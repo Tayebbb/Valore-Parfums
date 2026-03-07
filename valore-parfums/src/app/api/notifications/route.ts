@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     notifications = notifications.filter((n) => n.isActive === true);
   }
   notifications.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  return NextResponse.json(notifications);
+  return NextResponse.json(notifications.map(serializeDoc));
 }
 
 // POST — create notification (replaces prisma.notification.create)
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       createdAt: Timestamp.now(),
     };
     await db.collection(Collections.notifications).doc(id).set(data);
-    return NextResponse.json({ id, ...data }, { status: 201 });
+    return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to create notification" }, { status: 500 });
   }

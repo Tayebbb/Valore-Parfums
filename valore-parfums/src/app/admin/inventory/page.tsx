@@ -152,9 +152,9 @@ export default function InventoryPage() {
 
   const filtered = perfumes.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand.toLowerCase().includes(search.toLowerCase()) ||
-      p.inspiredBy.toLowerCase().includes(search.toLowerCase())
+      (p.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.brand || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.inspiredBy || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (

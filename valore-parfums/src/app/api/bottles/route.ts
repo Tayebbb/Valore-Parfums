@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 
 // GET all bottles — Firestore query ordered by ml (replaces prisma.bottleInventory.findMany)
 export async function GET() {
   const snap = await db.collection(Collections.bottles).orderBy("ml", "asc").get();
-  const bottles = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const bottles = snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
   return NextResponse.json(bottles);
 }
 
@@ -18,5 +18,5 @@ export async function POST(req: Request) {
   const now = Timestamp.now();
   const data = { ...body, createdAt: now, updatedAt: now };
   await db.collection(Collections.bottles).doc(id).set(data);
-  return NextResponse.json({ id, ...data }, { status: 201 });
+  return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }

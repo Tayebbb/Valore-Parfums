@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 
 // GET all vouchers (replaces prisma.voucher.findMany)
 export async function GET() {
   const snap = await db.collection(Collections.vouchers).orderBy("createdAt", "desc").get();
-  const vouchers = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const vouchers = snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
   return NextResponse.json(vouchers);
 }
 
@@ -21,5 +21,5 @@ export async function POST(req: Request) {
     createdAt: Timestamp.now(),
   };
   await db.collection(Collections.vouchers).doc(id).set(data);
-  return NextResponse.json({ id, ...data }, { status: 201 });
+  return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }

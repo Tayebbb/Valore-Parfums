@@ -79,7 +79,7 @@ export default function ReportsPage() {
           <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-[var(--gold-tint)] border border-[var(--gold)] flex items-center justify-center">
-                <span className="font-serif text-sm text-[var(--gold)]">{data.owners.owner1Name[0]}</span>
+                <span className="font-serif text-sm text-[var(--gold)]">{data.owners.owner1Name?.[0] || "O"}</span>
               </div>
               <div>
                 <p className="font-serif text-base">{data.owners.owner1Name}&apos;s Share</p>
@@ -100,7 +100,7 @@ export default function ReportsPage() {
           <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-[rgba(74,222,128,0.08)] border border-[var(--success)] flex items-center justify-center">
-                <span className="font-serif text-sm text-[var(--success)]">{data.owners.owner2Name[0]}</span>
+                <span className="font-serif text-sm text-[var(--success)]">{data.owners.owner2Name?.[0] || "O"}</span>
               </div>
               <div>
                 <p className="font-serif text-base">{data.owners.owner2Name}&apos;s Share</p>

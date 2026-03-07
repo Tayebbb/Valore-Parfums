@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
@@ -24,11 +24,11 @@ export async function GET() {
       const data = doc.data();
       // Fetch related perfume (replaces Prisma include: { perfume: true })
       const perfumeDoc = await db.collection(Collections.perfumes).doc(data.perfumeId).get();
-      items.push({
+      items.push(serializeDoc({
         id: doc.id,
         ...data,
         perfume: perfumeDoc.exists ? { id: perfumeDoc.id, ...perfumeDoc.data() } : null,
-      });
+      }));
     }
     return NextResponse.json(items);
   } catch {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK — all aggregation done in-memory
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 
 // Helper: convert Firestore Timestamp to Date
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +70,7 @@ export async function GET() {
   for (const o of recentOrderDocs) {
     const itemsSnap = await db.collection(Collections.orders).doc(o.id).collection("items").get();
     const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    recentOrders.push({ ...o, items });
+    recentOrders.push(serializeDoc({ ...o, items }));
   }
 
   // Most sold perfumes — need all items from subcollections (replaces prisma.orderItem.groupBy)

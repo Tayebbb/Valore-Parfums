@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 
 // GET /api/perfumes/search?q=...&category=...&season=...&brand=...&sort=...
 // Updated: Firestore doesn't support OR/contains queries natively,
@@ -58,5 +58,5 @@ export async function GET(req: Request) {
   });
   const brands = Array.from(brandSet).sort();
 
-  return NextResponse.json({ perfumes, brands });
+  return NextResponse.json({ perfumes: perfumes.map(serializeDoc), brands });
 }

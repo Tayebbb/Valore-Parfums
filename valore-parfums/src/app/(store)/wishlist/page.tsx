@@ -102,7 +102,7 @@ export default function WishlistPage() {
                       <img src={images[0]} alt={item.perfume.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="font-serif text-4xl text-[var(--text-muted)]">{item.perfume.name[0]}</span>
+                        <span className="font-serif text-4xl text-[var(--text-muted)]">{item.perfume?.name?.[0] || "P"}</span>
                       </div>
                     )}
                   </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 
 // PUT — update notification (replaces prisma.notification.update)
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +13,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       sortOrder: body.sortOrder,
     });
     const doc = await db.collection(Collections.notifications).doc(id).get();
-    return NextResponse.json({ id, ...doc.data() });
+    return NextResponse.json(serializeDoc({ id, ...doc.data() }));
   } catch {
     return NextResponse.json({ error: "Failed to update notification" }, { status: 500 });
   }

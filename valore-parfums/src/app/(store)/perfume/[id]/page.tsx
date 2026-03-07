@@ -175,7 +175,7 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
               <img src={images[0]} alt={perfume.name} className="w-full h-full object-contain" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="font-serif text-6xl text-[var(--text-muted)]">{perfume.name[0]}</span>
+                <span className="font-serif text-6xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
               </div>
             )}
           </div>

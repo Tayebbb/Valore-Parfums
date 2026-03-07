@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 
 // GET all bulk pricing rules — Firestore query (replaces prisma.bulkPricingRule.findMany)
 export async function GET() {
   const snap = await db.collection(Collections.bulkPricingRules).orderBy("minQuantity", "asc").get();
-  const rules = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const rules = snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
   return NextResponse.json(rules);
 }
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     createdAt: Timestamp.now(),
   };
   await db.collection(Collections.bulkPricingRules).doc(id).set(data);
-  return NextResponse.json({ id, ...data }, { status: 201 });
+  return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }
 
 // PUT update rule — Firestore doc update (replaces prisma.bulkPricingRule.update)
@@ -31,7 +31,7 @@ export async function PUT(req: Request) {
   const { id, ...data } = body;
   await db.collection(Collections.bulkPricingRules).doc(id).update(data);
   const doc = await db.collection(Collections.bulkPricingRules).doc(id).get();
-  return NextResponse.json({ id, ...doc.data() });
+  return NextResponse.json(serializeDoc({ id, ...doc.data() }));
 }
 
 // DELETE rule — Firestore doc delete (replaces prisma.bulkPricingRule.delete)

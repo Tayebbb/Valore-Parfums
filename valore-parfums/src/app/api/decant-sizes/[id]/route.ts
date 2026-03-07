@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 
 // PUT update decant size — Firestore doc update (replaces prisma.decantSize.update)
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -8,7 +8,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const body = await req.json();
   await db.collection(Collections.decantSizes).doc(id).update(body);
   const doc = await db.collection(Collections.decantSizes).doc(id).get();
-  return NextResponse.json({ id, ...doc.data() });
+  return NextResponse.json(serializeDoc({ id, ...doc.data() }));
 }
 
 // DELETE decant size — Firestore doc delete (replaces prisma.decantSize.delete)

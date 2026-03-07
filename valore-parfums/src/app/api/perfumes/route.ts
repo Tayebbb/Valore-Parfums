@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const db2 = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
     return db2.getTime() - da.getTime();
   });
-  return NextResponse.json(perfumes);
+  return NextResponse.json(perfumes.map(serializeDoc));
 }
 
 // CREATE perfume (replaces prisma.perfume.create)
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     const now = Timestamp.now();
     const data = { ...body, createdAt: now, updatedAt: now };
     await db.collection(Collections.perfumes).doc(id).set(data);
-    return NextResponse.json({ id, ...data }, { status: 201 });
+    return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create perfume";
     return NextResponse.json({ error: message }, { status: 500 });

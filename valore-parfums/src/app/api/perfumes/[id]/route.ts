@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { Timestamp } from "firebase-admin/firestore";
 
 // GET single perfume (replaces prisma.perfume.findUnique)
@@ -8,7 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const doc = await db.collection(Collections.perfumes).doc(id).get();
   if (!doc.exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ id: doc.id, ...doc.data() });
+  return NextResponse.json(serializeDoc({ id: doc.id, ...doc.data() }));
 }
 
 // PUT update perfume (replaces prisma.perfume.update)
@@ -18,7 +18,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json();
     await db.collection(Collections.perfumes).doc(id).update({ ...body, updatedAt: Timestamp.now() });
     const doc = await db.collection(Collections.perfumes).doc(id).get();
-    return NextResponse.json({ id, ...doc.data() });
+    return NextResponse.json(serializeDoc({ id, ...doc.data() }));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update perfume";
     return NextResponse.json({ error: message }, { status: 500 });

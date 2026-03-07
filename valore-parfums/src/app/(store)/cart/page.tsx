@@ -50,7 +50,7 @@ export default function CartPage() {
                   <img src={item.image} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="font-serif text-2xl text-[var(--text-muted)]">{item.perfumeName[0]}</span>
+                    <span className="font-serif text-2xl text-[var(--text-muted)]">{item.perfumeName?.[0] || "P"}</span>
                   </div>
                 )}
               </div>

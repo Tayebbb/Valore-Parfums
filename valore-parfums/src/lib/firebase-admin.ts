@@ -17,6 +17,25 @@ if (!getApps().length) {
 
 export const db = getFirestore();
 
+// ─── Serialization helper ──────────────────────────────
+// Recursively converts Firestore Timestamp fields to ISO strings
+// so JSON responses don't contain raw {_seconds, _nanoseconds} objects
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function serializeDoc(obj: any): any {
+  if (obj == null) return obj;
+  if (obj.toDate && typeof obj.toDate === "function") return obj.toDate().toISOString();
+  if (Array.isArray(obj)) return obj.map(serializeDoc);
+  if (typeof obj === "object") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = {};
+    for (const key of Object.keys(obj)) {
+      result[key] = serializeDoc(obj[key]);
+    }
+    return result;
+  }
+  return obj;
+}
+
 // ─── Collection name constants ─────────────────────────
 // Centralised so typos are caught at compile time
 export const Collections = {

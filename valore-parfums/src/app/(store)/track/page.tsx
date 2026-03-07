@@ -49,7 +49,7 @@ export default function TrackOrderPage() {
         const match = all.find(
           (o) =>
             o.id.startsWith(query.trim()) ||
-            o.customerName.toLowerCase().includes(query.trim().toLowerCase())
+            o.customerName?.toLowerCase().includes(query.trim().toLowerCase())
         );
         if (match) {
           setOrder(match);
@@ -108,7 +108,7 @@ export default function TrackOrderPage() {
                 <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-0.5">Order ID</p>
                 <p className="font-mono text-[var(--gold)]">{order.id.slice(0, 8)}</p>
               </div>
-              <span className={`status-pill ${order.status.toLowerCase()}`}>
+              <span className={`status-pill ${(order.status ?? "").toLowerCase()}`}>
                 {statusIcon(order.status)} {order.status}
               </span>
             </div>
@@ -164,26 +164,26 @@ export default function TrackOrderPage() {
               </div>
               <div>
                 <span className="text-[var(--text-muted)]">Items</span>
-                <p>{order.items.length}</p>
+                <p>{order.items?.length ?? 0}</p>
               </div>
             </div>
 
             <div className="gold-line my-4" />
 
             <div className="space-y-2">
-              {order.items.map((item, i) => (
+              {(order.items ?? []).map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-[var(--text-secondary)]">
                     {item.perfumeName} — {item.ml}ml × {item.quantity}
                   </span>
-                  <span>{(item.unitPrice * item.quantity).toLocaleString("en-BD")} BDT</span>
+                  <span>{((item.unitPrice ?? 0) * (item.quantity ?? 0)).toLocaleString("en-BD")} BDT</span>
                 </div>
               ))}
             </div>
 
             <div className="gold-line my-4" />
 
-            {order.discount > 0 && (
+            {(order.discount ?? 0) > 0 && (
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-[var(--text-muted)]">Discount</span>
                 <span className="text-[var(--success)]">-{order.discount} BDT</span>
@@ -191,7 +191,7 @@ export default function TrackOrderPage() {
             )}
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--text-muted)]">Total</span>
-              <span className="font-serif text-xl text-[var(--gold)]">{order.finalAmount.toLocaleString("en-BD")} BDT</span>
+              <span className="font-serif text-xl text-[var(--gold)]">{(order.finalAmount ?? 0).toLocaleString("en-BD")} BDT</span>
             </div>
           </div>
         </div>

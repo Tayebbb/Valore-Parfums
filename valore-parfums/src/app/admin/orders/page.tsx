@@ -129,13 +129,13 @@ export default function OrdersPage() {
                     <p className="text-xs text-[var(--text-muted)]">{o.customerPhone}</p>
                   </td>
                   <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
-                    {o.items.map((i) => `${i.perfumeName} ${i.ml}ml×${i.quantity}`).join(", ")}
+                    {o.items?.map((i) => `${i.perfumeName} ${i.ml}ml×${i.quantity}`).join(", ") || "—"}
                   </td>
-                  <td className="py-3 px-4 text-right font-serif text-[var(--gold)]">{fmt(o.total)}</td>
-                  <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit)}</td>
+                  <td className="py-3 px-4 text-right font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</td>
+                  <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(o.status)}`}>
-                      {o.status}
+                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(o.status || "Pending")}`}>
+                      {o.status || "Pending"}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
@@ -188,32 +188,32 @@ export default function OrdersPage() {
               </div>
               <div className="gold-line my-3" />
               <h4 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Items</h4>
-              {selectedOrder.items.map((item) => (
+              {selectedOrder.items?.map((item) => (
                 <div key={item.id} className="flex justify-between py-1">
                   <span>{item.perfumeName} — {item.ml}ml × {item.quantity}</span>
-                  <span className="font-serif text-[var(--gold)]">{fmt(item.totalPrice)} BDT</span>
+                  <span className="font-serif text-[var(--gold)]">{fmt(item.totalPrice ?? 0)} BDT</span>
                 </div>
               ))}
               <div className="gold-line my-3" />
-              {selectedOrder.discount > 0 && (
+              {(selectedOrder.discount ?? 0) > 0 && (
                 <>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-muted)]">Subtotal</span>
-                    <span>{fmt(selectedOrder.subtotal)} BDT</span>
+                    <span>{fmt(selectedOrder.subtotal ?? 0)} BDT</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[var(--text-muted)]">Discount ({selectedOrder.voucherCode})</span>
-                    <span className="text-[var(--success)]">-{fmt(selectedOrder.discount)} BDT</span>
+                    <span className="text-[var(--success)]">-{fmt(selectedOrder.discount ?? 0)} BDT</span>
                   </div>
                 </>
               )}
               <div className="flex justify-between text-base">
                 <span className="text-[var(--text-muted)]">Total</span>
-                <span className="font-serif text-[var(--gold)]">{fmt(selectedOrder.total)} BDT</span>
+                <span className="font-serif text-[var(--gold)]">{fmt(selectedOrder.total ?? 0)} BDT</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Profit</span>
-                <span className="font-serif text-[var(--success)]">{fmt(selectedOrder.profit)} BDT</span>
+                <span className="font-serif text-[var(--success)]">{fmt(selectedOrder.profit ?? 0)} BDT</span>
               </div>
             </div>
           </div>

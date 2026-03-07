@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
@@ -28,7 +28,15 @@ export async function GET(req: Request) {
     const db2 = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
     return db2.getTime() - da.getTime();
   });
-  return NextResponse.json(allOrders);
+
+  // Normalize Firestore Timestamps and field names for the frontend
+  const normalized = allOrders.map((o) => serializeDoc({
+    ...o,
+    status: o.status || "Pending",
+    totalAmount: o.totalAmount ?? o.subtotal ?? 0,
+    finalAmount: o.finalAmount ?? o.total ?? 0,
+  }));
+  return NextResponse.json(normalized);
 }
 
 // POST create order (replaces prisma.order.create with nested items)
@@ -163,6 +171,7 @@ export async function POST(req: Request) {
   const now = Timestamp.now();
   const orderDoc = {
     ...orderData,
+    status: orderData.status || "Pending",
     voucherCode: voucherCode || null,
     discount,
     subtotal,
@@ -181,5 +190,5 @@ export async function POST(req: Request) {
     createdItems.push({ id: itemId, ...oi });
   }
 
-  return NextResponse.json({ id: orderId, ...orderDoc, items: createdItems }, { status: 201 });
+  return NextResponse.json(serializeDoc({ id: orderId, ...orderDoc, items: createdItems }), { status: 201 });
 }

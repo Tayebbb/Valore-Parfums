@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Updated: replaced Prisma with Firestore Admin SDK
-import { db, Collections } from "@/lib/prisma";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
@@ -13,7 +13,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  return NextResponse.json({ id: doc.id, ...doc.data(), items });
+  const data = doc.data()!;
+  return NextResponse.json(serializeDoc({
+    id: doc.id,
+    ...data,
+    status: data.status || "Pending",
+    totalAmount: data.totalAmount ?? data.subtotal ?? 0,
+    finalAmount: data.finalAmount ?? data.total ?? 0,
+    items,
+  }));
 }
 
 // PUT update order (replaces prisma.order.update, handles cancel-restore-stock)
@@ -57,5 +65,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  return NextResponse.json({ id: updatedDoc.id, ...updatedDoc.data(), items });
+  const updatedData = updatedDoc.data()!;
+  return NextResponse.json(serializeDoc({
+    id: updatedDoc.id,
+    ...updatedData,
+    status: updatedData.status || "Pending",
+    totalAmount: updatedData.totalAmount ?? updatedData.subtotal ?? 0,
+    finalAmount: updatedData.finalAmount ?? updatedData.total ?? 0,
+    items,
+  }));
 }

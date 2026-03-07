@@ -44,7 +44,7 @@ function PerfumeCard({ perfume }: { perfume: Perfume }) {
             <img src={images[0]} alt={perfume.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name[0]}</span>
+              <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
             </div>
           )}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
