@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
 
 function toCSV(headers: string[], rows: string[][]): string {
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
@@ -14,6 +14,9 @@ function toDate(ts: any): Date {
 }
 
 export async function GET(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type");
 

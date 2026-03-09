@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
 
 // Default settings values (used if doc doesn't exist yet)
 const DEFAULTS = {
@@ -16,8 +16,10 @@ const DEFAULTS = {
   owner2Share: 40,
 };
 
-// GET settings — Firestore doc get with defaults (replaces prisma.settings.upsert)
+// GET settings — admin only
 export async function GET() {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const doc = await db.collection(Collections.settings).doc("default").get();
   if (!doc.exists) {
     // Create defaults if no settings doc exists
@@ -27,8 +29,10 @@ export async function GET() {
   return NextResponse.json({ id: doc.id, ...doc.data() });
 }
 
-// PUT settings — Firestore doc set with merge (replaces prisma.settings.upsert)
+// PUT settings — admin only
 export async function PUT(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
     const { id, ...data } = body;

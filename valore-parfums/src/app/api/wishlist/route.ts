@@ -1,19 +1,15 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
+import { getSessionUser } from "@/lib/auth";
 
-// GET /api/wishlist — get user's wishlist (replaces prisma.wishlist.findMany with include: perfume)
+// GET /api/wishlist — get user's wishlist
 export async function GET() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("vp-session");
-  if (!session?.value) return NextResponse.json([]);
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json([]);
 
   try {
-    const user = JSON.parse(session.value);
-    // Firestore: query wishlists by userId (replaces Prisma where + include)
     const snap = await db.collection(Collections.wishlists)
       .where("userId", "==", user.id)
       .orderBy("createdAt", "desc")
@@ -22,7 +18,6 @@ export async function GET() {
     const items = [];
     for (const doc of snap.docs) {
       const data = doc.data();
-      // Fetch related perfume (replaces Prisma include: { perfume: true })
       const perfumeDoc = await db.collection(Collections.perfumes).doc(data.perfumeId).get();
       items.push(serializeDoc({
         id: doc.id,
@@ -37,19 +32,19 @@ export async function GET() {
 }
 
 // POST /api/wishlist — toggle wishlist item
-// Updated: uses Firestore compound query for unique constraint (replaces Prisma @@unique)
 export async function POST(req: Request) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("vp-session");
-  if (!session?.value) {
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ error: "Login required" }, { status: 401 });
   }
 
   try {
-    const user = JSON.parse(session.value);
     const { perfumeId } = await req.json();
 
-    // Check if already wishlisted (replaces prisma.wishlist.findUnique with compound key)
+    if (!perfumeId || typeof perfumeId !== "string") {
+      return NextResponse.json({ error: "perfumeId required" }, { status: 400 });
+    }
+
     const existingSnap = await db.collection(Collections.wishlists)
       .where("userId", "==", user.id)
       .where("perfumeId", "==", perfumeId)
@@ -57,11 +52,9 @@ export async function POST(req: Request) {
       .get();
 
     if (!existingSnap.empty) {
-      // Remove (replaces prisma.wishlist.delete)
       await db.collection(Collections.wishlists).doc(existingSnap.docs[0].id).delete();
       return NextResponse.json({ action: "removed" });
     } else {
-      // Add (replaces prisma.wishlist.create)
       const id = uuid();
       await db.collection(Collections.wishlists).doc(id).set({
         userId: user.id,

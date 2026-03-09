@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
 
 // GET all decant sizes — Firestore query ordered by ml (replaces prisma.decantSize.findMany)
 export async function GET() {
@@ -11,8 +11,10 @@ export async function GET() {
   return NextResponse.json(sizes);
 }
 
-// POST create decant size — Firestore doc set (replaces prisma.decantSize.create)
+// POST create decant size — admin only
 export async function POST(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const id = uuid();
   const data = { ...body, createdAt: Timestamp.now() };

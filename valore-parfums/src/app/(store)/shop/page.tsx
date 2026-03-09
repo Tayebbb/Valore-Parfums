@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense, useCallback, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
@@ -24,18 +25,9 @@ interface PriceInfo {
   available: boolean;
 }
 
-function PerfumeCard({ perfume }: { perfume: Perfume }) {
-  const [prices, setPrices] = useState<PriceInfo[]>([]);
+function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo[] }) {
   const images: string[] = JSON.parse(perfume.images || "[]");
-
-  useEffect(() => {
-    fetch(`/api/pricing?perfumeId=${perfume.id}`)
-      .then((r) => r.json())
-      .then((d) => setPrices(d.prices || []))
-      .catch(() => {});
-  }, [perfume.id]);
-
-  const lowestPrice = prices.filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
+  const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
   const outOfStock = perfume.totalStockMl <= 0;
 
   return (
@@ -43,7 +35,7 @@ function PerfumeCard({ perfume }: { perfume: Perfume }) {
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group">
         <div className="aspect-[3/4] bg-[var(--bg-surface)] relative img-zoom">
           {images[0] ? (
-            <img src={images[0]} alt={perfume.name} className="w-full h-full object-cover" />
+            <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
@@ -80,7 +72,7 @@ function PerfumeCard({ perfume }: { perfume: Perfume }) {
               </p>
             ) : (
               <p className="text-sm text-[var(--text-muted)]">
-                {prices.length > 0 ? "Unavailable" : "..."}
+                {prices ? "Unavailable" : "..."}
               </p>
             )}
           </div>
@@ -239,6 +231,7 @@ function ShopContent() {
   const sortParam = searchParams.get("sort") || "newest";
 
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
+  const [priceMap, setPriceMap] = useState<Record<string, PriceInfo[]>>({});
   const [allBrands, setAllBrands] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(qParam);
@@ -271,6 +264,27 @@ function ShopContent() {
         const p = data.perfumes || [];
         setPerfumes(p);
         if (data.brands) setAllBrands((data.brands as string[]).filter((b: string) => b.toLowerCase() !== "valore parfums"));
+        // Batch-fetch pricing for all results in ONE call
+        const ids = p.map((pf: Perfume) => pf.id);
+        if (ids.length > 0) {
+          fetch("/api/pricing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ perfumeIds: ids }),
+          })
+            .then((r) => r.json())
+            .then((map) => {
+              const parsed: Record<string, PriceInfo[]> = {};
+              for (const [id, val] of Object.entries(map)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                parsed[id] = (val as any).prices || [];
+              }
+              setPriceMap(parsed);
+            })
+            .catch(() => {});
+        } else {
+          setPriceMap({});
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -592,7 +606,7 @@ function ShopContent() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               {filteredPerfumes.map((perfume, i) => (
                 <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
-                  <PerfumeCard perfume={perfume} />
+                  <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
                 </div>
               ))}
             </div>

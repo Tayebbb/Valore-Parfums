@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
 
-// PUT update stock request (replaces prisma.stockRequest.update)
+// PUT update stock request — admin only
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json();
   await db.collection(Collections.stockRequests).doc(id).update(body);

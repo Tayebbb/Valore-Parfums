@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
 
 // GET all bulk pricing rules — Firestore query (replaces prisma.bulkPricingRule.findMany)
 export async function GET() {
@@ -11,8 +11,10 @@ export async function GET() {
   return NextResponse.json(rules);
 }
 
-// POST create rule — Firestore doc set (replaces prisma.bulkPricingRule.create)
+// POST create rule — admin only
 export async function POST(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const id = uuid();
   const data = {
@@ -25,8 +27,10 @@ export async function POST(req: Request) {
   return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }
 
-// PUT update rule — Firestore doc update (replaces prisma.bulkPricingRule.update)
+// PUT update rule — admin only
 export async function PUT(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { id, ...data } = body;
   await db.collection(Collections.bulkPricingRules).doc(id).update(data);
@@ -34,8 +38,10 @@ export async function PUT(req: Request) {
   return NextResponse.json(serializeDoc({ id, ...doc.data() }));
 }
 
-// DELETE rule — Firestore doc delete (replaces prisma.bulkPricingRule.delete)
+// DELETE rule — admin only
 export async function DELETE(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });

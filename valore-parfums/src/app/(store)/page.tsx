@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ArrowRight } from "lucide-react";
 
@@ -22,18 +23,9 @@ interface PriceInfo {
   available: boolean;
 }
 
-function PerfumeCard({ perfume }: { perfume: Perfume }) {
-  const [prices, setPrices] = useState<PriceInfo[]>([]);
+function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo[] }) {
   const images: string[] = JSON.parse(perfume.images || "[]");
-
-  useEffect(() => {
-    fetch(`/api/pricing?perfumeId=${perfume.id}`)
-      .then((r) => r.json())
-      .then((d) => setPrices(d.prices || []))
-      .catch(() => {});
-  }, [perfume.id]);
-
-  const lowestPrice = prices.filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
+  const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
   const outOfStock = perfume.totalStockMl <= 0;
 
   return (
@@ -41,7 +33,7 @@ function PerfumeCard({ perfume }: { perfume: Perfume }) {
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group">
         <div className="aspect-[3/4] bg-[var(--bg-surface)] relative img-zoom">
           {images[0] ? (
-            <img src={images[0]} alt={perfume.name} className="w-full h-full object-cover" />
+            <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
@@ -77,7 +69,7 @@ function PerfumeCard({ perfume }: { perfume: Perfume }) {
               </p>
             ) : (
               <p className="text-sm text-[var(--text-muted)]">
-                {prices.length > 0 ? "Unavailable" : "..."}
+                {prices ? "Unavailable" : "..."}
               </p>
             )}
           </div>
@@ -89,12 +81,34 @@ function PerfumeCard({ perfume }: { perfume: Perfume }) {
 
 export default function HomePage() {
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
+  const [priceMap, setPriceMap] = useState<Record<string, PriceInfo[]>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/perfumes?active=true")
       .then((r) => r.json())
-      .then((data: Perfume[]) => setPerfumes(data))
+      .then((data: Perfume[]) => {
+        setPerfumes(data);
+        // Batch-fetch pricing for all displayed perfumes in ONE call
+        const ids = data.slice(0, 12).map((p) => p.id);
+        if (ids.length > 0) {
+          fetch("/api/pricing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ perfumeIds: ids }),
+          })
+            .then((r) => r.json())
+            .then((map) => {
+              const parsed: Record<string, PriceInfo[]> = {};
+              for (const [id, val] of Object.entries(map)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                parsed[id] = (val as any).prices || [];
+              }
+              setPriceMap(parsed);
+            })
+            .catch(() => {});
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -156,7 +170,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {bestSellers.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-                <PerfumeCard perfume={perfume} />
+                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
               </div>
             ))}
           </div>
@@ -196,7 +210,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {newArrivals.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                <PerfumeCard perfume={perfume} />
+                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
               </div>
             ))}
           </div>

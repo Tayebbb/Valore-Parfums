@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK — all aggregation done in-memory
 import { db, Collections, serializeDoc } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
 
 // Helper: convert Firestore Timestamp to Date
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9,21 +9,47 @@ function toDate(ts: any): Date {
 }
 
 export async function GET() {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Fetch all orders, perfumes, bottles, stock requests, settings in parallel
-  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc] = await Promise.all([
+  // Fetch all orders, perfumes, bottles, stock requests, settings, and ALL order items in parallel
+  // Using collectionGroup("items") avoids N+1 subcollection reads
+  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap] = await Promise.all([
     db.collection(Collections.orders).get(),
     db.collection(Collections.perfumes).orderBy("totalStockMl", "asc").get(),
     db.collection(Collections.bottles).orderBy("availableCount", "asc").get(),
     db.collection(Collections.stockRequests).get(),
     db.collection(Collections.settings).doc("default").get(),
+    db.collectionGroup("items").get(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allOrders = ordersSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+
+  // Build items map keyed by parent order ID and order lookup
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderMap = new Map<string, any>();
+  for (const o of allOrders) orderMap.set(o.id, o);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const itemsByOrder = new Map<string, any[]>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allItems: any[] = [];
+  for (const doc of allItemsSnap.docs) {
+    const orderId = doc.ref.parent.parent?.id;
+    if (!orderId) continue;
+    const order = orderMap.get(orderId);
+    if (!order) continue;
+    const itemData = { ...doc.data(), orderId, orderStatus: order.status, orderCreatedAt: order.createdAt };
+    allItems.push(itemData);
+    const list = itemsByOrder.get(orderId) || [];
+    list.push({ id: doc.id, ...doc.data() });
+    itemsByOrder.set(orderId, list);
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const perfumes = perfumesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,28 +89,14 @@ export async function GET() {
   // Stock requests count (replaces prisma.stockRequest.count with status Pending)
   const stockRequests = stockRequestsList.filter((r) => r.status === "Pending").length;
 
-  // Recent orders (last 5, replaces prisma.order.findMany take 5 include items)
+  // Recent orders (last 5) — items already in memory from collectionGroup
   const sortedOrders = [...allOrders].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
   const recentOrderDocs = sortedOrders.slice(0, 5);
-  const recentOrders = [];
-  for (const o of recentOrderDocs) {
-    const itemsSnap = await db.collection(Collections.orders).doc(o.id).collection("items").get();
-    const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    recentOrders.push(serializeDoc({ ...o, items }));
-  }
+  const recentOrders = recentOrderDocs.map((o) =>
+    serializeDoc({ ...o, items: itemsByOrder.get(o.id) || [] })
+  );
 
-  // Most sold perfumes — need all items from subcollections (replaces prisma.orderItem.groupBy)
-  // Collect all items from all orders for aggregation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allItems: any[] = [];
-  for (const o of allOrders) {
-    const itemsSnap = await db.collection(Collections.orders).doc(o.id).collection("items").get();
-    for (const d of itemsSnap.docs) {
-      allItems.push({ ...d.data(), orderId: o.id, orderStatus: o.status, orderCreatedAt: o.createdAt });
-    }
-  }
-
-  // Most sold (replaces prisma.orderItem.groupBy by perfumeName)
+  // Most sold perfumes — items already collected from collectionGroup
   const soldMap = new Map<string, { quantity: number; totalPrice: number }>();
   for (const item of allItems) {
     const existing = soldMap.get(item.perfumeName);

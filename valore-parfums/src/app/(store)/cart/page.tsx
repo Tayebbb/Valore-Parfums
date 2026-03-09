@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/store/cart";
+import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag } from "lucide-react";
 
@@ -45,9 +46,9 @@ export default function CartPage() {
               className="flex items-center gap-4 bg-[var(--bg-card)] border border-[var(--border)] rounded p-4"
             >
               {/* Image */}
-              <div className="w-20 h-20 bg-[var(--bg-surface)] rounded flex-shrink-0 overflow-hidden">
+              <div className="w-20 h-20 bg-[var(--bg-surface)] rounded flex-shrink-0 overflow-hidden relative">
                 {item.image ? (
-                  <img src={item.image} alt="" className="w-full h-full object-cover" />
+                  <Image src={item.image} alt="" fill className="object-cover" sizes="80px" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="font-serif text-2xl text-[var(--text-muted)]">{item.perfumeName?.[0] || "P"}</span>

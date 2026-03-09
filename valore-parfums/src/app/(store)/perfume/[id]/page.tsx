@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useCart } from "@/store/cart";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/ui/Toaster";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Heart } from "lucide-react";
 
@@ -170,9 +171,9 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* Images */}
         <div>
-          <div className="aspect-square bg-[var(--bg-surface)] rounded overflow-hidden img-zoom">
+          <div className="aspect-square bg-[var(--bg-surface)] rounded overflow-hidden img-zoom relative">
             {images[0] ? (
-              <img src={images[0]} alt={perfume.name} className="w-full h-full object-contain" />
+              <Image src={images[0]} alt={perfume.name} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" priority />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <span className="font-serif text-6xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
@@ -182,8 +183,8 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
           {images.length > 1 && (
             <div className="grid grid-cols-4 gap-2 mt-2">
               {images.slice(1, 5).map((img, i) => (
-                <div key={i} className="aspect-square bg-[var(--bg-surface)] rounded overflow-hidden">
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                <div key={i} className="aspect-square bg-[var(--bg-surface)] rounded overflow-hidden relative">
+                  <Image src={img} alt="" fill className="object-cover" sizes="12vw" />
                 </div>
               ))}
             </div>

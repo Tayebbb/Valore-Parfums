@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ShoppingBag, Search, Heart, Sun, Moon, User, ChevronDown, X, Menu, LogOut } from "lucide-react";
@@ -197,7 +198,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
-            <img src="/valore-logo.png" alt="Valore Parfums" className="h-9 w-9 rounded-full object-cover" />
+            <Image src="/valore-logo.png" alt="Valore Parfums" width={36} height={36} className="rounded-full object-cover" />
             <h1 className="font-serif text-2xl font-light tracking-wide text-[var(--gold)]">
               Valore Parfums
             </h1>
@@ -356,9 +357,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
                           className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--gold-tint)] transition-colors"
                         >
-                          <div className="w-10 h-10 rounded bg-[var(--bg-surface)] flex-shrink-0 overflow-hidden">
+                          <div className="w-10 h-10 rounded bg-[var(--bg-surface)] flex-shrink-0 overflow-hidden relative">
                             {imgs[0] ? (
-                              <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
+                              <Image src={imgs[0]} alt={p.name} fill className="object-cover" sizes="40px" />
                             ) : (
                               <span className="w-full h-full flex items-center justify-center font-serif text-sm text-[var(--text-muted)]">{p.name[0]}</span>
                             )}
@@ -446,7 +447,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-1">
-                <img src="/valore-logo.png" alt="Valore Parfums" className="h-8 w-8 rounded-full object-cover" />
+                <Image src="/valore-logo.png" alt="Valore Parfums" width={32} height={32} className="rounded-full object-cover" />
                 <h2 className="font-serif text-xl font-light text-[var(--gold)]">Valore Parfums</h2>
               </div>
               <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">

@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
 
-// GET all vouchers (replaces prisma.voucher.findMany)
+// GET all vouchers — admin only
 export async function GET() {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const snap = await db.collection(Collections.vouchers).orderBy("createdAt", "desc").get();
   const vouchers = snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
   return NextResponse.json(vouchers);
 }
 
-// POST create voucher (replaces prisma.voucher.create)
+// POST create voucher — admin only
 export async function POST(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const id = uuid();
   const data = {

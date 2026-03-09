@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 
 // GET /api/perfumes/search?q=...&category=...&season=...&brand=...&sort=...

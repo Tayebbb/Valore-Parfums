@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { Timestamp } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
 
 // GET single perfume (replaces prisma.perfume.findUnique)
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,8 +11,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json(serializeDoc({ id: doc.id, ...doc.data() }));
 }
 
-// PUT update perfume (replaces prisma.perfume.update)
+// PUT update perfume — admin only
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { id } = await params;
     const body = await req.json();
@@ -25,8 +27,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// DELETE perfume (replaces prisma.perfume.delete)
+// DELETE perfume — admin only
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   await db.collection(Collections.perfumes).doc(id).delete();
   return NextResponse.json({ success: true });

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections } from "@/lib/prisma";
 
 // POST validate voucher code (replaces prisma.voucher.findUnique)

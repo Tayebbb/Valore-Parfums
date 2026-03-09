@@ -37,28 +37,12 @@ export default function TrackOrderPage() {
     setNotFound(false);
     setOrder(null);
 
-    // Try searching by id first
-    const res = await fetch(`/api/orders/${query.trim()}`);
+    // Only search by exact order ID — never expose full order list
+    const res = await fetch(`/api/orders/${encodeURIComponent(query.trim())}`);
     if (res.ok) {
       setOrder(await res.json());
     } else {
-      // Try by phone — fetch all orders and filter
-      const allRes = await fetch("/api/orders");
-      if (allRes.ok) {
-        const all: OrderResult[] = await allRes.json();
-        const match = all.find(
-          (o) =>
-            o.id.startsWith(query.trim()) ||
-            o.customerName?.toLowerCase().includes(query.trim().toLowerCase())
-        );
-        if (match) {
-          setOrder(match);
-        } else {
-          setNotFound(true);
-        }
-      } else {
-        setNotFound(true);
-      }
+      setNotFound(true);
     }
     setLoading(false);
   };

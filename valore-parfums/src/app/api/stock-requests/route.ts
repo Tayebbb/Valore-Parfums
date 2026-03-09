@@ -1,24 +1,32 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
 
-// GET all stock requests (replaces prisma.stockRequest.findMany with include: perfume)
-// Note: Firestore has no joins — perfume data is fetched separately and merged
+// GET all stock requests — admin only
 export async function GET() {
-  const snap = await db.collection(Collections.stockRequests).orderBy("createdAt", "desc").get();
-  const requests = [];
-  for (const doc of snap.docs) {
-    const data = doc.data();
-    // Fetch related perfume (replaces Prisma include)
-    const perfumeDoc = await db.collection(Collections.perfumes).doc(data.perfumeId).get();
-    requests.push(serializeDoc({
-      id: doc.id,
-      ...data,
-      perfume: perfumeDoc.exists ? { id: perfumeDoc.id, ...perfumeDoc.data() } : null,
-    }));
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Fetch stock requests and all perfumes in parallel (avoids N+1)
+  const [snap, perfumesSnap] = await Promise.all([
+    db.collection(Collections.stockRequests).orderBy("createdAt", "desc").get(),
+    db.collection(Collections.perfumes).get(),
+  ]);
+
+  // Build perfume lookup map
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const perfumeMap = new Map<string, any>();
+  for (const doc of perfumesSnap.docs) {
+    perfumeMap.set(doc.id, { id: doc.id, ...doc.data() });
   }
+
+  const requests = snap.docs.map((doc) => {
+    const data = doc.data();
+    const perfume = perfumeMap.get(data.perfumeId) || null;
+    return serializeDoc({ id: doc.id, ...data, perfume });
+  });
   return NextResponse.json(requests);
 }
 

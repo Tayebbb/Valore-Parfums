@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Heart, Trash2 } from "lucide-react";
 import { useAuth } from "@/store/auth";
@@ -97,9 +98,9 @@ export default function WishlistPage() {
             return (
               <div key={item.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group relative">
                 <Link href={`/perfume/${item.perfume.id}`}>
-                  <div className="aspect-[3/4] bg-[var(--bg-surface)] img-zoom">
+                  <div className="aspect-[3/4] bg-[var(--bg-surface)] img-zoom relative">
                     {images[0] ? (
-                      <img src={images[0]} alt={item.perfume.name} className="w-full h-full object-cover" />
+                      <Image src={images[0]} alt={item.perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="font-serif text-4xl text-[var(--text-muted)]">{item.perfume?.name?.[0] || "P"}</span>

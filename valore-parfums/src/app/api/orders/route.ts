@@ -1,25 +1,43 @@
 import { NextResponse } from "next/server";
-// Updated: replaced Prisma with Firestore Admin SDK
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
 
-// GET all orders (replaces prisma.order.findMany with include: items)
+// GET all orders — admin only
 export async function GET(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
 
-  // Fetch all then filter/sort in memory to avoid Firestore composite index requirement
-  const snap = await db.collection(Collections.orders).get();
+  // Fetch orders and all items in parallel (avoids N+1 subcollection reads)
+  const [ordersSnap, allItemsSnap] = await Promise.all([
+    db.collection(Collections.orders).get(),
+    db.collectionGroup("items").get(),
+  ]);
+
+  // Build items map keyed by parent order ID
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let allOrders: any[] = [];
-  for (const doc of snap.docs) {
-    const itemsSnap = await db.collection(Collections.orders).doc(doc.id).collection("items").get();
-    const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    allOrders.push({ id: doc.id, ...doc.data(), items });
+  const itemsByOrder = new Map<string, any[]>();
+  for (const doc of allItemsSnap.docs) {
+    const orderId = doc.ref.parent.parent?.id;
+    if (!orderId) continue;
+    const list = itemsByOrder.get(orderId) || [];
+    list.push({ id: doc.id, ...doc.data() });
+    itemsByOrder.set(orderId, list);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let allOrders: any[] = ordersSnap.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+    items: itemsByOrder.get(doc.id) || [],
+  }));
+
   if (status) {
     allOrders = allOrders.filter((o) => o.status === status);
   }
@@ -29,7 +47,6 @@ export async function GET(req: Request) {
     return db2.getTime() - da.getTime();
   });
 
-  // Normalize Firestore Timestamps and field names for the frontend
   const normalized = allOrders.map((o) => serializeDoc({
     ...o,
     status: o.status || "Pending",
