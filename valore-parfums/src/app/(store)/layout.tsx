@@ -480,7 +480,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <li><Link href="/track" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Track Order</Link></li>
                 <li><Link href="/wishlist" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Wishlist</Link></li>
                 <li><Link href="/cart" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Cart</Link></li>
-                <li><Link href="/admin" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Admin Panel</Link></li>
+                {/* Admin Panel button removed */}
               </ul>
             </div>
           </div>

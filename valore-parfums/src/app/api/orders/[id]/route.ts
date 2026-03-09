@@ -6,11 +6,15 @@ import { requireAdmin } from "@/lib/auth";
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const doc = await db.collection(Collections.orders).doc(id).get();
+  const orderRef = db.collection(Collections.orders).doc(id);
+
+  // Fetch order doc and items in parallel
+  const [doc, itemsSnap] = await Promise.all([
+    orderRef.get(),
+    orderRef.collection("items").get(),
+  ]);
   if (!doc.exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Fetch subcollection items (replaces Prisma include: { items: true })
-  const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   const data = doc.data()!;

@@ -35,11 +35,11 @@
 
 /* ── Light Mode ── */
 html.light {
-  --bg-base: #faf8f5;
-  --bg-surface: #f0ede8;
+  --bg-base: #ffffff;
+  --bg-surface: #ffffff;
   --bg-elevated: #ffffff;
   --bg-card: #ffffff;
-  --bg-input: #f5f3ef;
+  --bg-input: #ffffff;
 
   --gold: #9a7b3c;
   --gold-hover: #86692f;
@@ -50,8 +50,8 @@ html.light {
 
   --foreground: #1a1a1a;
   --text-primary: #1a1a1a;
-  --text-secondary: rgba(26, 26, 26, 0.55);
-  --text-muted: rgba(26, 26, 26, 0.35);
+  --text-secondary: #1a1a1a;
+  --text-muted: #1a1a1a;
 
   --border: rgba(0, 0, 0, 0.08);
   --border-hover: rgba(154, 123, 60, 0.3);
@@ -168,7 +168,7 @@ body {
 }
 .marquee-track {
   display: inline-flex;
-  animation: marquee-scroll 25s linear infinite;
+  animation: marquee-scroll 32s linear infinite;
 }
 
 /* ── Status pill colors ── */
