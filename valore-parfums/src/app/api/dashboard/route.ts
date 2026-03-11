@@ -18,13 +18,15 @@ export async function GET() {
 
   // Fetch all orders, perfumes, bottles, stock requests, settings, and ALL order items in parallel
   // Using collectionGroup("items") avoids N+1 subcollection reads
-  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap] = await Promise.all([
+  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap, ownerAccountsSnap, withdrawalsSnap] = await Promise.all([
     db.collection(Collections.orders).get(),
     db.collection(Collections.perfumes).orderBy("totalStockMl", "asc").get(),
     db.collection(Collections.bottles).orderBy("availableCount", "asc").get(),
     db.collection(Collections.stockRequests).get(),
     db.collection(Collections.settings).doc("default").get(),
     db.collectionGroup("items").get(),
+    db.collection(Collections.ownerAccounts).get(),
+    db.collection(Collections.withdrawals).get(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -159,21 +161,21 @@ export async function GET() {
   // Ownership profit breakdown from actual order items (replaces prisma.orderItem.findMany with order include)
   const completedItems = allItems.filter((i) => i.orderStatus === "Completed");
   const ownershipBreakdown: Record<string, { total: number; today: number; month: number }> = {};
-  let platformProfitTotal = 0, platformProfitToday = 0, platformProfitMonth = 0;
+  let crossOwnerTotal = 0, crossOwnerToday = 0, crossOwnerMonth = 0;
 
   for (const item of completedItems) {
     const name = item.ownerName || "Store";
     if (!ownershipBreakdown[name]) ownershipBreakdown[name] = { total: 0, today: 0, month: 0 };
     ownershipBreakdown[name].total += item.ownerProfit ?? 0;
-    platformProfitTotal += item.platformProfit ?? 0;
+    crossOwnerTotal += item.otherOwnerProfit ?? 0;
     const createdAt = toDate(item.orderCreatedAt);
     if (createdAt >= startOfDay) {
       ownershipBreakdown[name].today += item.ownerProfit ?? 0;
-      platformProfitToday += item.platformProfit ?? 0;
+      crossOwnerToday += item.otherOwnerProfit ?? 0;
     }
     if (createdAt >= startOfMonth) {
       ownershipBreakdown[name].month += item.ownerProfit ?? 0;
-      platformProfitMonth += item.platformProfit ?? 0;
+      crossOwnerMonth += item.otherOwnerProfit ?? 0;
     }
   }
 
@@ -197,7 +199,7 @@ export async function GET() {
     dailySales,
     monthlySales,
     ownership: {
-      platform: { total: Math.round(platformProfitTotal), today: Math.round(platformProfitToday), month: Math.round(platformProfitMonth) },
+      crossOwner: { total: Math.round(crossOwnerTotal), today: Math.round(crossOwnerToday), month: Math.round(crossOwnerMonth) },
       Tayeb: ownershipBreakdown["Tayeb"] ?? { total: 0, today: 0, month: 0 },
       Enid: ownershipBreakdown["Enid"] ?? { total: 0, today: 0, month: 0 },
     },
@@ -220,5 +222,34 @@ export async function GET() {
         owner2: Math.round(ownershipBreakdown["Enid"]?.month ?? 0),
       },
     },
+    // Owner account balances (from ownerAccounts + withdrawals collections)
+    ownerAccounts: (() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const accountsMap: Record<string, any> = {};
+      for (const doc of ownerAccountsSnap.docs) {
+        accountsMap[doc.id] = doc.data();
+      }
+      const withdrawalsByOwner: Record<string, number> = {};
+      for (const doc of withdrawalsSnap.docs) {
+        const w = doc.data();
+        const owner = w.ownerName || "Unknown";
+        withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + (w.amount || 0);
+      }
+      const buildBalance = (name: string) => {
+        const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
+        const earned = (acct.totalEarned || 0) + (acct.storeShareEarned || 0);
+        const withdrawn = withdrawalsByOwner[name] || 0;
+        return {
+          name,
+          totalEarned: Math.round(acct.totalEarned || 0),
+          storeShareEarned: Math.round(acct.storeShareEarned || 0),
+          totalWithdrawn: Math.round(withdrawn),
+          availableBalance: Math.round(earned - withdrawn),
+        };
+      };
+      const o1 = settings?.owner1Name ?? "Tayeb";
+      const o2 = settings?.owner2Name ?? "Enid";
+      return [buildBalance(o1), buildBalance(o2)];
+    })(),
   });
 }

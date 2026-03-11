@@ -21,6 +21,7 @@ interface Settings {
   owner2Name: string;
   owner1Share: number;
   owner2Share: number;
+  ownerProfitPercent: number;
 }
 
 interface BulkRule {
@@ -40,6 +41,7 @@ export default function SettingsPage() {
     owner2Name: "Enid",
     owner1Share: 60,
     owner2Share: 40,
+    ownerProfitPercent: 85,
   });
   const [tierMargins, setTierMargins] = useState<TierMargins>(DEFAULT_TIER_MARGINS);
   const [bulkRules, setBulkRules] = useState<BulkRule[]>([]);
@@ -372,6 +374,45 @@ export default function SettingsPage() {
           {settings.owner1Share + settings.owner2Share !== 100 && (
             <p className="text-xs text-[var(--error)] mt-2">⚠ Shares must add up to 100% (currently {settings.owner1Share + settings.owner2Share}%)</p>
           )}
+        </div>
+      </div>
+
+      {/* Bottle Owner Profit Split */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Bottle Owner Profit Split</h3>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">When a perfume owned by one person is sold, the profit is split between the bottle owner and the other owner.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Bottle Owner Gets (%)</label>
+            <input
+              type="number"
+              value={settings.ownerProfitPercent || ""}
+              onChange={(e) => setSettings({ ...settings, ownerProfitPercent: e.target.value === "" ? 0 : parseFloat(e.target.value) })}
+              min={0}
+              max={100}
+              className="w-32 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Other Owner Gets (%)</label>
+            <input
+              type="number"
+              value={100 - (settings.ownerProfitPercent || 0)}
+              disabled
+              className="w-32 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm opacity-60 cursor-not-allowed outline-none"
+            />
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="flex justify-between text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+            <span>Bottle Owner ({settings.ownerProfitPercent}%)</span>
+            <span>Other Owner ({100 - settings.ownerProfitPercent}%)</span>
+          </div>
+          <div className="h-3 bg-[var(--bg-surface)] rounded-full overflow-hidden flex">
+            <div className="h-full bg-[var(--gold)] rounded-l-full transition-all" style={{ width: `${settings.ownerProfitPercent}%` }} />
+            <div className="h-full bg-[var(--success)] rounded-r-full transition-all" style={{ width: `${100 - settings.ownerProfitPercent}%` }} />
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mt-2">e.g. If {settings.owner1Name} owns the bottle, {settings.owner1Name} gets {settings.ownerProfitPercent}% and {settings.owner2Name} gets {100 - settings.ownerProfitPercent}%</p>
         </div>
       </div>
 

@@ -81,7 +81,8 @@ export async function GET(req: Request) {
       profitMargin,
     );
     const profit = calculateProfit(sellingPrice, perfume.purchasePricePerMl, size.ml, bottleCost, packagingCost);
-    const { ownerProfit, platformProfit } = splitProfit(profit, owner);
+    const ownerProfitPercent = config!.settings?.ownerProfitPercent ?? 85;
+    const { ownerProfit, otherOwnerProfit } = splitProfit(profit, owner, ownerProfitPercent);
     const totalCost = perfume.purchasePricePerMl * size.ml + bottleCost + packagingCost;
     const inStock = perfume.totalStockMl >= size.ml;
     const bottleAvailable = bottle ? bottle.availableCount > 0 : false;
@@ -92,7 +93,7 @@ export async function GET(req: Request) {
       totalCost: Math.ceil(totalCost),
       profit,
       ownerProfit,
-      platformProfit,
+      otherOwnerProfit,
       ownerName: owner,
       bottleCost,
       packagingCost,

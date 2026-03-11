@@ -14,6 +14,7 @@ const DEFAULTS = {
   owner2Name: "Enid",
   owner1Share: 60,
   owner2Share: 40,
+  ownerProfitPercent: 85,
 };
 
 // GET settings — admin only
