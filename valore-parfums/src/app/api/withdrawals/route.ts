@@ -1,0 +1,106 @@
+import { NextResponse } from "next/server";
+import { db, Collections, serializeDoc } from "@/lib/prisma";
+import { v4 as uuid } from "uuid";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/auth";
+
+// GET all withdrawals — admin only
+// Supports ?ownerName=Tayeb filter
+export async function GET(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const ownerName = searchParams.get("ownerName");
+
+  const snap = await db.collection(Collections.withdrawals).orderBy("createdAt", "desc").get();
+  let withdrawals = snap.docs.map((doc) => serializeDoc({ id: doc.id, ...doc.data() }));
+
+  if (ownerName) {
+    withdrawals = withdrawals.filter((w: { ownerName?: string }) => w.ownerName === ownerName);
+  }
+
+  return NextResponse.json(withdrawals);
+}
+
+// POST create withdrawal — admin only
+// Requires ownerName to specify which owner is withdrawing
+export async function POST(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json();
+  const { amount, note, ownerName } = body;
+
+  if (!amount || typeof amount !== "number" || amount <= 0) {
+    return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+  }
+  if (!ownerName || typeof ownerName !== "string") {
+    return NextResponse.json({ error: "ownerName is required" }, { status: 400 });
+  }
+
+  // Enforce: admin can only withdraw from their own account
+  if (admin.name !== ownerName) {
+    return NextResponse.json({ error: "You can only withdraw from your own account" }, { status: 403 });
+  }
+
+  // Validate available balance
+  const accountDoc = await db.collection(Collections.ownerAccounts).doc(ownerName).get();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const account = accountDoc.exists ? (accountDoc.data() as any) : { totalEarned: 0, storeShareEarned: 0 };
+  const totalEarned = (account.totalEarned || 0) + (account.storeShareEarned || 0);
+
+  // Sum existing withdrawals for this owner
+  const wSnap = await db.collection(Collections.withdrawals).get();
+  let totalWithdrawn = 0;
+  for (const doc of wSnap.docs) {
+    const w = doc.data();
+    if (w.ownerName === ownerName) totalWithdrawn += w.amount || 0;
+  }
+
+  const available = totalEarned - totalWithdrawn;
+  if (amount > available) {
+    return NextResponse.json({ error: `Insufficient balance. Available: ${Math.round(available)} BDT` }, { status: 400 });
+  }
+
+  const id = uuid();
+  const now = Timestamp.now();
+  const data = {
+    amount,
+    ownerName: String(ownerName).slice(0, 100),
+    note: String(note || "").slice(0, 500),
+    withdrawnBy: admin.name,
+    createdAt: now,
+  };
+
+  await db.collection(Collections.withdrawals).doc(id).set(data);
+
+  // Record withdrawal as a profit transaction (negative)
+  const txId = uuid();
+  await db.collection(Collections.profitTransactions).doc(txId).set({
+    orderId: null,
+    ownerName,
+    type: "withdrawal",
+    amount: -amount,
+    description: `Withdrawal by ${admin.name}${note ? `: ${String(note).slice(0, 200)}` : ""}`,
+    createdAt: now,
+  });
+
+  // Deduct from owner account (split proportionally from totalEarned and storeShareEarned)
+  const earnedRatio = account.totalEarned > 0 ? account.totalEarned / totalEarned : 0;
+  const fromEarned = Math.round(amount * earnedRatio);
+  const fromStoreShare = amount - fromEarned;
+
+  if (fromEarned > 0) {
+    await db.collection(Collections.ownerAccounts).doc(ownerName).update({
+      totalEarned: FieldValue.increment(-fromEarned),
+    });
+  }
+  if (fromStoreShare > 0) {
+    await db.collection(Collections.ownerAccounts).doc(ownerName).update({
+      storeShareEarned: FieldValue.increment(-fromStoreShare),
+    });
+  }
+
+  return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
+}

@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     costPrice: number;
     ownerName: string;
     ownerProfit: number;
-    platformProfit: number;
+    otherOwnerProfit: number;
   }[] = [];
 
   // Fetch settings (replaces prisma.settings.findUnique)
@@ -161,7 +161,8 @@ export async function POST(req: Request) {
     const costPrice = ((perfume.purchasePricePerMl || 0) * item.ml + bottleCost + packagingCost) * item.quantity;
     const itemProfit = totalPrice - costPrice;
     const owner = (perfume.owner || "Store") as OwnerType;
-    const { ownerProfit, platformProfit } = splitProfit(itemProfit, owner);
+    const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
+    const { ownerProfit, otherOwnerProfit } = splitProfit(itemProfit, owner, ownerProfitPercent);
 
     subtotal += totalPrice;
 
@@ -187,7 +188,7 @@ export async function POST(req: Request) {
       costPrice,
       ownerName: owner,
       ownerProfit,
-      platformProfit,
+      otherOwnerProfit,
     });
   }
 

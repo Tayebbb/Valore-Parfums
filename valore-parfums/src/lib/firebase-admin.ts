@@ -51,4 +51,9 @@ export const Collections = {
   users: "users",
   wishlists: "wishlists",
   notifications: "notifications",
+  withdrawals: "withdrawals",
+  pickupLocations: "pickupLocations",
+  requests: "requests",
+  ownerAccounts: "ownerAccounts",
+  profitTransactions: "profitTransactions",
 } as const;

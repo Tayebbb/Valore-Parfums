@@ -240,6 +240,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             >
               Track Order
             </Link>
+            <Link
+              href="/requests"
+              className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
+                pathname === "/requests" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              Requests
+            </Link>
           </nav>
 
           {/* Right Actions */}
@@ -287,6 +295,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       </Link>
                       <Link href="/wishlist" onClick={() => setUserMenuOpen(false)} className="block px-5 py-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] transition-colors">
                         Wishlist
+                      </Link>
+                      <Link href="/requests" onClick={() => setUserMenuOpen(false)} className="block px-5 py-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] transition-colors">
+                        My Requests
                       </Link>
                       <button
                         onClick={async () => { await logout(); setUserMenuOpen(false); }}
@@ -423,6 +434,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             <Link href="/track" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
               Track Order
+            </Link>
+            <Link href="/requests" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
+              Requests
             </Link>
             {!user && (
               <>

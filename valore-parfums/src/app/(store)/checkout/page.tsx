@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/store/cart";
 import { toast } from "@/components/ui/Toaster";
 import { useRouter } from "next/navigation";
@@ -26,6 +26,12 @@ export default function CheckoutPage() {
 
   const sub = subtotal();
   const total = Math.max(0, sub - discount);
+
+  useEffect(() => {
+    if (!orderId && items.length === 0) {
+      router.push("/cart");
+    }
+  }, [items.length, router, orderId]);
 
   const applyVoucher = async () => {
     if (!voucherCode) return;
@@ -100,7 +106,6 @@ export default function CheckoutPage() {
   }
 
   if (items.length === 0) {
-    router.push("/cart");
     return null;
   }
 
