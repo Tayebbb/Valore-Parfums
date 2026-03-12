@@ -39,8 +39,12 @@ export default function RequestsPage() {
   const load = () => {
     if (!user) return;
     fetch("/api/requests")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return [];
+        return r.json();
+      })
       .then((data) => { if (Array.isArray(data)) setRequests(data); })
+      .catch(() => {})
       .finally(() => setLoading(false));
   };
 
@@ -87,8 +91,13 @@ export default function RequestsPage() {
       resetForm();
       load();
     } else {
-      const err = await res.json();
-      toast(err.error || "Failed to submit request", "error");
+      const text = await res.text();
+      try {
+        const err = JSON.parse(text);
+        toast(err.error || "Failed to submit request", "error");
+      } catch {
+        toast("Failed to submit request", "error");
+      }
     }
     setSubmitting(false);
   };

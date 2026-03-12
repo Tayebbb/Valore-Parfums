@@ -18,7 +18,7 @@ export async function GET() {
 
   // Fetch all orders, perfumes, bottles, stock requests, settings, and ALL order items in parallel
   // Using collectionGroup("items") avoids N+1 subcollection reads
-  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap, ownerAccountsSnap, withdrawalsSnap] = await Promise.all([
+  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap, ownerAccountsSnap, withdrawalsSnap, fulfilledRequestsSnap] = await Promise.all([
     db.collection(Collections.orders).get(),
     db.collection(Collections.perfumes).orderBy("totalStockMl", "asc").get(),
     db.collection(Collections.bottles).orderBy("availableCount", "asc").get(),
@@ -27,6 +27,7 @@ export async function GET() {
     db.collectionGroup("items").get(),
     db.collection(Collections.ownerAccounts).get(),
     db.collection(Collections.withdrawals).get(),
+    db.collection(Collections.requests).where("status", "==", "Fulfilled").get(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -179,17 +180,33 @@ export async function GET() {
     }
   }
 
+  // Aggregate profit from fulfilled perfume requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fulfilledRequests = fulfilledRequestsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  let requestProfitTotal = 0;
+  let requestProfitToday = 0;
+  let requestProfitMonth = 0;
+
+  for (const r of fulfilledRequests) {
+    const profit = r.profit ?? 0;
+    requestProfitTotal += profit;
+    const fulfilledAt = r.fulfilledAt ? toDate(r.fulfilledAt) : null;
+    if (fulfilledAt && fulfilledAt >= startOfDay) requestProfitToday += profit;
+    if (fulfilledAt && fulfilledAt >= startOfMonth) requestProfitMonth += profit;
+  }
+
   return NextResponse.json({
     totalOrders,
     completedOrders,
     pendingOrders,
     totalRevenue,
-    totalProfit: totalProfitVal,
+    totalProfit: totalProfitVal + requestProfitTotal,
     todayOrders,
     todayRevenue,
-    todayProfit: todayProfitVal,
+    todayProfit: todayProfitVal + requestProfitToday,
     monthRevenue,
-    monthProfit: monthProfitVal,
+    monthProfit: monthProfitVal + requestProfitMonth,
+    requestProfit: { total: requestProfitTotal, today: requestProfitToday, month: requestProfitMonth },
     lowStockPerfumes,
     lowStockBottles,
     mostSold,
@@ -235,12 +252,13 @@ export async function GET() {
         const owner = w.ownerName || "Unknown";
         withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + (w.amount || 0);
       }
-      const buildBalance = (name: string) => {
+      const buildBalance = (name: string, email: string) => {
         const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
         const earned = (acct.totalEarned || 0) + (acct.storeShareEarned || 0);
         const withdrawn = withdrawalsByOwner[name] || 0;
         return {
           name,
+          email,
           totalEarned: Math.round(acct.totalEarned || 0),
           storeShareEarned: Math.round(acct.storeShareEarned || 0),
           totalWithdrawn: Math.round(withdrawn),
@@ -249,7 +267,9 @@ export async function GET() {
       };
       const o1 = settings?.owner1Name ?? "Tayeb";
       const o2 = settings?.owner2Name ?? "Enid";
-      return [buildBalance(o1), buildBalance(o2)];
+      const e1 = settings?.owner1Email ?? "";
+      const e2 = settings?.owner2Email ?? "";
+      return [buildBalance(o1, e1), buildBalance(o2, e2)];
     })(),
   });
 }

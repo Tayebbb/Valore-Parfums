@@ -22,6 +22,7 @@ const Area = dynamic(() => import("recharts").then(m => m.Area), { ssr: false })
 
 interface OwnerAccount {
   name: string;
+  email: string;
   totalEarned: number;
   storeShareEarned: number;
   totalWithdrawn: number;
@@ -79,16 +80,22 @@ const statusClass = (s: string) => `status-${s.toLowerCase().replace(/ /g, "")}`
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading, fetchUser } = useAuth();
 
-  useEffect(() => {
+  const loadDashboard = () =>
     fetch("/api/dashboard")
       .then((r) => r.json())
-      .then(setData)
-      .finally(() => setLoading(false));
+      .then(setData);
+
+  useEffect(() => {
+    if (authLoading) fetchUser();
+  }, [authLoading, fetchUser]);
+
+  useEffect(() => {
+    loadDashboard().finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="space-y-6">
         <h1 className="font-serif text-3xl font-light">Dashboard</h1>
@@ -215,10 +222,16 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Per-Owner Withdrawals — only show withdrawal form for the logged-in owner */}
-      {data.ownerAccounts && data.ownerAccounts.map((acct) => (
-        <WithdrawalsSection key={acct.name} ownerName={acct.name} availableBalance={acct.availableBalance} canWithdraw={acct.name === user?.name} />
-      ))}
+      {/* Withdrawal — only for the logged-in owner (matched by email, fallback to name) */}
+      {data.ownerAccounts && (() => {
+        const myAccount = data.ownerAccounts.find((acct) =>
+          (acct.email && user?.email && acct.email.toLowerCase() === user.email.toLowerCase()) ||
+          (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()))
+        );
+        return myAccount ? (
+          <WithdrawalsSection key={myAccount.name} ownerName={myAccount.name} availableBalance={myAccount.availableBalance} canWithdraw onWithdraw={loadDashboard} />
+        ) : null;
+      })()}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -372,7 +385,7 @@ interface Withdrawal {
   createdAt: string;
 }
 
-function WithdrawalsSection({ ownerName, availableBalance, canWithdraw }: { ownerName: string; availableBalance: number; canWithdraw: boolean }) {
+function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdraw }: { ownerName: string; availableBalance: number; canWithdraw: boolean; onWithdraw?: () => void }) {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState("");
@@ -407,6 +420,7 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw }: { owne
       setAmount("");
       setNote("");
       load();
+      onWithdraw?.();
     } else {
       const err = await res.json().catch(() => ({}));
       toast(err.error || "Failed to record withdrawal", "error");

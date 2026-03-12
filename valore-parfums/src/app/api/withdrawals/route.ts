@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 
 // GET all withdrawals — admin only
@@ -39,8 +39,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ownerName is required" }, { status: 400 });
   }
 
-  // Enforce: admin can only withdraw from their own account
-  if (admin.name !== ownerName) {
+  // Enforce: admin can only withdraw from their own account (verified by email, fallback to name)
+  const settingsDoc = await db.collection(Collections.settings).doc("default").get();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
+  const ownerEmail =
+    ownerName === (settings?.owner1Name ?? "Tayeb") ? settings?.owner1Email :
+    ownerName === (settings?.owner2Name ?? "Enid") ? settings?.owner2Email : null;
+
+  const emailMatch = ownerEmail && admin.email.toLowerCase() === ownerEmail.toLowerCase();
+  const nameMatch = !ownerEmail && admin.name.toLowerCase().includes(ownerName.toLowerCase());
+
+  if (!emailMatch && !nameMatch) {
     return NextResponse.json({ error: "You can only withdraw from your own account" }, { status: 403 });
   }
 
@@ -85,22 +95,6 @@ export async function POST(req: Request) {
     description: `Withdrawal by ${admin.name}${note ? `: ${String(note).slice(0, 200)}` : ""}`,
     createdAt: now,
   });
-
-  // Deduct from owner account (split proportionally from totalEarned and storeShareEarned)
-  const earnedRatio = account.totalEarned > 0 ? account.totalEarned / totalEarned : 0;
-  const fromEarned = Math.round(amount * earnedRatio);
-  const fromStoreShare = amount - fromEarned;
-
-  if (fromEarned > 0) {
-    await db.collection(Collections.ownerAccounts).doc(ownerName).update({
-      totalEarned: FieldValue.increment(-fromEarned),
-    });
-  }
-  if (fromStoreShare > 0) {
-    await db.collection(Collections.ownerAccounts).doc(ownerName).update({
-      storeShareEarned: FieldValue.increment(-fromStoreShare),
-    });
-  }
 
   return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }
