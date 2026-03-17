@@ -127,16 +127,43 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const voucher = voucherSnap.docs[0].data() as any;
           if (voucher.isActive) {
-            discount = voucher.discountType === "percentage"
-              ? Math.round((subtotal * Number(voucher.discountValue || 0)) / 100)
-              : Number(voucher.discountValue || 0);
-            discount = Math.max(0, Math.min(discount, subtotal));
+            // Enforce the same rules as /api/vouchers/validate: expiry, usage limit, minOrderValue.
+            const voucherExpiry = voucher.expiresAt || voucher.expiryDate || null;
+            let isExpired = false;
+            if (voucherExpiry) {
+              // Prefer Firestore Timestamp semantics if available, otherwise fall back to Date.
+              if (typeof voucherExpiry.toMillis === "function" && typeof now.toMillis === "function") {
+                isExpired = voucherExpiry.toMillis() < now.toMillis();
+              } else {
+                const expiryDate = new Date(voucherExpiry);
+                const nowDate = new Date();
+                if (!isNaN(expiryDate.getTime())) {
+                  isExpired = expiryDate.getTime() < nowDate.getTime();
+                }
+              }
+            }
 
-            if (!voucherAppliedAt && discount > 0) {
-              await db.collection(Collections.vouchers).doc(voucherSnap.docs[0].id).update({
-                usedCount: FieldValue.increment(1),
-              });
-              voucherAppliedAt = now;
+            const usageLimit = Number(voucher.usageLimit ?? 0);
+            const currentUsedCount = Number(voucher.usedCount ?? 0);
+            const overUsageLimit = usageLimit > 0 && currentUsedCount >= usageLimit;
+
+            const minOrderValue = Number(voucher.minOrderValue ?? 0);
+            const belowMinOrderValue = minOrderValue > 0 && subtotal < minOrderValue;
+
+            if (!isExpired && !overUsageLimit && !belowMinOrderValue) {
+              discount = voucher.discountType === "percentage"
+                ? Math.round((subtotal * Number(voucher.discountValue || 0)) / 100)
+                : Number(voucher.discountValue || 0);
+              discount = Math.max(0, Math.min(discount, subtotal));
+
+              if (!voucherAppliedAt && discount > 0) {
+                await db.collection(Collections.vouchers).doc(voucherSnap.docs[0].id).update({
+                  usedCount: FieldValue.increment(1),
+                });
+                voucherAppliedAt = now;
+              }
+            } else {
+              discount = 0;
             }
           } else {
             discount = 0;
