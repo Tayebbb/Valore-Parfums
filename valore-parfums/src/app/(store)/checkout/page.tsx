@@ -91,7 +91,7 @@ export default function CheckoutPage() {
           <p className="font-mono text-lg text-[var(--gold)]">{orderId.slice(0, 8)}</p>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
-          Save your Order ID to track your order status.
+          You can monitor updates anytime from My Orders.
         </p>
         <Link
           href="/"

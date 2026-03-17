@@ -4,7 +4,7 @@ import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMarg
 import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
-import { requireAdmin } from "@/lib/auth";
+import { getSessionUser, requireAdmin } from "@/lib/auth";
 
 // GET all orders — admin only
 export async function GET(req: Request) {
@@ -60,6 +60,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json();
   const { items, voucherCode, ...orderData } = body;
+  const sessionUser = await getSessionUser();
 
   let subtotal = 0;
   const orderItems: {
@@ -189,6 +190,8 @@ export async function POST(req: Request) {
   const now = Timestamp.now();
   const orderDoc = {
     ...orderData,
+    userId: sessionUser?.id ?? null,
+    customerEmail: orderData.customerEmail || sessionUser?.email || "",
     status: orderData.status || "Pending",
     voucherCode: voucherCode || null,
     discount,
