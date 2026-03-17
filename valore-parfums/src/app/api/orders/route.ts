@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
-import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
+import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit, normalizeOrderImagePath } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
-
-function normalizeOrderImagePath(value: unknown): string {
-  if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
-    return trimmed;
-  }
-  return `/${trimmed}`;
-}
 
 // GET all orders — admin only
 export async function GET(req: Request) {
