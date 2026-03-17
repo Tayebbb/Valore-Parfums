@@ -6,14 +6,16 @@ import { toast } from "@/components/ui/Toaster";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle } from "lucide-react";
+import { useAuth } from "@/store/auth";
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const router = useRouter();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
-    customerEmail: "",
+    customerEmail: user?.email || "",
     pickupMethod: "Pickup",
   });
   const [voucherCode, setVoucherCode] = useState("");

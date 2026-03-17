@@ -8,11 +8,45 @@ import { getSessionUser, requireAdmin } from "@/lib/auth";
 
 // GET all orders — admin only
 export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const userParam = searchParams.get("user");
+  const status = searchParams.get("status");
+
+  // If user=me, return only orders for logged-in user
+  if (userParam === "me") {
+    const { getSessionUser } = await import("@/lib/auth");
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Fetch all orders for this user
+    const ordersSnap = await db.collection(Collections.orders).where("customerEmail", "==", user.email).get();
+    
+    // Return order summaries without fetching items subcollections (much faster)
+    let allOrders = ordersSnap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      items: [],
+    }));
+    if (status) {
+      allOrders = allOrders.filter((o) => o.status === status);
+    }
+    // Sort by createdAt descending (in memory to avoid composite index requirement)
+    allOrders.sort((a, b) => {
+      const da = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+      const db2 = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return db2.getTime() - da.getTime();
+    });
+    const normalized = allOrders.map((o) => serializeDoc({
+      ...o,
+      status: o.status || "Pending",
+      totalAmount: o.totalAmount ?? o.subtotal ?? 0,
+      finalAmount: o.finalAmount ?? o.total ?? 0,
+    }));
+    return NextResponse.json(normalized);
+  }
+
+  // Otherwise, admin only
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
 
   // Fetch orders and all items in parallel (avoids N+1 subcollection reads)
   const [ordersSnap, allItemsSnap] = await Promise.all([
