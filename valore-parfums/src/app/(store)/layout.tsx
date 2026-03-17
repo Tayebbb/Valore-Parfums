@@ -238,7 +238,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 pathname === "/track" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
-              Track Order
+              My Orders
             </Link>
             <Link
               href="/requests"
@@ -433,7 +433,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               ))}
             </div>
             <Link href="/track" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
-              Track Order
+              My Orders
             </Link>
             <Link href="/requests" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
               Requests
@@ -491,7 +491,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div>
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Account</h3>
               <ul className="space-y-2.5">
-                <li><Link href="/track" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Track Order</Link></li>
+                <li><Link href="/track" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">My Orders</Link></li>
                 <li><Link href="/wishlist" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Wishlist</Link></li>
                 <li><Link href="/cart" className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">Cart</Link></li>
                 {/* Admin Panel button removed */}
