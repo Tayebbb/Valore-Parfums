@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
+function normalizeOrderImagePath(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  return `/${trimmed}`;
+}
+
 // GET /api/orders/my - returns orders for the authenticated user only
 export async function GET() {
   const user = await getSessionUser();
@@ -24,11 +34,27 @@ export async function GET() {
 
   const orderDocs = Array.from(orderDocsMap.values());
 
+  const missingImagePerfumeIds = new Set<string>();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ordersWithItems: any[] = await Promise.all(
     orderDocs.map(async (doc) => {
       const itemsSnap = await db.collection(Collections.orders).doc(doc.id).collection("items").get();
-      const items = itemsSnap.docs.map((itemDoc) => ({ id: itemDoc.id, ...itemDoc.data() }));
+      const items = itemsSnap.docs.map((itemDoc) => {
+        const itemData = itemDoc.data();
+        const perfumeImage = normalizeOrderImagePath(itemData.perfumeImage);
+        const perfumeId = typeof itemData.perfumeId === "string" ? itemData.perfumeId.trim() : "";
+
+        if (!perfumeImage && perfumeId) {
+          missingImagePerfumeIds.add(perfumeId);
+        }
+
+        return {
+          id: itemDoc.id,
+          ...itemData,
+          perfumeImage,
+        };
+      });
       const data = doc.data();
 
       return {
@@ -41,6 +67,41 @@ export async function GET() {
       };
     }),
   );
+
+  const perfumeImageById = new Map<string, string>();
+  if (missingImagePerfumeIds.size > 0) {
+    await Promise.all(
+      [...missingImagePerfumeIds].map(async (perfumeId) => {
+        const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
+        if (!perfumeDoc.exists) return;
+        const perfume = perfumeDoc.data();
+        if (!perfume) return;
+
+        const images: string[] = (() => {
+          try {
+            return JSON.parse(perfume.images || "[]");
+          } catch {
+            return [];
+          }
+        })();
+
+        const fallbackImage = normalizeOrderImagePath(images[0]);
+        if (fallbackImage) {
+          perfumeImageById.set(perfumeId, fallbackImage);
+        }
+      }),
+    );
+  }
+
+  for (const order of ordersWithItems) {
+    order.items = (order.items || []).map((item: { perfumeId?: string; perfumeImage?: string }) => {
+      if (item.perfumeImage) return item;
+      return {
+        ...item,
+        perfumeImage: perfumeImageById.get(item.perfumeId || "") || "",
+      };
+    });
+  }
 
   ordersWithItems.sort((a, b) => {
     const da = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);

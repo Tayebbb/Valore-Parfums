@@ -6,6 +6,16 @@ import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 
+function normalizeOrderImagePath(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  return `/${trimmed}`;
+}
+
 // GET all orders — admin only
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -96,11 +106,28 @@ export async function POST(req: Request) {
   const { items, voucherCode, ...orderData } = body;
   const sessionUser = await getSessionUser();
 
+  const hasFullBottle = Array.isArray(items) && items.some((i: { isFullBottle?: boolean }) => Boolean(i.isFullBottle));
+  if (hasFullBottle) {
+    if (!String(orderData.customerPhone || "").trim()) {
+      return NextResponse.json({ error: "Phone number is required for full bottle orders" }, { status: 400 });
+    }
+    if (!String(orderData.deliveryAddress || "").trim()) {
+      return NextResponse.json({ error: "Delivery address is required for full bottle orders" }, { status: 400 });
+    }
+    const missingItemSize = items.some((i: { isFullBottle?: boolean; fullBottleSize?: string }) => Boolean(i.isFullBottle) && !String(i.fullBottleSize || "").trim());
+    if (missingItemSize) {
+      return NextResponse.json({ error: "Desired bottle size is required for full bottle items" }, { status: 400 });
+    }
+  }
+
   let subtotal = 0;
   const orderItems: {
     perfumeId: string;
     perfumeName: string;
+    perfumeImage?: string;
     ml: number;
+    isFullBottle?: boolean;
+    fullBottleSize?: string;
     quantity: number;
     unitPrice: number;
     totalPrice: number;
@@ -128,12 +155,28 @@ export async function POST(req: Request) {
     if (!perfumeDoc.exists) continue;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const perfume = { id: perfumeDoc.id, ...perfumeDoc.data() } as any;
+    const perfumeImages: string[] = (() => {
+      try {
+        return JSON.parse(perfume.images || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const perfumeImage = normalizeOrderImagePath(perfumeImages[0]);
+
+    const isFullBottleItem = Boolean(item.isFullBottle);
+    const requestedFullBottleSize = String(item.fullBottleSize || "").trim();
+    const requestedFullBottleMl = isFullBottleItem
+      ? Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || 0
+      : item.ml;
 
     // Fetch bottle (replaces prisma.bottleInventory.findUnique by ml)
-    const bottleSnap = await db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1).get();
+    const bottleSnap = isFullBottleItem
+      ? null
+      : await db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1).get();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bottle = bottleSnap.empty ? null : { id: bottleSnap.docs[0].id, ...bottleSnap.docs[0].data() } as any;
-    const bottleCost = bottle?.costPerBottle ?? 0;
+    const bottle = bottleSnap && !bottleSnap.empty ? { id: bottleSnap.docs[0].id, ...bottleSnap.docs[0].data() } as any : null;
+    const bottleCost = isFullBottleItem ? 0 : (bottle?.costPerBottle ?? 0);
 
     // Personal collection: market price = purchase price
     const effectiveMarketPricePerMl = perfume.isPersonalCollection
@@ -142,15 +185,17 @@ export async function POST(req: Request) {
 
     const fullBottlePrice = effectiveMarketPricePerMl * 100;
     const tier = getBrandTier(fullBottlePrice);
-    const profitMargin = getTierProfitMargin(tier, item.ml, margins);
+    const profitMargin = getTierProfitMargin(tier, requestedFullBottleMl || item.ml, margins);
 
-    let unitPrice = calculateSellingPrice(
-      effectiveMarketPricePerMl,
-      item.ml,
-      bottleCost,
-      packagingCost,
-      profitMargin,
-    );
+    let unitPrice = isFullBottleItem
+      ? 0
+      : calculateSellingPrice(
+        effectiveMarketPricePerMl,
+        requestedFullBottleMl,
+        bottleCost,
+        packagingCost,
+        profitMargin,
+      );
 
     // Apply bulk discount if applicable
     const bulkRule = bulkRules.find((r: { minQuantity: number }) => item.quantity >= r.minQuantity);
@@ -159,21 +204,27 @@ export async function POST(req: Request) {
     }
 
     const totalPrice = unitPrice * item.quantity;
-    const costPrice = ((perfume.purchasePricePerMl || 0) * item.ml + bottleCost + packagingCost) * item.quantity;
+    const costPrice = isFullBottleItem
+      ? 0
+      : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + bottleCost + packagingCost) * item.quantity;
     const itemProfit = totalPrice - costPrice;
     const owner = (perfume.owner || "Store") as OwnerType;
     const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
     const { ownerProfit, otherOwnerProfit } = splitProfit(itemProfit, owner, ownerProfitPercent);
 
-    subtotal += totalPrice;
+    if (!isFullBottleItem) {
+      subtotal += totalPrice;
+    }
 
     // Deduct stock (replaces prisma.perfume.update with decrement)
-    await db.collection(Collections.perfumes).doc(item.perfumeId).update({
-      totalStockMl: FieldValue.increment(-(item.ml * item.quantity)),
-    });
+    if (!isFullBottleItem) {
+      await db.collection(Collections.perfumes).doc(item.perfumeId).update({
+        totalStockMl: FieldValue.increment(-(requestedFullBottleMl * item.quantity)),
+      });
+    }
 
     // Deduct bottle (replaces prisma.bottleInventory.update with decrement)
-    if (bottle && bottle.availableCount > 0) {
+    if (!isFullBottleItem && bottle && bottle.availableCount > 0) {
       await db.collection(Collections.bottles).doc(bottle.id).update({
         availableCount: FieldValue.increment(-item.quantity),
       });
@@ -182,7 +233,10 @@ export async function POST(req: Request) {
     orderItems.push({
       perfumeId: item.perfumeId,
       perfumeName: perfume.name,
-      ml: item.ml,
+      perfumeImage,
+      ml: requestedFullBottleMl,
+      isFullBottle: isFullBottleItem,
+      fullBottleSize: isFullBottleItem ? requestedFullBottleSize : undefined,
       quantity: item.quantity,
       unitPrice,
       totalPrice,
@@ -195,7 +249,7 @@ export async function POST(req: Request) {
 
   // Apply voucher (replaces prisma.voucher.findUnique + update)
   let discount = 0;
-  if (voucherCode) {
+  if (voucherCode && !hasFullBottle) {
     const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
     if (!voucherSnap.empty) {
       const voucherDoc = voucherSnap.docs[0];
@@ -226,6 +280,8 @@ export async function POST(req: Request) {
     ...orderData,
     userId: sessionUser?.id ?? null,
     customerEmail: orderData.customerEmail || sessionUser?.email || "",
+    hasFullBottle,
+    deliveryAddress: orderData.deliveryAddress || "",
     status: orderData.status || "Pending",
     voucherCode: voucherCode || null,
     discount,

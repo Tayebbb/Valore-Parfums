@@ -17,6 +17,9 @@ interface Perfume {
   category: string;
   images: string;
   totalStockMl: number;
+  marketPricePerMl: number;
+  isPersonalCollection?: boolean;
+  purchasePricePerMl?: number;
 }
 
 interface PriceOption {
@@ -43,6 +46,8 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   const [prices, setPrices] = useState<PriceOption[]>([]);
   const [bulkRules, setBulkRules] = useState<BulkRule[]>([]);
   const [selectedMl, setSelectedMl] = useState<number | null>(null);
+  const [selectedOption, setSelectedOption] = useState<"decant" | "full-bottle">("decant");
+  const [fullBottleSize, setFullBottleSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showRequest, setShowRequest] = useState(false);
@@ -98,21 +103,37 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   // Calculate bulk discount for current quantity
   const activeBulkRule = bulkRules.find((r) => quantity >= r.minQuantity);
   const bulkDiscountPercent = activeBulkRule?.discountPercent ?? 0;
-  const effectiveUnitPrice = selectedPrice ? Math.ceil(selectedPrice.sellingPrice * (1 - bulkDiscountPercent / 100)) : 0;
+  const decantUnitPrice = selectedPrice ? Math.ceil(selectedPrice.sellingPrice * (1 - bulkDiscountPercent / 100)) : 0;
+  const effectiveUnitPrice = selectedOption === "full-bottle" ? 0 : decantUnitPrice;
   const totalDisplayPrice = effectiveUnitPrice * quantity;
 
   const handleAddToCart = () => {
-    if (!perfume || !selectedPrice) return;
+    if (!perfume) return;
+
+    if (selectedOption === "decant" && !selectedPrice) return;
+    if (selectedOption === "full-bottle" && !fullBottleSize.trim()) {
+      toast("Please enter desired bottle size (e.g., 50ml, 100ml)", "error");
+      return;
+    }
+
     addItem({
       perfumeId: perfume.id,
       perfumeName: perfume.name,
-      ml: selectedPrice.ml,
+      ml: selectedOption === "full-bottle" ? 0 : (selectedPrice?.ml ?? 0),
+      isFullBottle: selectedOption === "full-bottle",
+      fullBottleSize: selectedOption === "full-bottle" ? fullBottleSize.trim() : undefined,
       quantity,
       unitPrice: effectiveUnitPrice,
       image: images[0],
     });
-    toast(`${perfume.name} ${selectedPrice.ml}ml added to cart`, "success");
+    toast(
+      selectedOption === "full-bottle"
+        ? `${perfume.name} Full Bottle request added to cart`
+        : `${perfume.name} ${selectedPrice?.ml}ml added to cart`,
+      "success",
+    );
     setQuantity(1);
+    if (selectedOption === "full-bottle") setFullBottleSize("");
   };
 
   const submitRequest = async () => {
@@ -227,14 +248,42 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
           {/* Size Selector */}
           <div>
             <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-3">Select Size</h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setSelectedOption("full-bottle")}
+                className={`px-5 py-3 rounded text-sm transition-all ${
+                  selectedOption === "full-bottle"
+                    ? "bg-[var(--gold)] text-black"
+                    : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+                }`}
+              >
+                <span className="font-serif text-base">Full Bottle</span>
+              </button>
+              <button
+                onClick={() => setSelectedOption("decant")}
+                className={`px-5 py-3 rounded text-sm transition-all ${
+                  selectedOption === "decant"
+                    ? "bg-[var(--gold)] text-black"
+                    : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+                }`}
+              >
+                <span className="font-serif text-base">Decant</span>
+              </button>
+            </div>
+
+            {selectedOption === "decant" && (
+              <div className="flex flex-wrap gap-2">
               {prices.map((p) => (
                 <button
                   key={p.ml}
-                  onClick={() => p.available && setSelectedMl(p.ml)}
+                  onClick={() => {
+                    if (!p.available) return;
+                    setSelectedOption("decant");
+                    setSelectedMl(p.ml);
+                  }}
                   disabled={!p.available}
                   className={`px-5 py-3 rounded text-sm transition-all ${
-                    selectedMl === p.ml
+                    selectedOption === "decant" && selectedMl === p.ml
                       ? "bg-[var(--gold)] text-black"
                       : p.available
                       ? "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
@@ -247,11 +296,30 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
                   </span>
                 </button>
               ))}
-            </div>
+              </div>
+            )}
+
+            {selectedOption === "full-bottle" && (
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] block">
+                  Desired Bottle Size *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., 50ml, 100ml"
+                  value={fullBottleSize}
+                  onChange={(e) => setFullBottleSize(e.target.value)}
+                  className="w-full md:w-[320px] bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
+                />
+                <p className="text-xs text-[var(--text-muted)]">
+                  Price is not fixed for Full Bottle requests. Admin will confirm pricing manually after order placement.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Quantity */}
-          {selectedPrice && selectedPrice.available && (
+          {(selectedOption === "full-bottle" || (selectedPrice && selectedPrice.available)) && (
             <div>
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-3">Quantity</h3>
               <div className="flex items-center gap-3">
@@ -273,13 +341,13 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
           )}
 
           {/* Price Display */}
-          {selectedPrice && (
+          {selectedOption === "decant" && selectedPrice && (
             <div className="py-4 space-y-3">
               <div className="flex items-baseline gap-3">
                 <p className="font-serif text-3xl text-[var(--gold)]">
                   {totalDisplayPrice.toLocaleString("en-BD")} BDT
                 </p>
-                {bulkDiscountPercent > 0 && (
+                {selectedOption === "decant" && bulkDiscountPercent > 0 && (
                   <span className="text-xs bg-[var(--success)]/20 text-[var(--success)] px-2 py-0.5 rounded">
                     {bulkDiscountPercent}% bulk discount
                   </span>
@@ -292,7 +360,7 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
               )}
 
               {/* Bulk pricing tiers hint */}
-              {bulkRules.length > 0 && (
+              {selectedOption === "decant" && bulkRules.length > 0 && (
                 <div className="text-xs text-[var(--text-muted)] space-y-0.5">
                   {bulkRules.map((r, i) => (
                     <p key={i} className={quantity >= r.minQuantity ? "text-[var(--gold)]" : ""}>
@@ -306,7 +374,7 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
           )}
 
           {/* Add to Cart */}
-          {selectedPrice?.available ? (
+          {selectedOption === "full-bottle" || selectedPrice?.available ? (
             <button
               onClick={handleAddToCart}
               className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"

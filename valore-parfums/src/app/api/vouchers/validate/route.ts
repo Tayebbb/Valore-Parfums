@@ -3,7 +3,7 @@ import { db, Collections } from "@/lib/prisma";
 
 // POST validate voucher code (replaces prisma.voucher.findUnique)
 export async function POST(req: Request) {
-  const { code, orderTotal } = await req.json();
+  const { code, orderTotal, hasFullBottle } = await req.json();
 
   // Firestore: query vouchers by code (replaces prisma.voucher.findUnique({ where: { code } }))
   const snap = await db.collection(Collections.vouchers).where("code", "==", code).limit(1).get();
@@ -20,7 +20,8 @@ export async function POST(req: Request) {
   }
   if (voucher.usedCount >= voucher.usageLimit)
     return NextResponse.json({ error: "Voucher usage limit reached" }, { status: 400 });
-  if (orderTotal < voucher.minOrderValue)
+  // Full Bottle requests are manually priced later, so allow voucher application even when current cart total is low.
+  if (!hasFullBottle && orderTotal < voucher.minOrderValue)
     return NextResponse.json({ error: `Minimum order value: ${voucher.minOrderValue}` }, { status: 400 });
 
   let discount = 0;

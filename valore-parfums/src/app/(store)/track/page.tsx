@@ -10,11 +10,21 @@ interface OrderResult {
   status: string;
   totalAmount: number;
   discount: number;
+  voucherCode?: string | null;
   finalAmount: number;
   pickupMethod: string;
   customerName: string;
   createdAt: string;
-  items: { perfumeName: string; ml: number; quantity: number; unitPrice: number }[];
+  items: {
+    perfumeId?: string;
+    perfumeName: string;
+    perfumeImage?: string;
+    ml: number;
+    isFullBottle?: boolean;
+    fullBottleSize?: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
 }
 
 const statusSteps = ["Pending", "Processing", "Out for Delivery", "Completed"];
@@ -24,6 +34,17 @@ const pastStatuses = new Set(["completed", "delivered", "cancelled"]);
 const statusClass = (status: string) => {
   const normalized = (status ?? "").toLowerCase().replace(/\s+/g, "");
   return `status-${normalized}`;
+};
+
+const productPlaceholderImage = "/images/perfume-placeholder.svg";
+
+const resolveImageSrc = (value?: string) => {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return productPlaceholderImage;
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) {
+    return raw;
+  }
+  return `/${raw}`;
 };
 
 const statusIcon = (status: string) => {
@@ -193,8 +214,78 @@ export default function TrackOrderPage() {
           <div>
             <span className="text-[var(--text-muted)]">Total</span>
             <p className="font-serif text-[var(--gold)]">{(order.finalAmount ?? 0).toLocaleString("en-BD")} BDT</p>
+            {Boolean(order.voucherCode) && (order.discount ?? 0) > 0 && (
+              <p className="text-[10px] text-[var(--success)]">-{(order.discount ?? 0).toLocaleString("en-BD")} via {order.voucherCode}</p>
+            )}
+            {Boolean(order.voucherCode) && (order.discount ?? 0) <= 0 && (
+              <p className="text-[10px] text-[var(--text-muted)]">Voucher {order.voucherCode} will apply after pricing confirmation</p>
+            )}
           </div>
         </div>
+
+        {(order.items?.length ?? 0) > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Products</p>
+            <div className="space-y-2">
+              {order.items.map((item, idx) => {
+                const sizeLabel = item.isFullBottle
+                  ? `Full Bottle (${item.fullBottleSize || "Custom"})`
+                  : `${item.ml}ml`;
+                const imageSrc = resolveImageSrc(item.perfumeImage);
+                const productHref = item.perfumeId ? `/perfume/${item.perfumeId}` : "";
+
+                return (
+                  <div
+                    key={`${order.id}-${item.perfumeName}-${idx}`}
+                    className="flex items-center gap-3 p-2.5 rounded border border-[var(--border)] bg-[var(--bg-surface)]"
+                  >
+                    {productHref ? (
+                      <Link href={productHref} className="flex items-center gap-3 min-w-0 flex-1 group">
+                        <div className="w-12 h-12 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
+                          <img
+                            src={imageSrc}
+                            alt={item.perfumeName}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.src.endsWith(productPlaceholderImage)) return;
+                              target.src = productPlaceholderImage;
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm truncate group-hover:text-[var(--gold)] transition-colors">{item.perfumeName}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{sizeLabel} × {item.quantity}</p>
+                        </div>
+                      </Link>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
+                          <img
+                            src={imageSrc}
+                            alt={item.perfumeName}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.src.endsWith(productPlaceholderImage)) return;
+                              target.src = productPlaceholderImage;
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm truncate">{item.perfumeName}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{sizeLabel} × {item.quantity}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
