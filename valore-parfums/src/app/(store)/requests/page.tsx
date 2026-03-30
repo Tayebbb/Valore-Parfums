@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/ui/Toaster";
 import { Send, Package, FlaskConical } from "lucide-react";
@@ -24,7 +24,7 @@ const mlOptions = [3, 6, 10, 15];
 export default function RequestsPage() {
   const { user, loading: authLoading } = useAuth();
   const [requests, setRequests] = useState<UserRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,8 +36,9 @@ export default function RequestsPage() {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!user) return;
+    setLoading(true);
     fetch("/api/requests")
       .then((r) => {
         if (!r.ok) return [];
@@ -46,9 +47,15 @@ export default function RequestsPage() {
       .then((data) => { if (Array.isArray(data)) setRequests(data); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
+  }, [user]);
 
-  useEffect(() => { if (user) load(); else setLoading(false); }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    const timer = window.setTimeout(() => {
+      load();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [user, load]);
 
   const resetForm = () => {
     setPerfumeName("");

@@ -4,20 +4,31 @@ import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 
+const NOTIFICATIONS_CACHE_TTL = 30_000;
+const notificationsCache = new Map<string, { data: unknown[]; ts: number }>();
+
 // GET — return notifications (replaces prisma.notification.findMany)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const activeOnly = searchParams.get("active") === "true";
-
-  // Fetch all then filter/sort in memory to avoid Firestore composite index requirement
-  const snap = await db.collection(Collections.notifications).get();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let notifications: any[] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  if (activeOnly) {
-    notifications = notifications.filter((n) => n.isActive === true);
+  const cacheKey = activeOnly ? "active" : "all";
+  const cached = notificationsCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < NOTIFICATIONS_CACHE_TTL) {
+    return NextResponse.json(cached.data);
   }
+
+  const baseQuery = activeOnly
+    ? db.collection(Collections.notifications).where("isActive", "==", true)
+    : db.collection(Collections.notifications);
+
+  const snap = await baseQuery.get();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const notifications: any[] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   notifications.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  return NextResponse.json(notifications.map(serializeDoc));
+
+  const payload = notifications.map(serializeDoc);
+  notificationsCache.set(cacheKey, { data: payload, ts: Date.now() });
+  return NextResponse.json(payload);
 }
 
 // POST — create notification — admin only
@@ -34,6 +45,7 @@ export async function POST(req: Request) {
       createdAt: Timestamp.now(),
     };
     await db.collection(Collections.notifications).doc(id).set(data);
+    notificationsCache.clear();
     return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to create notification" }, { status: 500 });

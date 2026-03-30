@@ -21,7 +21,8 @@ export async function GET(req: Request) {
     const ordersSnap = await db.collection(Collections.orders).where("customerEmail", "==", user.email).get();
     
     // Return order summaries without fetching items subcollections (much faster)
-    let allOrders = ordersSnap.docs.map((doc) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let allOrders: any[] = ordersSnap.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       items: [],

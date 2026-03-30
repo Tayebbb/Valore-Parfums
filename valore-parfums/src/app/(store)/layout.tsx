@@ -9,6 +9,9 @@ import { useTheme } from "@/store/theme";
 import { useAuth } from "@/store/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 
+const ANNOUNCEMENTS_CACHE_KEY = "vp-announcements";
+const ANNOUNCEMENTS_CACHE_TTL = 60_000;
+
 const shopDropdown = [
   { label: "For Him", href: "/shop?category=Men" },
   { label: "For Her", href: "/shop?category=Women" },
@@ -89,17 +92,56 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMounted(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
 
   useEffect(() => {
+    let cacheTimer: number | null = null;
+
+    try {
+      const cached = sessionStorage.getItem(ANNOUNCEMENTS_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as { ts: number; data: { id: string; message: string }[] };
+        if (Date.now() - parsed.ts < ANNOUNCEMENTS_CACHE_TTL) {
+          cacheTimer = window.setTimeout(() => {
+            setAnnouncements(parsed.data || []);
+          }, 0);
+          return () => {
+            if (cacheTimer !== null) window.clearTimeout(cacheTimer);
+          };
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+
     fetch("/api/notifications?active=true")
       .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data) && data.length > 0) setAnnouncements(data); })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAnnouncements(data);
+          sessionStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+        }
+      })
       .catch(() => {});
+
+    return () => {
+      if (cacheTimer !== null) window.clearTimeout(cacheTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounce.current) {
+        clearTimeout(searchDebounce.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -121,8 +163,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [userMenuOpen]);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
-    setOpenDropdown(null);
+    const timer = window.setTimeout(() => {
+      setMobileMenuOpen(false);
+      setOpenDropdown(null);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   const cartCount = items.reduce((s, i) => s + i.quantity, 0);

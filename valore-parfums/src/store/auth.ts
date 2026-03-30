@@ -18,18 +18,40 @@ interface AuthStore {
   logout: () => Promise<void>;
 }
 
+const AUTH_ME_TTL = 30_000;
+let lastFetchAt = 0;
+let inFlightFetch: Promise<{ kind: "fetched"; user: UserInfo | null }> | null = null;
+
+async function fetchMeOnce(): Promise<{ kind: "fetched"; user: UserInfo | null } | { kind: "skipped" }> {
+  const now = Date.now();
+  if (inFlightFetch) return inFlightFetch;
+  if (now - lastFetchAt < AUTH_ME_TTL) return { kind: "skipped" };
+
+  inFlightFetch = fetch("/api/auth/me")
+    .then(async (res) => {
+      if (!res.ok) return { kind: "fetched", user: null } as const;
+      return { kind: "fetched", user: (await res.json()) as UserInfo | null } as const;
+    })
+    .catch(() => ({ kind: "fetched", user: null } as const))
+    .finally(() => {
+      lastFetchAt = Date.now();
+      inFlightFetch = null;
+    });
+
+  return inFlightFetch;
+}
+
 export const useAuth = create<AuthStore>((set) => ({
   user: null,
   loading: true,
 
   fetchUser: async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      const data = await res.json();
-      set({ user: data, loading: false });
-    } catch {
-      set({ user: null, loading: false });
+    const data = await fetchMeOnce();
+    if (data.kind === "fetched") {
+      set({ user: data.user, loading: false });
+      return;
     }
+    set((state) => ({ loading: false, user: state.user }));
   },
 
   login: async (email, password) => {
@@ -43,6 +65,7 @@ export const useAuth = create<AuthStore>((set) => ({
       return err.error || "Login failed";
     }
     const user = await res.json();
+    lastFetchAt = Date.now();
     set({ user });
     return null;
   },
@@ -58,12 +81,14 @@ export const useAuth = create<AuthStore>((set) => ({
       return err.error || "Signup failed";
     }
     const user = await res.json();
+    lastFetchAt = Date.now();
     set({ user });
     return null;
   },
 
   logout: async () => {
     await fetch("/api/auth/logout", { method: "POST" });
+    lastFetchAt = Date.now();
     set({ user: null });
   },
 }));
