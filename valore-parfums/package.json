@@ -6,12 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "seed": "npx tsx prisma/seed.ts"
+    "lint": "eslint"
   },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
-  },
+
   "dependencies": {
     "date-fns": "^4.1.0",
     "firebase-admin": "^13.7.0",
