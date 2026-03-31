@@ -113,7 +113,7 @@ export default function WishlistPage() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-serif text-lg font-light leading-tight">{item.perfume.name}</h3>
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)] mt-1">{item.perfume.brand}</p>
+                    <p className="text-sm md:text-base leading-relaxed font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mt-1">{item.perfume.brand}</p>
                   </div>
                 </Link>
                 <button

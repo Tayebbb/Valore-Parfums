@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Package,
   FlaskConical,
+  Sparkles,
   Wine,
   Settings,
   ShoppingCart,
@@ -21,6 +22,7 @@ import {
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/inventory", label: "Inventory", icon: Package },
+  { href: "/admin/notes-library", label: "Notes Library", icon: Sparkles },
   { href: "/admin/decant-sizes", label: "Decant Sizes", icon: FlaskConical },
   { href: "/admin/bottles", label: "Bottles", icon: Wine },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },

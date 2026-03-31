@@ -4,6 +4,41 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
 
+interface FragranceNotes {
+  top: string[];
+  middle: string[];
+  base: string[];
+  all?: string[];
+}
+
+interface FragranceNoteIds {
+  top: string[];
+  middle: string[];
+  base: string[];
+  all?: string[];
+}
+
+interface NotesLibraryCategory {
+  id: string;
+  label: string;
+  emphasis?: "high" | "trending" | "core";
+  notes: string[];
+}
+
+interface NotesLibraryNote {
+  id: string;
+  label: string;
+  categoryId: string;
+  categoryLabel: string;
+  emphasis?: "high" | "trending" | "core";
+}
+
+interface NotesLibraryPayload {
+  categories: NotesLibraryCategory[];
+  notes: NotesLibraryNote[];
+  noteLabels: string[];
+}
+
 interface Perfume {
   id: string;
   name: string;
@@ -21,6 +56,30 @@ interface Perfume {
   isActive: boolean;
   owner: string;
   isPersonalCollection: boolean;
+  fragranceNotes?: FragranceNotes;
+  fragranceNoteIds?: FragranceNoteIds;
+}
+
+interface PerfumeForm {
+  name: string;
+  brand: string;
+  inspiredBy: string;
+  description: string;
+  category: string;
+  images: string;
+  marketPricePerMl: number;
+  purchasePricePerMl: number;
+  lowStockThreshold: number;
+  season: string;
+  isBestSeller: boolean;
+  isActive: boolean;
+  owner: string;
+  isPersonalCollection: boolean;
+  fragranceNotes: FragranceNotes;
+  fragranceNoteIds: FragranceNoteIds;
+  bottleSizeMl: number;
+  marketPriceWhole: number;
+  purchasePriceWhole: number;
 }
 
 const categories = ["Men", "Women", "Unisex", "Oud", "Premium", "Budget"];
@@ -29,34 +88,122 @@ const seasons = ["Summer", "Winter", "Spring", "Fall", ""];
 
 const owners = ["Store", "Tayeb", "Enid"];
 
-const emptyPerfume = {
-  name: "",
-  brand: "",
-  inspiredBy: "",
-  description: "",
-  category: "Unisex",
-  images: "[]",
-  marketPricePerMl: 0,
-  purchasePricePerMl: 0,
-  lowStockThreshold: 20,
-  season: "",
-  isBestSeller: false,
-  isActive: true,
-  owner: "Store",
-  isPersonalCollection: false,
-  // UI-only fields
-  bottleSizeMl: 0,
-  marketPriceWhole: 0,
-  purchasePriceWhole: 0,
-};
+const emptyNotes: FragranceNotes = { top: [], middle: [], base: [], all: [] };
+const emptyNoteIds: FragranceNoteIds = { top: [], middle: [], base: [], all: [] };
+
+function createEmptyPerfumeForm(): PerfumeForm {
+  return {
+    name: "",
+    brand: "",
+    inspiredBy: "",
+    description: "",
+    category: "Unisex",
+    images: "[]",
+    marketPricePerMl: 0,
+    purchasePricePerMl: 0,
+    lowStockThreshold: 20,
+    season: "",
+    isBestSeller: false,
+    isActive: true,
+    owner: "Store",
+    isPersonalCollection: false,
+    fragranceNotes: { ...emptyNotes, top: [], middle: [], base: [], all: [] },
+    fragranceNoteIds: { ...emptyNoteIds, top: [], middle: [], base: [], all: [] },
+    // UI-only fields
+    bottleSizeMl: 0,
+    marketPriceWhole: 0,
+    purchasePriceWhole: 0,
+  };
+}
+
+function normalizeImages(images: string): string {
+  if (!images?.trim()) return "[]";
+  try {
+    const parsed = JSON.parse(images);
+    if (Array.isArray(parsed)) {
+      return JSON.stringify(parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0));
+    }
+  } catch {
+    // legacy single URL string support
+  }
+  return JSON.stringify([images.trim()]);
+}
+
+function NoteSelector({
+  label,
+  selectedIds,
+  categories,
+  notesByCategory,
+  noteLabel,
+  onToggle,
+}: {
+  label: string;
+  selectedIds: string[];
+  categories: NotesLibraryCategory[];
+  notesByCategory: Record<string, NotesLibraryNote[]>;
+  noteLabel: (id: string) => string;
+  onToggle: (noteId: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] block">{label}</label>
+      <div className="max-h-56 overflow-y-auto rounded border border-[var(--border)] bg-[var(--bg-input)] p-2 space-y-2">
+        {categories.map((category) => {
+          const notes = notesByCategory[category.id] || [];
+          if (notes.length === 0) return null;
+
+          const categoryClass = category.emphasis === "high"
+            ? "border-[var(--gold)] bg-[var(--gold-tint)]"
+            : category.emphasis === "trending"
+              ? "border-[rgba(245,158,11,0.45)] bg-[rgba(245,158,11,0.07)]"
+              : "border-[var(--border)] bg-[var(--bg-surface)]";
+
+          return (
+            <div key={`${label}-${category.id}`} className={`rounded border p-2 ${categoryClass}`}>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)] mb-2">{category.label}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {notes.map((note) => {
+                  const active = selectedIds.includes(note.id);
+                  return (
+                    <button
+                      key={`${label}-${note.id}`}
+                      type="button"
+                      onClick={() => onToggle(note.id)}
+                      className={`px-2 py-1 rounded text-[10px] uppercase tracking-wider transition-colors border ${
+                        active
+                          ? "bg-[var(--gold)] text-black border-[var(--gold)]"
+                          : "text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)] hover:text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {note.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-1.5 min-h-6">
+        {selectedIds.length > 0 ? selectedIds.map((noteId) => (
+          <span key={`${label}-tag-${noteId}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+            {noteLabel(noteId)}
+          </span>
+        )) : <span className="text-xs text-[var(--text-muted)]">No notes selected</span>}
+      </div>
+    </div>
+  );
+}
 
 export default function InventoryPage() {
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Perfume | null>(null);
-  const [form, setForm] = useState(emptyPerfume);
+  const [form, setForm] = useState<PerfumeForm>(createEmptyPerfumeForm);
   const [search, setSearch] = useState("");
+  const [notesLibrary, setNotesLibrary] = useState<NotesLibraryPayload>({ categories: [], notes: [], noteLabels: [] });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const load = () =>
     fetch("/api/perfumes")
@@ -64,37 +211,104 @@ export default function InventoryPage() {
       .then(setPerfumes)
       .finally(() => setLoading(false));
 
-  useEffect(() => { load(); }, []);
+  const loadNotesLibrary = () =>
+    fetch("/api/notes-library")
+      .then((r) => r.json())
+      .then((data) => setNotesLibrary({
+        categories: Array.isArray(data?.categories) ? data.categories : [],
+        notes: Array.isArray(data?.notes) ? data.notes : [],
+        noteLabels: Array.isArray(data?.noteLabels) ? data.noteLabels : [],
+      }));
+
+  useEffect(() => {
+    load();
+    loadNotesLibrary();
+  }, []);
+
+  const noteById = Object.fromEntries(notesLibrary.notes.map((note) => [note.id, note])) as Record<string, NotesLibraryNote>;
+  const notesByCategory = notesLibrary.notes.reduce<Record<string, NotesLibraryNote[]>>((acc, note) => {
+    const list = acc[note.categoryId] || [];
+    list.push(note);
+    acc[note.categoryId] = list;
+    return acc;
+  }, {});
+
+  const noteLabel = (id: string) => noteById[id]?.label || id;
+  const noteIdByLabel = (label: string) => notesLibrary.notes.find((note) => note.label.toLowerCase() === label.toLowerCase())?.id || "";
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyPerfume);
+    setForm(createEmptyPerfumeForm());
     setShowModal(true);
   };
 
   const openEdit = (p: Perfume) => {
+    const stockMl = Number(p.totalStockMl || 0);
+    const bottleSizeMl = stockMl > 0 ? stockMl : 0;
+    const marketPricePerMl = Number(p.marketPricePerMl || 0);
+    const purchasePricePerMl = Number(p.purchasePricePerMl || 0);
+
+    const topIds = p.fragranceNoteIds?.top || (p.fragranceNotes?.top || []).map(noteIdByLabel).filter(Boolean);
+    const middleIds = p.fragranceNoteIds?.middle || (p.fragranceNotes?.middle || []).map(noteIdByLabel).filter(Boolean);
+    const baseIds = p.fragranceNoteIds?.base || (p.fragranceNotes?.base || []).map(noteIdByLabel).filter(Boolean);
+    const allIds = Array.from(new Set([...(p.fragranceNoteIds?.all || []), ...topIds, ...middleIds, ...baseIds]));
+
     setEditing(p);
     setForm({
-      name: p.name,
-      brand: p.brand,
-      inspiredBy: p.inspiredBy,
-      description: p.description,
-      category: p.category,
-      images: p.images,
-      marketPricePerMl: p.marketPricePerMl,
-      purchasePricePerMl: p.purchasePricePerMl || 0,
-      lowStockThreshold: p.lowStockThreshold,
+      name: p.name || "",
+      brand: p.brand || "",
+      inspiredBy: p.inspiredBy || "",
+      description: p.description || "",
+      category: p.category || "Unisex",
+      images: normalizeImages(p.images || "[]"),
+      marketPricePerMl,
+      purchasePricePerMl,
+      lowStockThreshold: Number(p.lowStockThreshold || 20),
       season: p.season || "",
       isBestSeller: p.isBestSeller || false,
-      isActive: p.isActive,
+      isActive: p.isActive !== false,
       owner: p.owner || "Store",
       isPersonalCollection: p.isPersonalCollection || false,
-      bottleSizeMl: 0,
-      marketPriceWhole: 0,
-      purchasePriceWhole: 0,
+      fragranceNoteIds: {
+        top: topIds,
+        middle: middleIds,
+        base: baseIds,
+        all: allIds,
+      },
+      fragranceNotes: {
+        top: topIds.map(noteLabel),
+        middle: middleIds.map(noteLabel),
+        base: baseIds.map(noteLabel),
+        all: allIds.map(noteLabel),
+      },
+      bottleSizeMl,
+      marketPriceWhole: bottleSizeMl > 0 ? Number((marketPricePerMl * bottleSizeMl).toFixed(2)) : 0,
+      purchasePriceWhole: bottleSizeMl > 0 ? Number((purchasePricePerMl * bottleSizeMl).toFixed(2)) : 0,
     });
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (!editing || notesLibrary.notes.length === 0) return;
+    if ((form.fragranceNoteIds?.top?.length || 0) + (form.fragranceNoteIds?.middle?.length || 0) + (form.fragranceNoteIds?.base?.length || 0) > 0) return;
+
+    const top = (form.fragranceNotes?.top || []).map(noteIdByLabel).filter(Boolean);
+    const middle = (form.fragranceNotes?.middle || []).map(noteIdByLabel).filter(Boolean);
+    const base = (form.fragranceNotes?.base || []).map(noteIdByLabel).filter(Boolean);
+    const all = Array.from(new Set([...top, ...middle, ...base]));
+    if (all.length === 0) return;
+
+    setForm((prev) => ({
+      ...prev,
+      fragranceNoteIds: { top, middle, base, all },
+      fragranceNotes: {
+        top: top.map(noteLabel),
+        middle: middle.map(noteLabel),
+        base: base.map(noteLabel),
+        all: all.map(noteLabel),
+      },
+    }));
+  }, [editing, form.fragranceNoteIds?.base?.length, form.fragranceNoteIds?.middle?.length, form.fragranceNoteIds?.top?.length, form.fragranceNotes?.base, form.fragranceNotes?.middle, form.fragranceNotes?.top, noteIdByLabel, noteLabel, notesLibrary.notes.length]);
 
   const save = async () => {
     if (!form.name) return toast("Name is required", "error");
@@ -140,6 +354,63 @@ export default function InventoryPage() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       toast(message, "error");
+    }
+  };
+
+  const toggleNote = (group: "top" | "middle" | "base", noteId: string) => {
+    const current = form.fragranceNoteIds?.[group] || [];
+    const next = current.includes(noteId)
+      ? current.filter((id) => id !== noteId)
+      : [...current, noteId].sort((a, b) => a.localeCompare(b));
+
+    const nextIds = {
+      top: group === "top" ? next : (form.fragranceNoteIds?.top || []),
+      middle: group === "middle" ? next : (form.fragranceNoteIds?.middle || []),
+      base: group === "base" ? next : (form.fragranceNoteIds?.base || []),
+    };
+
+    const all = Array.from(new Set([...nextIds.top, ...nextIds.middle, ...nextIds.base])).sort((a, b) => a.localeCompare(b));
+    const nextNotes = {
+      top: nextIds.top.map(noteLabel),
+      middle: nextIds.middle.map(noteLabel),
+      base: nextIds.base.map(noteLabel),
+      all: all.map(noteLabel),
+    };
+
+    setForm((prev) => ({
+      ...prev,
+      fragranceNoteIds: {
+        ...nextIds,
+        all,
+      },
+      fragranceNotes: {
+        ...nextNotes,
+      },
+    }));
+  };
+
+  const uploadPngImage = async (file: File | null) => {
+    if (!file) return;
+    if (file.type !== "image/png") {
+      toast("Please upload a PNG file", "error");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const data = new FormData();
+      data.append("file", file);
+      const res = await fetch("/api/uploads/perfume-image", { method: "POST", body: data });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || "Image upload failed");
+
+      setForm((prev) => ({ ...prev, images: JSON.stringify([json.imageUrl]) }));
+      toast("Image uploaded and optimized", "success");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Image upload failed";
+      toast(message, "error");
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -259,7 +530,7 @@ export default function InventoryPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-fade-up">
+          <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 animate-fade-up">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-serif text-xl font-light">{editing ? "Edit Perfume" : "Add New Perfume"}</h2>
               <button onClick={() => setShowModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
@@ -412,14 +683,58 @@ export default function InventoryPage() {
                   className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
                 />
               </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Image URLs (comma-separated)</label>
-                <input
-                  type="text"
-                  value={(() => { try { return JSON.parse(form.images).join(", "); } catch { return ""; } })()}
-                  onChange={(e) => setForm({ ...form, images: JSON.stringify(e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean)) })}
-                  placeholder="https://..."
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm placeholder:text-[var(--text-muted)] focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
+              <div className="md:col-span-2">
+                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Perfume Image (PNG)</label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept="image/png"
+                    onChange={(e) => uploadPngImage(e.target.files?.[0] || null)}
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm file:mr-3 file:rounded file:border-0 file:bg-[var(--gold)] file:px-3 file:py-1 file:text-xs file:uppercase file:tracking-wider file:text-black"
+                  />
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Upload PNG only. The image is auto-processed with a premium neutral backdrop and compressed for fast loading.
+                  </p>
+                  {uploadingImage && <p className="text-xs text-[var(--gold)]">Processing image...</p>}
+                  {(() => {
+                    try {
+                      const current = JSON.parse(form.images || "[]") as string[];
+                      if (!current[0]) return null;
+                      return (
+                        <p className="text-xs text-[var(--text-secondary)] truncate">
+                          Current image: {current[0]}
+                        </p>
+                      );
+                    } catch {
+                      return null;
+                    }
+                  })()}
+                </div>
+              </div>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <NoteSelector
+                  label="Top Notes"
+                  selectedIds={form.fragranceNoteIds?.top || []}
+                  categories={notesLibrary.categories}
+                  notesByCategory={notesByCategory}
+                  noteLabel={noteLabel}
+                  onToggle={(noteId) => toggleNote("top", noteId)}
+                />
+                <NoteSelector
+                  label="Middle Notes"
+                  selectedIds={form.fragranceNoteIds?.middle || []}
+                  categories={notesLibrary.categories}
+                  notesByCategory={notesByCategory}
+                  noteLabel={noteLabel}
+                  onToggle={(noteId) => toggleNote("middle", noteId)}
+                />
+                <NoteSelector
+                  label="Base Notes"
+                  selectedIds={form.fragranceNoteIds?.base || []}
+                  categories={notesLibrary.categories}
+                  notesByCategory={notesByCategory}
+                  noteLabel={noteLabel}
+                  onToggle={(noteId) => toggleNote("base", noteId)}
                 />
               </div>
               <div className="md:col-span-2">

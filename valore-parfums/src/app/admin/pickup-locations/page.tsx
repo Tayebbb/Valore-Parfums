@@ -25,7 +25,7 @@ export default function PickupLocationsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = () =>
-    fetch("/api/pickup-locations")
+    fetch("/api/pickup-locations?all=1")
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setLocations(data); })
       .finally(() => setLoading(false));

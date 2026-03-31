@@ -5,9 +5,13 @@ import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 
 // GET all pickup locations
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const includeAll = searchParams.get("all") === "1";
   const snap = await db.collection(Collections.pickupLocations).orderBy("createdAt", "desc").get();
-  const locations = snap.docs.map((doc) => serializeDoc({ id: doc.id, ...doc.data() }));
+  const locations = snap.docs
+    .map((doc) => serializeDoc({ id: doc.id, ...doc.data() }))
+    .filter((loc) => includeAll || loc.active !== false);
   return NextResponse.json(locations);
 }
 

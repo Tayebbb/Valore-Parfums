@@ -173,8 +173,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       }
 
-      const total = Math.max(0, subtotal - discount);
-      const profit = total - totalCost;
+      const deliveryFee = Number(order.deliveryFee ?? 0);
+      const total = Math.max(0, subtotal - discount) + deliveryFee;
+      const profit = (total - deliveryFee) - totalCost;
 
       await db.collection(Collections.orders).doc(id).update({
         subtotal,
@@ -200,8 +201,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       subtotal += Number(item.totalPrice ?? 0);
       totalCost += Number(item.costPrice ?? 0);
     }
-    const total = subtotal;
-    const profit = total - totalCost;
+    const deliveryFee = Number(order.deliveryFee ?? 0);
+    const total = subtotal + deliveryFee;
+    const profit = (total - deliveryFee) - totalCost;
 
     // If a voucher was previously applied and counted, decrement its usedCount (but not below zero).
     if (order.voucherCode && order.voucherAppliedAt) {

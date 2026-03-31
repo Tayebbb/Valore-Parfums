@@ -14,6 +14,8 @@ interface Perfume {
   images: string;
   totalStockMl: number;
   isBestSeller: boolean;
+  totalOrders?: number;
+  keyNotes?: string[];
   isActive: boolean;
 }
 
@@ -27,6 +29,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
   const images: string[] = JSON.parse(perfume.images || "[]");
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
   const outOfStock = perfume.totalStockMl <= 0;
+  const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0 || perfume.isBestSeller;
 
   return (
     <Link href={`/perfume/${perfume.id}`}>
@@ -41,15 +44,15 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
           )}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {outOfStock && (
-              <span className="text-[9px] uppercase tracking-wider bg-[var(--error)] text-white px-2 py-0.5">
+              <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-[var(--error)] text-white px-2.5 py-1">
                 Out of Stock
               </span>
             )}
-            <span className="text-[9px] uppercase tracking-wider bg-black/60 text-[var(--gold)] px-2 py-0.5 backdrop-blur">
+            <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-black/60 text-[var(--gold)] px-2.5 py-1 backdrop-blur">
               {perfume.category}
             </span>
-            {perfume.isBestSeller && (
-              <span className="text-[9px] uppercase tracking-wider bg-[var(--gold)] text-black px-2 py-0.5">
+            {isDynamicBestSeller && (
+              <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-[var(--gold)] text-black px-2.5 py-1">
                 Best Seller
               </span>
             )}
@@ -58,17 +61,22 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
         <div className="p-4">
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
           {perfume.inspiredBy && (
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)] mt-1">
+            <p className="text-sm md:text-base leading-relaxed font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mt-1">
               Inspired by: {perfume.inspiredBy}
+            </p>
+          )}
+          {Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0 && (
+            <p className="text-sm md:text-base leading-relaxed font-semibold uppercase tracking-[0.08em] text-[var(--gold)] mt-2 truncate">
+              {perfume.keyNotes.slice(0, 3).join(" | ")}
             </p>
           )}
           <div className="mt-3">
             {lowestPrice ? (
-              <p className="font-serif text-lg text-[var(--gold)]">
+              <p className="font-serif text-lg md:text-2xl leading-snug font-bold text-[var(--gold-light)] drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">
                 From {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-base md:text-lg leading-snug font-medium text-[var(--text-secondary)]">
                 {prices ? "Unavailable" : "..."}
               </p>
             )}
@@ -112,7 +120,10 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const bestSellers = perfumes.filter((p) => p.isBestSeller).slice(0, 4);
+  const bestSellers = [...perfumes]
+    .filter((p) => Number(p.totalOrders || 0) > 0)
+    .sort((a, b) => Number(b.totalOrders || 0) - Number(a.totalOrders || 0))
+    .slice(0, 4);
   const newArrivals = perfumes.slice(0, 8);
 
   return (

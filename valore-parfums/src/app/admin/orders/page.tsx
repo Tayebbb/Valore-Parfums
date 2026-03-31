@@ -22,6 +22,8 @@ interface Order {
   customerPhone: string;
   customerEmail: string;
   pickupMethod: string;
+  deliveryZone?: string;
+  deliveryFee?: number;
   status: string;
   voucherCode: string | null;
   discount: number;
@@ -400,6 +402,18 @@ export default function OrdersPage() {
                 <span className="text-[var(--text-muted)]">Pickup</span>
                 <span>{selectedOrder.pickupMethod}</span>
               </div>
+              {selectedOrder.pickupMethod === "Delivery" && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Delivery Zone</span>
+                    <span>{selectedOrder.deliveryZone || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Delivery Fee</span>
+                    <span>{fmt(selectedOrder.deliveryFee ?? 0)} BDT</span>
+                  </div>
+                </>
+              )}
 
               <div className="gold-line my-3" />
               <h4 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Items</h4>

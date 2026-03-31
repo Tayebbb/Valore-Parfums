@@ -20,6 +20,12 @@ interface Perfume {
   marketPricePerMl: number;
   isPersonalCollection?: boolean;
   purchasePricePerMl?: number;
+  fragranceNotes?: {
+    top?: string[];
+    middle?: string[];
+    base?: string[];
+    all?: string[];
+  };
 }
 
 interface PriceOption {
@@ -244,6 +250,44 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
           {perfume.description && (
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{perfume.description}</p>
           )}
+
+          {(perfume.fragranceNotes?.top?.length || perfume.fragranceNotes?.middle?.length || perfume.fragranceNotes?.base?.length) ? (
+            <div className="space-y-3">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Fragrance Notes</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Top</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(perfume.fragranceNotes?.top || []).map((note) => (
+                      <span key={`top-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                        {note}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Middle</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(perfume.fragranceNotes?.middle || []).map((note) => (
+                      <span key={`middle-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                        {note}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Base</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(perfume.fragranceNotes?.base || []).map((note) => (
+                      <span key={`base-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                        {note}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Size Selector */}
           <div>

@@ -93,26 +93,50 @@ export async function GET(req: Request) {
 
 // POST create order (replaces prisma.order.create with nested items)
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { items, voucherCode, ...orderData } = body;
-  const sessionUser = await getSessionUser();
+  try {
+    const body = await req.json();
+    const { items, voucherCode, ...orderData } = body;
+    const sessionUser = await getSessionUser();
+    const pickupMethod = String(orderData.pickupMethod || "Pickup");
+    const isDelivery = pickupMethod === "Delivery";
+    const deliveryZone = String(orderData.deliveryZone || "");
 
-  const hasFullBottle = Array.isArray(items) && items.some((i: { isFullBottle?: boolean }) => Boolean(i.isFullBottle));
-  if (hasFullBottle) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "Cart items are required" }, { status: 400 });
+    }
+
+    if (!String(orderData.customerName || "").trim()) {
+      return NextResponse.json({ error: "Customer name is required" }, { status: 400 });
+    }
     if (!String(orderData.customerPhone || "").trim()) {
-      return NextResponse.json({ error: "Phone number is required for full bottle orders" }, { status: 400 });
+      return NextResponse.json({ error: "Customer phone is required" }, { status: 400 });
     }
-    if (!String(orderData.deliveryAddress || "").trim()) {
-      return NextResponse.json({ error: "Delivery address is required for full bottle orders" }, { status: 400 });
-    }
-    const missingItemSize = items.some((i: { isFullBottle?: boolean; fullBottleSize?: string }) => Boolean(i.isFullBottle) && !String(i.fullBottleSize || "").trim());
-    if (missingItemSize) {
-      return NextResponse.json({ error: "Desired bottle size is required for full bottle items" }, { status: 400 });
-    }
-  }
 
-  let subtotal = 0;
-  const orderItems: {
+    if (isDelivery && !["Inside Dhaka", "Outside Dhaka"].includes(deliveryZone)) {
+      return NextResponse.json({ error: "Delivery zone is required" }, { status: 400 });
+    }
+
+    if (isDelivery && !String(orderData.deliveryAddress || "").trim()) {
+      return NextResponse.json({ error: "Delivery address is required" }, { status: 400 });
+    }
+
+    const hasFullBottle = items.some((i: { isFullBottle?: boolean }) => Boolean(i.isFullBottle));
+    if (hasFullBottle) {
+      if (!String(orderData.customerPhone || "").trim()) {
+        return NextResponse.json({ error: "Phone number is required for full bottle orders" }, { status: 400 });
+      }
+      if (isDelivery && !String(orderData.deliveryAddress || "").trim()) {
+        return NextResponse.json({ error: "Delivery address is required for full bottle orders" }, { status: 400 });
+      }
+      const missingItemSize = items.some((i: { isFullBottle?: boolean; fullBottleSize?: string }) => Boolean(i.isFullBottle) && !String(i.fullBottleSize || "").trim());
+      if (missingItemSize) {
+        return NextResponse.json({ error: "Desired bottle size is required for full bottle items" }, { status: 400 });
+      }
+    }
+
+    let subtotal = 0;
+    const orderCountByPerfume = new Map<string, number>();
+    const orderItems: {
     perfumeId: string;
     perfumeName: string;
     perfumeImage?: string;
@@ -126,23 +150,33 @@ export async function POST(req: Request) {
     ownerName: string;
     ownerProfit: number;
     otherOwnerProfit: number;
-  }[] = [];
+    }[] = [];
 
-  // Fetch settings (replaces prisma.settings.findUnique)
-  const settingsDoc = await db.collection(Collections.settings).doc("default").get();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
-  const packagingCost = settings?.packagingCost ?? 20;
-  const margins = parseTierMargins(settings?.tierMargins);
+    // Fetch settings (replaces prisma.settings.findUnique)
+    const settingsDoc = await db.collection(Collections.settings).doc("default").get();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
+    const packagingCost = settings?.packagingCost ?? 20;
+    const legacyDeliveryFee = Number(settings?.deliveryFee ?? 0);
+    const deliveryFeeInsideDhaka = Number(settings?.deliveryFeeInsideDhaka ?? legacyDeliveryFee);
+    const deliveryFeeOutsideDhaka = Number(settings?.deliveryFeeOutsideDhaka ?? legacyDeliveryFee);
+    const deliveryFee = isDelivery
+      ? (deliveryZone === "Outside Dhaka" ? deliveryFeeOutsideDhaka : deliveryFeeInsideDhaka)
+      : 0;
+    const margins = parseTierMargins(settings?.tierMargins);
 
-  // Load bulk pricing rules — fetch all, filter/sort in memory to avoid composite index
-  const bulkSnap = await db.collection(Collections.bulkPricingRules).get();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bulkRules = bulkSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r: any) => r.isActive === true).sort((a: any, b: any) => b.minQuantity - a.minQuantity) as any[];
+    // Load bulk pricing rules — fetch all, filter/sort in memory to avoid composite index
+    const bulkSnap = await db.collection(Collections.bulkPricingRules).get();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bulkRules = bulkSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r: any) => r.isActive === true).sort((a: any, b: any) => b.minQuantity - a.minQuantity) as any[];
 
-  for (const item of items) {
+    for (const item of items) {
     // Fetch perfume (replaces prisma.perfume.findUnique)
-    const perfumeDoc = await db.collection(Collections.perfumes).doc(item.perfumeId).get();
+      const perfumeId = String(item.perfumeId || "").trim();
+      if (!perfumeId) continue;
+      const quantity = Math.floor(Number(item.quantity));
+      if (!Number.isFinite(quantity) || quantity <= 0) continue;
+      const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
     if (!perfumeDoc.exists) continue;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const perfume = { id: perfumeDoc.id, ...perfumeDoc.data() } as any;
@@ -155,11 +189,11 @@ export async function POST(req: Request) {
     })();
     const perfumeImage = normalizeOrderImagePath(perfumeImages[0]);
 
-    const isFullBottleItem = Boolean(item.isFullBottle);
-    const requestedFullBottleSize = String(item.fullBottleSize || "").trim();
-    const requestedFullBottleMl = isFullBottleItem
-      ? Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || 0
-      : item.ml;
+      const isFullBottleItem = Boolean(item.isFullBottle);
+      const requestedFullBottleSize = String(item.fullBottleSize || "").trim();
+      const requestedFullBottleMl = isFullBottleItem
+        ? Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || 0
+        : Number(item.ml || 0);
 
     // Fetch bottle (replaces prisma.bottleInventory.findUnique by ml)
     const bottleSnap = isFullBottleItem
@@ -189,15 +223,15 @@ export async function POST(req: Request) {
       );
 
     // Apply bulk discount if applicable
-    const bulkRule = bulkRules.find((r: { minQuantity: number }) => item.quantity >= r.minQuantity);
+    const bulkRule = bulkRules.find((r: { minQuantity: number }) => quantity >= r.minQuantity);
     if (bulkRule) {
       unitPrice = Math.ceil(unitPrice * (1 - bulkRule.discountPercent / 100));
     }
 
-    const totalPrice = unitPrice * item.quantity;
+    const totalPrice = unitPrice * quantity;
     const costPrice = isFullBottleItem
       ? 0
-      : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + bottleCost + packagingCost) * item.quantity;
+      : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + bottleCost + packagingCost) * quantity;
     const itemProfit = totalPrice - costPrice;
     const owner = (perfume.owner || "Store") as OwnerType;
     const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
@@ -209,38 +243,44 @@ export async function POST(req: Request) {
 
     // Deduct stock (replaces prisma.perfume.update with decrement)
     if (!isFullBottleItem) {
-      await db.collection(Collections.perfumes).doc(item.perfumeId).update({
-        totalStockMl: FieldValue.increment(-(requestedFullBottleMl * item.quantity)),
+      await db.collection(Collections.perfumes).doc(perfumeId).update({
+        totalStockMl: FieldValue.increment(-(requestedFullBottleMl * quantity)),
       });
     }
 
     // Deduct bottle (replaces prisma.bottleInventory.update with decrement)
     if (!isFullBottleItem && bottle && bottle.availableCount > 0) {
       await db.collection(Collections.bottles).doc(bottle.id).update({
-        availableCount: FieldValue.increment(-item.quantity),
+        availableCount: FieldValue.increment(-quantity),
       });
     }
 
-    orderItems.push({
-      perfumeId: item.perfumeId,
-      perfumeName: perfume.name,
-      perfumeImage,
-      ml: requestedFullBottleMl,
-      isFullBottle: isFullBottleItem,
-      fullBottleSize: isFullBottleItem ? requestedFullBottleSize : undefined,
-      quantity: item.quantity,
-      unitPrice,
-      totalPrice,
-      costPrice,
-      ownerName: owner,
-      ownerProfit,
-      otherOwnerProfit,
-    });
-  }
+      orderItems.push({
+        perfumeId,
+        perfumeName: perfume.name,
+        perfumeImage,
+        ml: requestedFullBottleMl,
+        isFullBottle: isFullBottleItem,
+        ...(isFullBottleItem ? { fullBottleSize: requestedFullBottleSize } : {}),
+        quantity,
+        unitPrice,
+        totalPrice,
+        costPrice,
+        ownerName: owner,
+        ownerProfit,
+        otherOwnerProfit,
+      });
 
-  // Apply voucher (replaces prisma.voucher.findUnique + update)
-  let discount = 0;
-  if (voucherCode && !hasFullBottle) {
+      orderCountByPerfume.set(perfumeId, (orderCountByPerfume.get(perfumeId) || 0) + quantity);
+    }
+
+    if (orderItems.length === 0) {
+      return NextResponse.json({ error: "No valid items found in cart" }, { status: 400 });
+    }
+
+    // Apply voucher (replaces prisma.voucher.findUnique + update)
+    let discount = 0;
+    if (voucherCode && !hasFullBottle) {
     const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
     if (!voucherSnap.empty) {
       const voucherDoc = voucherSnap.docs[0];
@@ -260,20 +300,26 @@ export async function POST(req: Request) {
     }
   }
 
-  const total = Math.max(0, subtotal - discount);
-  const totalCost = orderItems.reduce((s, i) => s + i.costPrice, 0);
-  const profit = total - totalCost;
+    const total = Math.max(0, subtotal - discount) + (isDelivery ? deliveryFee : 0);
+    const totalCost = orderItems.reduce((s, i) => s + i.costPrice, 0);
+    const profit = (total - (isDelivery ? deliveryFee : 0)) - totalCost;
 
-  // Create order document (replaces prisma.order.create)
-  const orderId = uuid();
-  const now = Timestamp.now();
-  const orderDoc = {
+    // Create order document (replaces prisma.order.create)
+    const orderId = uuid();
+    const now = Timestamp.now();
+    const orderDoc = {
     ...orderData,
     userId: sessionUser?.id ?? null,
+    isGuestOrder: !sessionUser,
     customerEmail: orderData.customerEmail || sessionUser?.email || "",
     hasFullBottle,
+    pickupMethod,
+    deliveryZone: isDelivery ? deliveryZone : "",
+    pickupLocationId: orderData.pickupLocationId || "",
+    pickupLocationName: orderData.pickupLocationName || "",
     deliveryAddress: orderData.deliveryAddress || "",
-    status: orderData.status || "Pending",
+    deliveryFee: isDelivery ? deliveryFee : 0,
+    status: "Pending",
     voucherCode: voucherCode || null,
     discount,
     subtotal,
@@ -281,16 +327,36 @@ export async function POST(req: Request) {
     profit,
     createdAt: now,
     updatedAt: now,
-  };
-  await db.collection(Collections.orders).doc(orderId).set(orderDoc);
+    };
+    await db.collection(Collections.orders).doc(orderId).set(orderDoc);
 
-  // Create items as subcollection (replaces Prisma nested create)
-  const createdItems = [];
-  for (const oi of orderItems) {
-    const itemId = uuid();
-    await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set(oi);
-    createdItems.push({ id: itemId, ...oi });
+    if (orderCountByPerfume.size > 0) {
+      await Promise.all(
+        Array.from(orderCountByPerfume.entries()).map(([perfumeId, count]) =>
+          db.collection(Collections.perfumes).doc(perfumeId).set(
+            {
+              totalOrders: FieldValue.increment(count),
+              lastOrderedAt: now,
+              updatedAt: now,
+            },
+            { merge: true },
+          ),
+        ),
+      );
+    }
+
+    // Create items as subcollection (replaces Prisma nested create)
+    const createdItems = [];
+    for (const oi of orderItems) {
+      const itemId = uuid();
+      await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set(oi);
+      createdItems.push({ id: itemId, ...oi });
+    }
+
+    return NextResponse.json(serializeDoc({ id: orderId, ...orderDoc, items: createdItems }), { status: 201 });
+  } catch (error) {
+    console.error("Order POST error:", error);
+    const message = error instanceof Error ? error.message : "Failed to place order";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json(serializeDoc({ id: orderId, ...orderDoc, items: createdItems }), { status: 201 });
 }

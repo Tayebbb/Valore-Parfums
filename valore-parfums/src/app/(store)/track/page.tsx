@@ -13,6 +13,8 @@ interface OrderResult {
   voucherCode?: string | null;
   finalAmount: number;
   pickupMethod: string;
+  deliveryZone?: string;
+  deliveryAddress?: string;
   customerName: string;
   createdAt: string;
   items: {
@@ -62,6 +64,10 @@ const statusIcon = (status: string) => {
 
 export default function TrackOrderPage() {
   const { user, loading: authLoading, fetchUser } = useAuth();
+  const [orderIdInput, setOrderIdInput] = useState("");
+  const [trackLoading, setTrackLoading] = useState(false);
+  const [trackedOrder, setTrackedOrder] = useState<OrderResult | null>(null);
+  const [trackError, setTrackError] = useState("");
   const [orders, setOrders] = useState<OrderResult[]>([]);
   const [initialLoading, setInitialLoading] = useState(false);
   const [error, setError] = useState("");
@@ -207,6 +213,12 @@ export default function TrackOrderPage() {
             <span className="text-[var(--text-muted)]">Collection</span>
             <p>{order.pickupMethod}</p>
           </div>
+          {order.pickupMethod === "Delivery" && (
+            <div>
+              <span className="text-[var(--text-muted)]">Delivery Zone</span>
+              <p>{order.deliveryZone || "N/A"}</p>
+            </div>
+          )}
           <div>
             <span className="text-[var(--text-muted)]">Items</span>
             <p>{order.items?.length ?? 0}</p>
@@ -290,17 +302,74 @@ export default function TrackOrderPage() {
     );
   };
 
+  const trackByOrderId = async () => {
+    const value = orderIdInput.trim();
+    if (!value) {
+      setTrackError("Please enter an Order ID");
+      setTrackedOrder(null);
+      return;
+    }
+
+    setTrackLoading(true);
+    setTrackError("");
+    setTrackedOrder(null);
+
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(value)}`, { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setTrackError(data?.error || "Order not found");
+        return;
+      }
+
+      setTrackedOrder(data as OrderResult);
+    } catch {
+      setTrackError("Unable to track order right now. Please try again.");
+    } finally {
+      setTrackLoading(false);
+    }
+  };
+
   return (
     <div className="px-[5%] py-12 max-w-3xl mx-auto">
-      <h1 className="font-serif text-3xl font-light mb-2 text-center">My Orders</h1>
+      <h1 className="font-serif text-3xl font-light mb-2 text-center">Track Order</h1>
       <p className="text-sm text-[var(--text-muted)] text-center mb-8">
-        Your orders are linked to your account and update automatically.
+        Enter your Order ID to check real-time order status. Sign in users can also see account-linked history below.
       </p>
+
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5 mb-8">
+        <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Order ID</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Paste full Order ID"
+            value={orderIdInput}
+            onChange={(e) => setOrderIdInput(e.target.value)}
+            className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm outline-none focus:border-[var(--gold)]"
+          />
+          <button
+            onClick={trackByOrderId}
+            disabled={trackLoading}
+            className="bg-[var(--gold)] text-black px-4 py-2.5 rounded text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
+          >
+            {trackLoading ? "Checking..." : "Track"}
+          </button>
+        </div>
+        {trackError && <p className="text-sm text-[var(--error)] mt-2">{trackError}</p>}
+      </div>
+
+      {trackedOrder && (
+        <section className="mb-8">
+          <h2 className="text-xs uppercase tracking-[0.2em] text-[var(--gold)] mb-3">Tracked Result</h2>
+          {renderOrderCard(trackedOrder, true)}
+        </section>
+      )}
 
       {!authLoading && !user && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-8 text-center">
           <Package size={40} className="mx-auto text-[var(--text-muted)] mb-3" />
-          <p className="text-sm text-[var(--text-secondary)]">Log in to view orders linked to your account.</p>
+          <p className="text-sm text-[var(--text-secondary)]">Guest tracking works with Order ID. Log in to view your full account-linked order history.</p>
           <div className="mt-4 flex items-center justify-center gap-2">
             <Link
               href="/login"

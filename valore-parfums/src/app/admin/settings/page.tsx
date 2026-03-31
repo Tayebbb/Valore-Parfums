@@ -14,6 +14,8 @@ const DEFAULT_TIER_MARGINS: TierMargins = {
 
 interface Settings {
   packagingCost: number;
+  deliveryFeeInsideDhaka: number;
+  deliveryFeeOutsideDhaka: number;
   tierMargins: string;
   currency: string;
   lowStockAlertMl: number;
@@ -34,6 +36,8 @@ interface BulkRule {
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({
     packagingCost: 20,
+    deliveryFeeInsideDhaka: 80,
+    deliveryFeeOutsideDhaka: 150,
     tierMargins: JSON.stringify(DEFAULT_TIER_MARGINS),
     currency: "BDT",
     lowStockAlertMl: 20,
@@ -54,7 +58,13 @@ export default function SettingsPage() {
       fetch("/api/settings").then((r) => r.json()),
       fetch("/api/bulk-pricing").then((r) => r.json()),
     ]).then(([s, rules]) => {
-      setSettings(s);
+      const legacyDeliveryFee = Number(s.deliveryFee ?? 80);
+      setSettings((prev) => ({
+        ...prev,
+        ...s,
+        deliveryFeeInsideDhaka: Number(s.deliveryFeeInsideDhaka ?? legacyDeliveryFee),
+        deliveryFeeOutsideDhaka: Number(s.deliveryFeeOutsideDhaka ?? legacyDeliveryFee),
+      }));
       try {
         setTierMargins(JSON.parse(s.tierMargins || "{}"));
       } catch {
@@ -67,7 +77,12 @@ export default function SettingsPage() {
   const save = async () => {
     setSaving(true);
     try {
-      const payload = { ...settings, tierMargins: JSON.stringify(tierMargins) };
+      const payload = {
+        ...settings,
+        // Keep legacy field for compatibility with older clients.
+        deliveryFee: settings.deliveryFeeInsideDhaka,
+        tierMargins: JSON.stringify(tierMargins),
+      };
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -197,6 +212,31 @@ export default function SettingsPage() {
             onChange={(e) => setSettings({ ...settings, packagingCost: e.target.value === "" ? 0 : parseFloat(e.target.value) })}
             className="w-32 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
           />
+        </div>
+      </div>
+
+      {/* Delivery Fee */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Delivery Fees by Zone</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Inside Dhaka (BDT)</label>
+            <input
+              type="number"
+              value={settings.deliveryFeeInsideDhaka || ""}
+              onChange={(e) => setSettings({ ...settings, deliveryFeeInsideDhaka: e.target.value === "" ? 0 : parseFloat(e.target.value) })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Outside Dhaka (BDT)</label>
+            <input
+              type="number"
+              value={settings.deliveryFeeOutsideDhaka || ""}
+              onChange={(e) => setSettings({ ...settings, deliveryFeeOutsideDhaka: e.target.value === "" ? 0 : parseFloat(e.target.value) })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
         </div>
       </div>
 

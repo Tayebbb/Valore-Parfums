@@ -16,7 +16,28 @@ interface Perfume {
   totalStockMl: number;
   season: string;
   isBestSeller: boolean;
+  totalOrders?: number;
   marketPricePerMl: number;
+  fragranceNotes?: {
+    top?: string[];
+    middle?: string[];
+    base?: string[];
+    all?: string[];
+  };
+  fragranceNoteIds?: {
+    top?: string[];
+    middle?: string[];
+    base?: string[];
+    all?: string[];
+  };
+  keyNotes?: string[];
+}
+
+interface NotesCategory {
+  id: string;
+  label: string;
+  emphasis?: "high" | "trending" | "core";
+  notes: string[];
 }
 
 interface PriceInfo {
@@ -29,6 +50,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
   const images: string[] = JSON.parse(perfume.images || "[]");
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
   const outOfStock = perfume.totalStockMl <= 0;
+  const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0 || perfume.isBestSeller;
 
   return (
     <Link href={`/perfume/${perfume.id}`}>
@@ -43,15 +65,15 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
           )}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {outOfStock && (
-              <span className="text-[9px] uppercase tracking-wider bg-[var(--error)] text-white px-2 py-0.5">
+              <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-[var(--error)] text-white px-2.5 py-1">
                 Out of Stock
               </span>
             )}
-            <span className="text-[9px] uppercase tracking-wider bg-black/60 text-[var(--gold)] px-2 py-0.5 backdrop-blur">
+            <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-black/60 text-[var(--gold)] px-2.5 py-1 backdrop-blur">
               {perfume.category}
             </span>
-            {perfume.isBestSeller && (
-              <span className="text-[9px] uppercase tracking-wider bg-[var(--gold)] text-black px-2 py-0.5">
+            {isDynamicBestSeller && (
+              <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-[var(--gold)] text-black px-2.5 py-1">
                 Best Seller
               </span>
             )}
@@ -60,18 +82,23 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
         <div className="p-4">
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
           {perfume.inspiredBy && (
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)] mt-1">
+            <p className="text-sm md:text-base leading-relaxed font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mt-1">
               Inspired by: {perfume.inspiredBy}
             </p>
           )}
-          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{perfume.brand}</p>
+          <p className="text-sm md:text-base leading-relaxed font-medium text-[var(--text-muted)] mt-0.5">{perfume.brand}</p>
+          {Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0 && (
+            <p className="text-sm md:text-base leading-relaxed font-semibold uppercase tracking-[0.08em] text-[var(--gold)] mt-2 truncate">
+                {perfume.keyNotes.slice(0, 3).join(" | ")}
+            </p>
+          )}
           <div className="mt-3">
             {lowestPrice ? (
-              <p className="font-serif text-lg text-[var(--gold)]">
+              <p className="font-serif text-lg md:text-2xl leading-snug font-bold text-[var(--gold-light)] drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">
                 From {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-base md:text-lg leading-snug font-medium text-[var(--text-secondary)]">
                 {prices ? "Unavailable" : "..."}
               </p>
             )}
@@ -235,11 +262,15 @@ function ShopContent() {
   const seasonParam = searchParams.get("season") || "";
   const bestSellerParam = searchParams.get("bestSeller") || "";
   const brandParam = searchParams.get("brand") || "";
+  const notesParam = searchParams.get("notes") || "";
   const sortParam = searchParams.get("sort") || "newest";
+  const selectedNotes = notesParam.split(",").map((n) => n.trim()).filter(Boolean);
 
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
   const [priceMap, setPriceMap] = useState<Record<string, PriceInfo[]>>({});
   const [allBrands, setAllBrands] = useState<string[]>([]);
+  const [allNotes, setAllNotes] = useState<string[]>([]);
+  const [noteCategories, setNoteCategories] = useState<NotesCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(qParam);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -270,6 +301,7 @@ function ShopContent() {
     if (seasonParam) params.set("season", seasonParam);
     if (bestSellerParam) params.set("bestSeller", bestSellerParam);
     if (brandParam) params.set("brand", brandParam);
+    if (notesParam) params.set("notes", notesParam);
     if (sortParam) params.set("sort", sortParam);
 
     try {
@@ -313,7 +345,21 @@ function ShopContent() {
         setLoading(false);
       }
     }
-  }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, sortParam]);
+  }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, notesParam, sortParam]);
+
+  useEffect(() => {
+    fetch("/api/notes-library")
+      .then((r) => r.json())
+      .then((data) => {
+        const notes = Array.isArray(data?.noteLabels) ? data.noteLabels : [];
+        setAllNotes(notes);
+        setNoteCategories(Array.isArray(data?.categories) ? data.categories : []);
+      })
+      .catch(() => {
+        setAllNotes([]);
+        setNoteCategories([]);
+      });
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -333,6 +379,15 @@ function ShopContent() {
       params.delete(key);
     }
     router.push(`/shop?${params.toString()}`);
+  };
+
+  const toggleNote = (note: string) => {
+    const active = new Set(selectedNotes);
+    if (active.has(note)) active.delete(note);
+    else active.add(note);
+
+    const next = Array.from(active).sort((a, b) => a.localeCompare(b));
+    updateFilter("notes", next.join(","));
   };
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -357,7 +412,7 @@ function ShopContent() {
     setPriceRange([0, MAX_PRICE]);
   };
 
-  const hasFilters = qParam || categoryParam || seasonParam || bestSellerParam || brandParam;
+  const hasFilters = qParam || categoryParam || seasonParam || bestSellerParam || brandParam || notesParam;
 
   // Price-filter client side (API handles the rest)
   const filteredPerfumes = perfumes.filter((p) => {
@@ -373,7 +428,7 @@ function ShopContent() {
   else if (brandParam) title = brandParam;
   else if (qParam) title = `Results for "${qParam}"`;
 
-  const activeFilterCount = [categoryParam, seasonParam, bestSellerParam, brandParam].filter(Boolean).length;
+  const activeFilterCount = [categoryParam, seasonParam, bestSellerParam, brandParam].filter(Boolean).length + selectedNotes.length;
 
   /* ── Sidebar Content (shared between desktop & mobile) ── */
   const filtersContent = (
@@ -504,6 +559,66 @@ function ShopContent() {
         </label>
       </FilterSection>
 
+      {/* Fragrance Notes */}
+      <FilterSection title="Fragrance Notes" defaultOpen={selectedNotes.length > 0}>
+        <div className="max-h-56 overflow-y-auto pr-1 space-y-2">
+          {noteCategories.map((category) => {
+            const style = category.emphasis === "high"
+              ? "border-[var(--gold)] bg-[var(--gold-tint)]"
+              : category.emphasis === "trending"
+                ? "border-[rgba(245,158,11,0.45)] bg-[rgba(245,158,11,0.08)]"
+                : "border-[var(--border)] bg-[var(--bg-surface)]";
+
+            return (
+              <div key={category.id} className={`rounded border p-2 ${style}`}>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-secondary)] mb-2">{category.label}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {category.notes.map((note) => {
+                    const active = selectedNotes.includes(note);
+                    return (
+                      <button
+                        key={note}
+                        onClick={() => toggleNote(note)}
+                        className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border transition-colors ${
+                          active
+                            ? "border-[var(--gold)] text-black bg-[var(--gold)]"
+                            : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold)]"
+                        }`}
+                      >
+                        {note}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {noteCategories.length === 0 && allNotes.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {allNotes.map((note) => {
+                const active = selectedNotes.includes(note);
+                return (
+                  <button
+                    key={note}
+                    onClick={() => toggleNote(note)}
+                    className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border transition-colors ${
+                      active
+                        ? "border-[var(--gold)] text-black bg-[var(--gold)]"
+                        : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold)]"
+                    }`}
+                  >
+                    {note}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {noteCategories.length === 0 && allNotes.length === 0 && (
+            <p className="text-xs text-[var(--text-muted)]">No fragrance notes available</p>
+          )}
+        </div>
+      </FilterSection>
+
       {/* Clear Filters */}
       {hasFilters && (
         <div className="pt-4 mt-2 border-t border-[var(--border)]">
@@ -595,6 +710,12 @@ function ShopContent() {
               <button onClick={() => updateFilter("bestSeller", "")}><X size={12} /></button>
             </span>
           )}
+          {selectedNotes.map((note) => (
+            <span key={note} className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+              Note: {note}
+              <button onClick={() => toggleNote(note)}><X size={12} /></button>
+            </span>
+          ))}
         </div>
       )}
 

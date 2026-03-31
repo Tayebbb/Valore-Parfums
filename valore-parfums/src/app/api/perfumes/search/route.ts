@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
+import { buildStructuredNotes, getCanonicalNotesLibrary, getNoteLookup } from "@/lib/fragrance-notes";
 
 const ACTIVE_CACHE_TTL = 60_000;
 const SEARCH_CACHE_TTL = 20_000;
@@ -13,7 +14,23 @@ type SearchPerfume = {
   category?: string;
   season?: string;
   isBestSeller?: boolean;
+  totalOrders?: number;
   marketPricePerMl?: number;
+  fragranceNotes?: {
+    top?: string[];
+    middle?: string[];
+    base?: string[];
+    all?: string[];
+  };
+  fragranceNoteIds?: {
+    all?: string[];
+    top?: string[];
+    middle?: string[];
+    base?: string[];
+  };
+  keyNotes?: string[];
+  noteSearchIndex?: string[];
+  noteIdIndex?: Record<string, 1>;
   createdAt?: { toDate?: () => Date } | Date | string | number;
   [key: string]: unknown;
 };
@@ -35,9 +52,18 @@ function getSearchCacheKey(params: URLSearchParams): string {
     season: params.get("season") || "",
     bestSeller: params.get("bestSeller") || "",
     brand: params.get("brand") || "",
+    notes: params.get("notes") || "",
     sort: params.get("sort") || "newest",
   };
   return JSON.stringify(keyObject);
+}
+
+function asLowerList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.toLowerCase().trim())
+    .filter(Boolean);
 }
 
 async function getActivePerfumeIndex(): Promise<{ perfumes: SearchPerfume[]; brands: string[] }> {
@@ -74,6 +100,13 @@ export async function GET(req: Request) {
   const season = searchParams.get("season") || "";
   const bestSeller = searchParams.get("bestSeller");
   const brand = searchParams.get("brand") || "";
+  const selectedNotes = (searchParams.get("notes") || "")
+    .split(",")
+    .map((note) => note.trim().toLowerCase())
+    .filter(Boolean);
+  const library = getCanonicalNotesLibrary();
+  const { byLabel } = getNoteLookup(library);
+  const selectedNoteIds = Array.from(new Set(selectedNotes.map((note) => byLabel.get(note)?.id || "").filter(Boolean)));
   const sort = searchParams.get("sort") || "newest";
 
   const activeIndex = await getActivePerfumeIndex();
@@ -82,8 +115,24 @@ export async function GET(req: Request) {
   // Apply filters in memory (replaces Prisma where clauses)
   if (category) perfumes = perfumes.filter((p) => p.category === category);
   if (season) perfumes = perfumes.filter((p) => p.season === season);
-  if (bestSeller === "true") perfumes = perfumes.filter((p) => p.isBestSeller);
+  if (bestSeller === "true") {
+    perfumes = perfumes.filter((p) => Number(p.totalOrders || 0) > 0);
+  }
   if (brand) perfumes = perfumes.filter((p) => p.brand === brand);
+  if (selectedNotes.length > 0) {
+    perfumes = perfumes.filter((p) => {
+      const noteIndex = new Set([
+        ...(Array.isArray(p.fragranceNoteIds?.all) ? p.fragranceNoteIds?.all : []),
+        ...asLowerList(p.fragranceNotes?.all),
+        ...asLowerList(p.fragranceNotes?.top),
+        ...asLowerList(p.fragranceNotes?.middle),
+        ...asLowerList(p.fragranceNotes?.base),
+      ]);
+      const matchesByName = selectedNotes.every((note) => noteIndex.has(note));
+      const matchesById = selectedNoteIds.length > 0 && selectedNoteIds.every((id) => noteIndex.has(id));
+      return matchesByName || matchesById;
+    });
+  }
 
   // Text search across multiple fields (replaces Prisma contains/OR)
   if (q) {
@@ -91,12 +140,20 @@ export async function GET(req: Request) {
       p.name?.toLowerCase().includes(q) ||
       p.brand?.toLowerCase().includes(q) ||
       p.inspiredBy?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q),
+      p.description?.toLowerCase().includes(q) ||
+      asLowerList(p.fragranceNotes?.all).some((note) => note.includes(q)) ||
+      asLowerList(p.noteSearchIndex).some((note) => note.includes(q)),
     );
   }
 
   // Sort (replaces Prisma orderBy)
-  if (sort === "name-asc") perfumes.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  if (bestSeller === "true") {
+    perfumes.sort((a, b) => {
+      const orderDiff = Number(b.totalOrders || 0) - Number(a.totalOrders || 0);
+      if (orderDiff !== 0) return orderDiff;
+      return asDate(b.createdAt).getTime() - asDate(a.createdAt).getTime();
+    });
+  } else if (sort === "name-asc") perfumes.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   else if (sort === "name-desc") perfumes.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
   else if (sort === "price-asc") perfumes.sort((a, b) => (a.marketPricePerMl || 0) - (b.marketPricePerMl || 0));
   else if (sort === "price-desc") perfumes.sort((a, b) => (b.marketPricePerMl || 0) - (a.marketPricePerMl || 0));
@@ -105,7 +162,22 @@ export async function GET(req: Request) {
     perfumes.sort((a, b) => asDate(b.createdAt).getTime() - asDate(a.createdAt).getTime());
   }
 
-  const body = { perfumes: perfumes.map(serializeDoc), brands: activeIndex.brands };
+  const body = {
+    perfumes: perfumes.map((perfume) => {
+      if (Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0) {
+        return serializeDoc(perfume);
+      }
+      const normalized = buildStructuredNotes(perfume, library);
+      return serializeDoc({
+        ...perfume,
+        keyNotes: normalized.keyNotes,
+        fragranceNotes: normalized.fragranceNotes,
+        fragranceNoteIds: normalized.fragranceNoteIds,
+        noteSearchIndex: normalized.noteSearchIndex,
+      });
+    }),
+    brands: activeIndex.brands,
+  };
   searchResultCache.set(cacheKey, { body, ts: Date.now() });
   if (searchResultCache.size > 50) {
     const firstKey = searchResultCache.keys().next().value;

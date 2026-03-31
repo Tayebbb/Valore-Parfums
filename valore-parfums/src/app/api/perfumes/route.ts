@@ -3,9 +3,11 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
+import { buildStructuredNotes, getCanonicalNotesLibrary } from "@/lib/fragrance-notes";
 
 const PERFUMES_CACHE_TTL = 20_000;
 const perfumesCache = new Map<string, { data: unknown[]; ts: number }>();
+const canonicalNotesLibrary = getCanonicalNotesLibrary();
 
 function getDate(value: unknown): Date {
   if (value && typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function") {
@@ -37,7 +39,19 @@ export async function GET(req: Request) {
     return db2.getTime() - da.getTime();
   });
 
-  const payload = perfumes.map(serializeDoc);
+  const payload = perfumes.map((perfume) => {
+    const hasKeyNotes = Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0;
+    if (hasKeyNotes) return serializeDoc(perfume);
+
+    const notes = buildStructuredNotes(perfume, canonicalNotesLibrary);
+    return serializeDoc({
+      ...perfume,
+      keyNotes: notes.keyNotes,
+      fragranceNotes: notes.fragranceNotes,
+      fragranceNoteIds: notes.fragranceNoteIds,
+      noteSearchIndex: notes.noteSearchIndex,
+    });
+  });
   perfumesCache.set(cacheKey, { data: payload, ts: Date.now() });
   return NextResponse.json(payload);
 }
@@ -50,7 +64,24 @@ export async function POST(req: Request) {
     const body = await req.json();
     const id = uuid();
     const now = Timestamp.now();
-    const data = { ...body, createdAt: now, updatedAt: now };
+    const notes = buildStructuredNotes(body);
+    const data = {
+      ...body,
+      fragranceNoteIds: notes.fragranceNoteIds,
+      fragranceNotes: notes.fragranceNotes,
+      topNoteIds: notes.fragranceNoteIds.top,
+      middleNoteIds: notes.fragranceNoteIds.middle,
+      baseNoteIds: notes.fragranceNoteIds.base,
+      topNotes: notes.fragranceNotes.top,
+      middleNotes: notes.fragranceNotes.middle,
+      baseNotes: notes.fragranceNotes.base,
+      keyNotes: notes.keyNotes,
+      noteSearchIndex: notes.noteSearchIndex,
+      noteIdIndex: notes.noteIdIndex,
+      totalOrders: Number(body.totalOrders ?? 0),
+      createdAt: now,
+      updatedAt: now,
+    };
     await db.collection(Collections.perfumes).doc(id).set(data);
     perfumesCache.clear();
     return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });

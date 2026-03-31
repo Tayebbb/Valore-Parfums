@@ -33,40 +33,78 @@ const brandsDropdown = [
   { label: "Designers", href: "/shop?brand=designer" },
 ];
 
-function Dropdown({ label, items, open, onToggle }: { label: string; items: { label: string; href: string }[]; open: boolean; onToggle: () => void }) {
+function DesktopDropdown({
+  label,
+  items,
+  href,
+  open,
+  onOpen,
+  onRequestClose,
+  onCloseImmediate,
+}: {
+  label: string;
+  items: { label: string; href: string }[];
+  href?: string;
+  open: boolean;
+  onOpen: () => void;
+  onRequestClose: () => void;
+  onCloseImmediate: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onToggle();
+      if (ref.current && !ref.current.contains(e.target as Node)) onCloseImmediate();
     };
-    if (open) document.addEventListener("mousedown", handler);
+    document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open, onToggle]);
+  }, [onCloseImmediate]);
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-1 text-[11px] uppercase tracking-[0.15em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+    <div className="relative" ref={ref} onMouseEnter={onOpen} onMouseLeave={onRequestClose}>
+      <div className="flex items-center gap-1">
+        {href ? (
+          <Link
+            href={href}
+            className="text-[11px] uppercase tracking-[0.15em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            {label}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => (open ? onCloseImmediate() : onOpen())}
+            className="text-[11px] uppercase tracking-[0.15em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            {label}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => (open ? onCloseImmediate() : onOpen())}
+          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          aria-label={`${label} dropdown`}
+        >
+          <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+
+      <div
+        className={`absolute top-full left-0 mt-3 min-w-[220px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-[0_18px_40px_var(--shadow-color)] z-50 overflow-hidden transition-all duration-200 ${
+          open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-1 pointer-events-none"
+        }`}
       >
-        {label}
-        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-3 min-w-[200px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded shadow-lg z-50 animate-fade-up overflow-hidden">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              onClick={onToggle}
-              className="block px-5 py-3 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] last:border-b-0 transition-colors"
+              onClick={onCloseImmediate}
+              className="block px-5 py-3.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] last:border-b-0 transition-colors"
             >
               {item.label}
             </Link>
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -86,11 +124,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [searchLoading, setSearchLoading] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<{id:string;message:string}[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setMounted(true));
@@ -145,6 +185,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       if (searchDebounce.current) {
         clearTimeout(searchDebounce.current);
       }
+      if (dropdownCloseTimer.current) {
+        clearTimeout(dropdownCloseTimer.current);
+      }
     };
   }, []);
 
@@ -170,6 +213,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const timer = window.setTimeout(() => {
       setMobileMenuOpen(false);
       setOpenDropdown(null);
+      setMobileExpanded(null);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [pathname]);
@@ -204,8 +248,34 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }, 250);
   }, []);
 
-  const toggleDropdown = (name: string) => {
-    setOpenDropdown(openDropdown === name ? null : name);
+  const openDropdownWithIntent = (name: string) => {
+    if (dropdownCloseTimer.current) {
+      clearTimeout(dropdownCloseTimer.current);
+      dropdownCloseTimer.current = null;
+    }
+    setOpenDropdown(name);
+  };
+
+  const closeDropdownWithDelay = () => {
+    if (dropdownCloseTimer.current) {
+      clearTimeout(dropdownCloseTimer.current);
+    }
+    dropdownCloseTimer.current = setTimeout(() => {
+      setOpenDropdown(null);
+      dropdownCloseTimer.current = null;
+    }, 130);
+  };
+
+  const closeDropdownImmediately = () => {
+    if (dropdownCloseTimer.current) {
+      clearTimeout(dropdownCloseTimer.current);
+      dropdownCloseTimer.current = null;
+    }
+    setOpenDropdown(null);
+  };
+
+  const toggleMobileExpanded = (name: string) => {
+    setMobileExpanded((prev) => (prev === name ? null : name));
   };
 
   return (
@@ -263,40 +333,70 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             >
               Home
             </Link>
-            <Dropdown
+            <DesktopDropdown
               label="Shop"
+              href="/shop"
               items={shopDropdown}
               open={openDropdown === "shop"}
-              onToggle={() => toggleDropdown("shop")}
+              onOpen={() => openDropdownWithIntent("shop")}
+              onRequestClose={closeDropdownWithDelay}
+              onCloseImmediate={closeDropdownImmediately}
             />
-            <Dropdown
+            <DesktopDropdown
               label="Seasons"
               items={seasonsDropdown}
               open={openDropdown === "seasons"}
-              onToggle={() => toggleDropdown("seasons")}
+              onOpen={() => openDropdownWithIntent("seasons")}
+              onRequestClose={closeDropdownWithDelay}
+              onCloseImmediate={closeDropdownImmediately}
             />
-            <Dropdown
+            <DesktopDropdown
               label="Brands"
               items={brandsDropdown}
               open={openDropdown === "brands"}
-              onToggle={() => toggleDropdown("brands")}
+              onOpen={() => openDropdownWithIntent("brands")}
+              onRequestClose={closeDropdownWithDelay}
+              onCloseImmediate={closeDropdownImmediately}
             />
-            <Link
-              href="/track"
-              className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
-                pathname === "/track" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              My Orders
-            </Link>
-            <Link
-              href="/requests"
-              className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
-                pathname === "/requests" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              Requests
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/track"
+                  className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
+                    pathname === "/track" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  My Orders
+                </Link>
+                <Link
+                  href="/requests"
+                  className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
+                    pathname === "/requests" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  My Requests
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/track"
+                  className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
+                    pathname === "/track" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  Track Order
+                </Link>
+                <Link
+                  href="/login"
+                  className={`text-[11px] uppercase tracking-[0.15em] transition-colors ${
+                    pathname === "/login" ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  Login
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Right Actions */}
@@ -319,9 +419,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </button>
 
             {/* Wishlist */}
-            <Link href="/wishlist" className="hidden sm:block text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
-              <Heart size={18} />
-            </Link>
+            {user && (
+              <Link href="/wishlist" className="hidden sm:block text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
+                <Heart size={18} />
+              </Link>
+            )}
 
             {/* User */}
             <div className="relative" ref={userMenuRef}>
@@ -342,6 +444,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       <Link href="/track" onClick={() => setUserMenuOpen(false)} className="block px-5 py-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--gold-tint)] transition-colors">
                         My Orders
                       </Link>
+                      <div className="px-5 py-2 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] border-t border-[var(--border)]">
+                        Account Controls
+                      </div>
                       <Link href="/wishlist" onClick={() => setUserMenuOpen(false)} className="block px-5 py-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] transition-colors">
                         Wishlist
                       </Link>
@@ -458,39 +563,76 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               Home
             </Link>
             <div className="border-b border-[var(--border)]">
-              <p className="py-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Shop</p>
-              {shopDropdown.map((item) => (
-                <Link key={item.href} href={item.href} className="block py-2.5 pl-4 text-sm text-[var(--text-secondary)]">
-                  {item.label}
-                </Link>
-              ))}
+              <div className="flex items-center justify-between py-3">
+                <Link href="/shop" className="text-sm uppercase tracking-wider">Shop</Link>
+                <button
+                  type="button"
+                  onClick={() => toggleMobileExpanded("shop")}
+                  className="p-1 text-[var(--text-secondary)]"
+                  aria-label="Toggle shop submenu"
+                >
+                  <ChevronDown size={16} className={`transition-transform ${mobileExpanded === "shop" ? "rotate-180" : ""}`} />
+                </button>
+              </div>
+              {mobileExpanded === "shop" && (
+                <div className="pb-3 space-y-1">
+                  {shopDropdown.map((item) => (
+                    <Link key={item.href} href={item.href} className="block py-2.5 pl-4 text-sm text-[var(--text-secondary)]">
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="border-b border-[var(--border)]">
-              <p className="py-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Seasons</p>
-              {seasonsDropdown.map((item) => (
-                <Link key={item.href} href={item.href} className="block py-2.5 pl-4 text-sm text-[var(--text-secondary)]">
-                  {item.label}
-                </Link>
-              ))}
+              <button
+                type="button"
+                onClick={() => toggleMobileExpanded("seasons")}
+                className="w-full flex items-center justify-between py-3"
+              >
+                <span className="text-sm uppercase tracking-wider">Seasons</span>
+                <ChevronDown size={16} className={`transition-transform ${mobileExpanded === "seasons" ? "rotate-180" : ""}`} />
+              </button>
+              {mobileExpanded === "seasons" && (
+                <div className="pb-3 space-y-1">
+                  {seasonsDropdown.map((item) => (
+                    <Link key={item.href} href={item.href} className="block py-2.5 pl-4 text-sm text-[var(--text-secondary)]">
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="border-b border-[var(--border)]">
-              <p className="py-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Brands</p>
-              {brandsDropdown.map((item) => (
-                <Link key={item.href} href={item.href} className="block py-2.5 pl-4 text-sm text-[var(--text-secondary)]">
-                  {item.label}
-                </Link>
-              ))}
+              <button
+                type="button"
+                onClick={() => toggleMobileExpanded("brands")}
+                className="w-full flex items-center justify-between py-3"
+              >
+                <span className="text-sm uppercase tracking-wider">Brands</span>
+                <ChevronDown size={16} className={`transition-transform ${mobileExpanded === "brands" ? "rotate-180" : ""}`} />
+              </button>
+              {mobileExpanded === "brands" && (
+                <div className="pb-3 space-y-1">
+                  {brandsDropdown.map((item) => (
+                    <Link key={item.href} href={item.href} className="block py-2.5 pl-4 text-sm text-[var(--text-secondary)]">
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
             <Link href="/track" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
-              My Orders
+              {user ? "My Orders" : "Track Order"}
             </Link>
-            <Link href="/requests" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
-              Requests
-            </Link>
-            {!user && (
+            {user ? (
+              <Link href="/requests" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
+                My Requests
+              </Link>
+            ) : (
               <>
                 <Link href="/login" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
-                  Sign In
+                  Login
                 </Link>
                 <Link href="/signup" className="block py-3 text-sm uppercase tracking-wider text-[var(--gold)]">
                   Create Account
