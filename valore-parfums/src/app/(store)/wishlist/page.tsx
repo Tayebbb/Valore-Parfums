@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Trash2 } from "lucide-react";
@@ -23,18 +23,22 @@ export default function WishlistPage() {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchWishlist = () => {
+  const fetchWishlist = useCallback(() => {
+    setLoading(true);
     fetch("/api/wishlist")
       .then((r) => r.json())
       .then((data) => setItems(data.items || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
-    if (user) fetchWishlist();
-    else setLoading(false);
-  }, [user]);
+    if (!user) return;
+    const timer = window.setTimeout(() => {
+      fetchWishlist();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [user, fetchWishlist]);
 
   const removeItem = async (perfumeId: string) => {
     await fetch("/api/wishlist", {

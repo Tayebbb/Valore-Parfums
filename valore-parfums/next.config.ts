@@ -4,10 +4,17 @@ const nextConfig: NextConfig = {
   // Compress responses with gzip (Brotli handled by CDN/reverse proxy)
   compress: true,
 
+  // Allow Turbopack to use system TLS certificates so Google Fonts can be
+  // fetched during the build (required when the build host uses a custom CA).
+  experimental: {
+    turbopackUseSystemTlsCerts: true,
+  },
+
   // Optimize images
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    dangerouslyAllowLocalIP: true,
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     remotePatterns: [

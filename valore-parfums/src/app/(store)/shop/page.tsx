@@ -109,31 +109,30 @@ function PriceRangeSlider({ min, max, value, onChange }: {
 }) {
   const [localMin, setLocalMin] = useState(String(value[0]));
   const [localMax, setLocalMax] = useState(String(value[1]));
+  const [editingMin, setEditingMin] = useState(false);
+  const [editingMax, setEditingMax] = useState(false);
 
-  // Sync local text when parent value changes (e.g. from slider drag or reset)
-  useEffect(() => {
-    setLocalMin(String(value[0]));
-  }, [value[0]]);
-  useEffect(() => {
-    setLocalMax(String(value[1]));
-  }, [value[1]]);
+  const minInputValue = editingMin ? localMin : String(value[0]);
+  const maxInputValue = editingMax ? localMax : String(value[1]);
 
   const pct = (v: number) => max > min ? ((v - min) / (max - min)) * 100 : 0;
 
   const applyMin = () => {
     const raw = localMin.replace(/[^0-9]/g, "");
-    if (!raw) { setLocalMin(String(min)); onChange([min, value[1]]); return; }
+    if (!raw) { setLocalMin(String(min)); onChange([min, value[1]]); setEditingMin(false); return; }
     const n = Math.max(min, Math.min(parseInt(raw, 10), value[1]));
     setLocalMin(String(n));
     onChange([n, value[1]]);
+    setEditingMin(false);
   };
 
   const applyMax = () => {
     const raw = localMax.replace(/[^0-9]/g, "");
-    if (!raw) { setLocalMax(String(max)); onChange([value[0], max]); return; }
+    if (!raw) { setLocalMax(String(max)); onChange([value[0], max]); setEditingMax(false); return; }
     const n = Math.min(max, Math.max(parseInt(raw, 10), value[0]));
     setLocalMax(String(n));
     onChange([value[0], n]);
+    setEditingMax(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, apply: () => void) => {
@@ -152,7 +151,11 @@ function PriceRangeSlider({ min, max, value, onChange }: {
           <input
             type="text"
             inputMode="numeric"
-            value={localMin}
+            value={minInputValue}
+            onFocus={() => {
+              setEditingMin(true);
+              setLocalMin(String(value[0]));
+            }}
             onChange={(e) => setLocalMin(e.target.value)}
             onBlur={applyMin}
             onKeyDown={(e) => handleKeyDown(e, applyMin)}
@@ -165,7 +168,11 @@ function PriceRangeSlider({ min, max, value, onChange }: {
           <input
             type="text"
             inputMode="numeric"
-            value={localMax}
+            value={maxInputValue}
+            onFocus={() => {
+              setEditingMax(true);
+              setLocalMax(String(value[1]));
+            }}
             onChange={(e) => setLocalMax(e.target.value)}
             onBlur={applyMax}
             onKeyDown={(e) => handleKeyDown(e, applyMax)}
@@ -237,6 +244,8 @@ function ShopContent() {
   const [searchInput, setSearchInput] = useState(qParam);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
+  const fetchControllerRef = useRef<AbortController | null>(null);
+  const fetchSeqRef = useRef(0);
 
   const categories = ["Men", "Women", "Unisex", "Oud"];
   const seasons = ["Summer", "Winter", "Spring", "Fall", "All Year"];
@@ -248,7 +257,12 @@ function ShopContent() {
     { value: "price-desc", label: "Price: High to Low" },
   ];
 
-  const fetchPerfumes = useCallback(() => {
+  const fetchPerfumes = useCallback(async () => {
+    fetchControllerRef.current?.abort();
+    const controller = new AbortController();
+    fetchControllerRef.current = controller;
+    const seq = ++fetchSeqRef.current;
+
     setLoading(true);
     const params = new URLSearchParams();
     if (qParam) params.set("q", qParam);
@@ -258,39 +272,58 @@ function ShopContent() {
     if (brandParam) params.set("brand", brandParam);
     if (sortParam) params.set("sort", sortParam);
 
-    fetch(`/api/perfumes/search?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const p = data.perfumes || [];
-        setPerfumes(p);
-        if (data.brands) setAllBrands((data.brands as string[]).filter((b: string) => b.toLowerCase() !== "valore parfums"));
-        // Batch-fetch pricing for all results in ONE call
-        const ids = p.map((pf: Perfume) => pf.id);
-        if (ids.length > 0) {
-          fetch("/api/pricing", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ perfumeIds: ids }),
-          })
-            .then((r) => r.json())
-            .then((map) => {
-              const parsed: Record<string, PriceInfo[]> = {};
-              for (const [id, val] of Object.entries(map)) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                parsed[id] = (val as any).prices || [];
-              }
-              setPriceMap(parsed);
-            })
-            .catch(() => {});
-        } else {
-          setPriceMap({});
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    try {
+      const perfumeRes = await fetch(`/api/perfumes/search?${params.toString()}`, { signal: controller.signal });
+      const data = await perfumeRes.json();
+      if (seq !== fetchSeqRef.current) return;
+
+      const p = (data.perfumes || []) as Perfume[];
+      setPerfumes(p);
+      if (data.brands) {
+        setAllBrands((data.brands as string[]).filter((b: string) => b.toLowerCase() !== "valore parfums"));
+      }
+
+      const ids = p.map((pf) => pf.id);
+      if (ids.length === 0) {
+        setPriceMap({});
+        return;
+      }
+
+      const pricingRes = await fetch("/api/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ perfumeIds: ids }),
+        signal: controller.signal,
+      });
+      const map = await pricingRes.json();
+      if (seq !== fetchSeqRef.current) return;
+
+      const parsed: Record<string, PriceInfo[]> = {};
+      for (const [id, val] of Object.entries(map)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        parsed[id] = (val as any).prices || [];
+      }
+      setPriceMap(parsed);
+    } catch {
+      if (seq === fetchSeqRef.current) {
+        setPriceMap({});
+      }
+    } finally {
+      if (seq === fetchSeqRef.current) {
+        setLoading(false);
+      }
+    }
   }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, sortParam]);
 
-  useEffect(() => { fetchPerfumes(); }, [fetchPerfumes]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      fetchPerfumes();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      fetchControllerRef.current?.abort();
+    };
+  }, [fetchPerfumes]);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
