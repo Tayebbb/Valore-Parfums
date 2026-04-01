@@ -245,6 +245,10 @@ a[href]:hover {
 
 /* ── Status pill colors ── */
 .status-pending  { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.status-pendingbkashverification { background: rgba(244,114,182,0.14); color: #f472b6; }
+.status-bkashpaid { background: rgba(236,72,153,0.14); color: #ec4899; }
+.status-pendingbankverification { background: rgba(59,130,246,0.14); color: #60a5fa; }
+.status-paid { background: rgba(34,197,94,0.14); color: #22c55e; }
 .status-confirmed { background: rgba(96,165,250,0.12); color: #60a5fa; }
 .status-ready    { background: rgba(201,165,92,0.12); color: #c9a55c; }
 .status-processing { background: rgba(56,189,248,0.12); color: #38bdf8; }

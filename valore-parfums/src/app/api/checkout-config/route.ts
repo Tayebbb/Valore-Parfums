@@ -18,6 +18,17 @@ export async function GET() {
   return NextResponse.json({
     deliveryFeeInsideDhaka: Number.isFinite(deliveryFeeInsideDhaka) ? deliveryFeeInsideDhaka : 0,
     deliveryFeeOutsideDhaka: Number.isFinite(deliveryFeeOutsideDhaka) ? deliveryFeeOutsideDhaka : 0,
+    bkashAccountName: String(settings.bkashAccountName || ""),
+    bkashAccountNumber: String(settings.bkashAccountNumber || ""),
+    bkashAccountType: String(settings.bkashAccountType || ""),
+    bkashQrImageUrl: String(settings.bkashQrImageUrl || ""),
+    bankName: String(settings.bankName || ""),
+    bankAccountName: String(settings.bankAccountName || ""),
+    bankAccountNumber: String(settings.bankAccountNumber || ""),
+    bankAccountType: String(settings.bankAccountType || ""),
+    bankDistrict: String(settings.bankDistrict || ""),
+    bankBranch: String(settings.bankBranch || ""),
+    bankQrImageUrl: String(settings.bankQrImageUrl || ""),
     pickupLocations,
   });
 }

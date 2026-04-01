@@ -106,6 +106,10 @@ export function splitProfit(profit: number, owner: OwnerType, ownerPercent = 85)
 export function statusColor(status: string): string {
   switch (status) {
     case "Pending": return "amber";
+    case "Pending Bkash Verification": return "amber";
+    case "Pending Bank Verification": return "blue";
+    case "Bkash Paid": return "blue";
+    case "Paid": return "green";
     case "Confirmed": return "blue";
     case "Ready": return "gold";
     case "Completed": return "green";
