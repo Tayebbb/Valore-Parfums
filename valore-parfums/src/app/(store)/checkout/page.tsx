@@ -615,7 +615,7 @@ export default function CheckoutPage() {
 
                   <ol className="list-decimal pl-5 space-y-1.5 text-sm text-[var(--text-secondary)]">
                     <li>Send the required payment amount to our bKash account.</li>
-                    <li>Use your bKash app to complete the transfer.</li>
+                    <li>Scan the QR code from the bKash app using the QR Scan option, or pay from your bKash app or pay using <span className="font-semibold text-[var(--text-primary)]">*247#</span>.</li>
                     <li>Copy the transaction number (TXN ID) from your payment receipt.</li>
                     <li>Fill in the form below with your payment details.</li>
                   </ol>
@@ -641,7 +641,7 @@ export default function CheckoutPage() {
 
                   {checkoutConfig.bkashQrImageUrl ? (
                     <div className="mt-4 rounded-2xl border border-[rgba(227,35,132,0.45)] bg-[var(--bg-card)] p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Scan QR to Pay Quickly</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Scan this QR from the bKash app QR Scan option</p>
                       <img
                         src={checkoutConfig.bkashQrImageUrl}
                         alt="bKash payment QR"
