@@ -54,11 +54,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .get();
 
     let refundAmount = 0;
+    const cancelledItemsList: string[] = [];
 
     // Restore inventory for all items
     for (const itemDoc of itemsSnap.docs) {
       const item = itemDoc.data();
       refundAmount += item.totalPrice || 0;
+      cancelledItemsList.push(`${item.perfumeName || "Perfume"} - ${item.ml || 0}ml x ${item.quantity || 0}`);
 
       // Only restore decant items (full bottles are not stock-managed the same way)
       if (!item.isFullBottle) {
@@ -149,6 +151,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Send cancellation email
     let emailSent = false;
+    const orderedItems = cancelledItemsList.length > 0 ? cancelledItemsList.join("<br/>") : "{{ORDER_ITEMS}}";
     try {
       await sendEmail({
         to: order?.customerEmail || "",
@@ -166,6 +169,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
               <strong>Cancellation Reason:</strong> ${String(cancelReason || "").trim()}<br/>
               ${refundAmount > 0 ? `<strong>Refund Amount:</strong> ৳${refundAmount}<br/>` : ""}
               <strong>Status:</strong> <span style="color: #d32f2f;">Cancelled</span>
+            </div>
+
+            <div style="background:#fff; border:1px solid #e8e4dc; padding: 20px 24px; margin: 20px 0;">
+              <p style="font-size:10px; letter-spacing:3px; color:#999; text-transform:uppercase; margin-bottom:14px;">Your Selection</p>
+              <p style="font-size:13px; color:#333; line-height:1.8;">${orderedItems}</p>
             </div>
             
             <p>If you paid via bKash or bank transfer, your refund will be processed within 3-5 business days.</p>

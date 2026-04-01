@@ -5,7 +5,12 @@ import { requireAdmin } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
 import { splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
-import { generateOrderShippedEmail, sendEmail } from "@/lib/email";
+import {
+  generateOrderConfirmedEmail,
+  generateOrderDeliveredEmail,
+  generateOrderDispatchedEmail,
+  sendEmail,
+} from "@/lib/email";
 import { validateString } from "@/lib/validation";
 
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
@@ -52,7 +57,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const previousStatus = order.status || "Pending";
-  const newStatus = typeof orderPatch.status === "string" ? orderPatch.status : undefined;
+  const requestedStatus = typeof orderPatch.status === "string" ? String(orderPatch.status).trim() : undefined;
+  const newStatus = requestedStatus === "Processing"
+    ? "Confirmed"
+    : requestedStatus === "Ready"
+      ? "Out for Delivery"
+      : requestedStatus;
+  if (newStatus && newStatus !== requestedStatus) {
+    orderPatch.status = newStatus;
+  }
 
   if (newStatus === "Cancelled") {
     const reasonValidation = validateString(orderPatch.cancelReason, "cancelReason", {
@@ -482,22 +495,58 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   const updatedData = updatedDoc.data()!;
+  const emailItems = items.map((item) => {
+    const row = item as Record<string, unknown>;
+    return {
+      perfumeName: String(row.perfumeName || "Perfume"),
+      quantity: Number(row.quantity || 0),
+      ml: Number(row.ml || 0),
+      unitPrice: Number(row.unitPrice || 0),
+    };
+  });
 
-  if (newStatus === "Shipped" && previousStatus !== "Shipped") {
-    const customerEmail = String(updatedData.customerEmail || "").trim();
-    if (customerEmail) {
-      void sendEmail(
-        generateOrderShippedEmail({
-          customerName: String(updatedData.customerName || "Customer"),
-          customerEmail,
-          orderId: id,
-          trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
-          estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
-        }),
-      ).catch((error) => {
-        console.error("Failed to send shipment email:", error);
-      });
-    }
+  const customerEmail = String(updatedData.customerEmail || "").trim();
+
+  if (customerEmail && (newStatus === "Confirmed" || newStatus === "Paid") && previousStatus !== newStatus) {
+    void sendEmail(
+      generateOrderConfirmedEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+        total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+      }),
+    ).catch((error) => {
+      console.error("Failed to send confirmation email:", error);
+    });
+  }
+
+  if (customerEmail && ["Shipped", "Dispatched", "Out for Delivery"].includes(String(newStatus || "")) && previousStatus !== newStatus) {
+    void sendEmail(
+      generateOrderDispatchedEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+        trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
+        estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
+      }),
+    ).catch((error) => {
+      console.error("Failed to send shipment email:", error);
+    });
+  }
+
+  if (customerEmail && (newStatus === "Completed" || newStatus === "Delivered") && previousStatus !== newStatus) {
+    void sendEmail(
+      generateOrderDeliveredEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+      }),
+    ).catch((error) => {
+      console.error("Failed to send delivered email:", error);
+    });
   }
 
   return NextResponse.json(serializeDoc({

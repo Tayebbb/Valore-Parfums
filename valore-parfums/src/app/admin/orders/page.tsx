@@ -51,7 +51,7 @@ interface Order {
   items: OrderItem[];
 }
 
-const statuses = ["Pending", "Pending Bkash Verification", "Pending Bank Verification", "Confirmed", "Ready", "Completed", "Cancelled"];
+const statuses = ["Pending", "Pending Bkash Verification", "Pending Bank Verification", "Confirmed", "Out for Delivery", "Completed", "Cancelled"];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
 type SortType = "newest" | "oldest" | "highest-total" | "highest-profit";
 

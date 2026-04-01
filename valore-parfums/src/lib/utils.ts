@@ -112,6 +112,7 @@ export function statusColor(status: string): string {
     case "Paid": return "green";
     case "Confirmed": return "blue";
     case "Ready": return "gold";
+    case "Out for Delivery": return "gold";
     case "Completed": return "green";
     case "Cancelled": return "red";
     default: return "gray";
