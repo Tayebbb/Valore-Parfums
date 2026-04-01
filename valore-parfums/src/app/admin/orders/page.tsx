@@ -24,6 +24,23 @@ interface Order {
   customerPhone: string;
   customerEmail: string;
   pickupMethod: string;
+  paymentMethod?: string;
+  bkashPayment?: {
+    customerName?: string;
+    paidFromNumber?: string;
+    transactionNumber?: string;
+    notes?: string;
+    submittedAt?: string;
+    amount?: number;
+  } | null;
+  bankPayment?: {
+    accountName?: string;
+    accountNumber?: string;
+    transactionNumber?: string;
+    notes?: string;
+    submittedAt?: string;
+    amount?: number;
+  } | null;
   deliveryZone?: string;
   deliveryFee?: number;
   status: string;
@@ -66,7 +83,18 @@ interface StockRequest {
   createdAt: string;
 }
 
-const statuses = ["Pending", "Confirmed", "Sourcing", "Ready", "Dispatched", "Cancelled"];
+const statuses = [
+  "Pending",
+  "Pending Bkash Verification",
+  "Pending Bank Verification",
+  "Confirmed",
+  "Sourcing",
+  "Ready",
+  "Out for Delivery",
+  "Dispatched",
+  "Completed",
+  "Cancelled",
+];
 const requestStatuses = ["Pending", "Confirmed", "Dispatched", "Cancelled"];
 const procurementStatuses = ["Pending", "Sourcing", "Ready", "Dispatched", "Cancelled"];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
@@ -129,6 +157,9 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("orders");
   const [statusFilter, setStatusFilter] = useState("");
   const [sizeTypeFilter, setSizeTypeFilter] = useState<SizeTypeFilter>("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<"all" | "Cash on Delivery" | "Bkash Manual" | "Bank Manual">("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [manualPrices, setManualPrices] = useState<Record<string, string>>({});
@@ -139,6 +170,7 @@ export default function OrdersPage() {
   const [savingRequestPrices, setSavingRequestPrices] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
   const [applyingStatusChange, setApplyingStatusChange] = useState(false);
+  const [verifyingBkash, setVerifyingBkash] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -176,6 +208,11 @@ export default function OrdersPage() {
     });
   };
 
+  const showPendingBankPayments = () => {
+    setStatusFilter("Pending Bank Verification");
+    setSortBy("newest");
+  };
+
   const updateStatus = async (id: string, status: string) => {
     const res = await fetch(`/api/orders/${id}`, {
       method: "PUT",
@@ -193,6 +230,48 @@ export default function OrdersPage() {
     updateOrderInState(updated);
     toast(`Order ${status.toLowerCase()}`, "success");
     return true;
+  };
+
+  const verifyBkashAndConfirm = async () => {
+    if (!selectedOrder) return;
+    setVerifyingBkash(true);
+    const res = await fetch(`/api/orders/${selectedOrder.id}/verify-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "Verified via admin quick action" }),
+    });
+    setVerifyingBkash(false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to verify bKash payment", "error");
+      return;
+    }
+
+    const updated = await res.json();
+    updateOrderInState(updated);
+    toast("bKash payment verified and order confirmed", "success");
+  };
+
+  const verifyBankAndMarkPaid = async () => {
+    if (!selectedOrder) return;
+    setVerifyingBkash(true);
+    const res = await fetch(`/api/orders/${selectedOrder.id}/verify-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "Verified via admin quick action" }),
+    });
+    setVerifyingBkash(false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to verify bank payment", "error");
+      return;
+    }
+
+    const updated = await res.json();
+    updateOrderInState(updated);
+    toast("Bank payment verified and marked as paid", "success");
   };
 
   const saveFullBottlePrices = async () => {
@@ -375,8 +454,22 @@ export default function OrdersPage() {
     const bySize = sizeTypeFilter === "all"
       ? byStatus
       : byStatus.filter((o) => getOrderSizeType(o) === sizeTypeFilter);
+    const byPaymentMethod = paymentMethodFilter === "all"
+      ? bySize
+      : bySize.filter((o) => (o.paymentMethod || "Cash on Delivery") === paymentMethodFilter);
 
-    const sorted = [...bySize];
+    const byDateRange = byPaymentMethod.filter((o) => {
+      if (!dateFrom && !dateTo) return true;
+      const createdAt = new Date(o.createdAt);
+      if (Number.isNaN(createdAt.getTime())) return false;
+      const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+      const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
+      if (start && createdAt < start) return false;
+      if (end && createdAt > end) return false;
+      return true;
+    });
+
+    const sorted = [...byDateRange];
     sorted.sort((a, b) => {
       if (sortBy === "highest-total") return (b.total ?? 0) - (a.total ?? 0);
       if (sortBy === "highest-profit") return (b.profit ?? 0) - (a.profit ?? 0);
@@ -387,7 +480,7 @@ export default function OrdersPage() {
     });
 
     return sorted;
-  }, [orders, statusFilter, sizeTypeFilter, sortBy]);
+  }, [orders, statusFilter, sizeTypeFilter, paymentMethodFilter, dateFrom, dateTo, sortBy]);
 
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -434,6 +527,19 @@ export default function OrdersPage() {
       <div className={activeTab === "orders" ? "space-y-2" : "hidden"}>
         <div className="flex items-center gap-2 flex-wrap">
           <button
+            onClick={showPendingBankPayments}
+            className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded transition-colors ${
+              statusFilter === "Pending Bank Verification"
+                ? "bg-[rgb(59,130,246)] text-white"
+                : "border border-[rgba(59,130,246,0.45)] text-[rgb(96,165,250)] hover:bg-[rgba(59,130,246,0.12)]"
+            }`}
+          >
+            Pending Bank Payments ({orders.filter((o) => o.status === "Pending Bank Verification").length})
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
             onClick={() => setStatusFilter("")}
             className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded transition-colors ${
               !statusFilter
@@ -462,6 +568,37 @@ export default function OrdersPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Payment</span>
+            <select
+              value={paymentMethodFilter}
+              onChange={(e) => setPaymentMethodFilter(e.target.value as "all" | "Cash on Delivery" | "Bkash Manual" | "Bank Manual")}
+              className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+            >
+              <option value="all">All</option>
+              <option value="Cash on Delivery">Cash on Delivery</option>
+              <option value="Bkash Manual">bKash Manual</option>
+              <option value="Bank Manual">Bank Manual</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">From</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+            />
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">To</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+
           {[
             { key: "all", label: "All Types" },
             { key: "decant", label: "Decants" },
@@ -532,6 +669,12 @@ export default function OrdersPage() {
                       <p className="font-mono text-xs text-[var(--text-secondary)]">{o.id.slice(0, 8)}</p>
                       <p className="text-sm mt-1">{o.customerName}</p>
                       <p className="text-xs text-[var(--text-muted)]">{o.customerPhone}</p>
+                      {o.paymentMethod === "Bkash Manual" && (
+                        <p className="text-[10px] text-[rgb(227,35,132)] mt-1 uppercase tracking-wider">bKash Manual</p>
+                      )}
+                      {o.paymentMethod === "Bank Manual" && (
+                        <p className="text-[10px] text-[rgb(59,130,246)] mt-1 uppercase tracking-wider">Bank Manual</p>
+                      )}
                       {o.voucherCode && (
                         <p className="text-[10px] text-[var(--success)] mt-1 uppercase tracking-wider">Voucher: {o.voucherCode}</p>
                       )}
@@ -743,6 +886,10 @@ export default function OrdersPage() {
                 <span className="text-[var(--text-muted)]">Pickup</span>
                 <span>{selectedOrder.pickupMethod}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Payment Method</span>
+                <span>{selectedOrder.paymentMethod || "Cash on Delivery"}</span>
+              </div>
               {selectedOrder.pickupMethod === "Delivery" && (
                 <>
                   <div className="flex justify-between">
@@ -753,6 +900,74 @@ export default function OrdersPage() {
                     <span className="text-[var(--text-muted)]">Delivery Fee</span>
                     <span>{fmt(selectedOrder.deliveryFee ?? 0)} BDT</span>
                   </div>
+                </>
+              )}
+
+              {selectedOrder.paymentMethod === "Bkash Manual" && selectedOrder.bkashPayment && (
+                <>
+                  <div className="gold-line my-3" />
+                  <h4 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">bKash Payment Details</h4>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Sender Name</span>
+                    <span>{selectedOrder.bkashPayment.customerName || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Paid From</span>
+                    <span>{selectedOrder.bkashPayment.paidFromNumber || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Transaction ID</span>
+                    <span className="font-mono">{selectedOrder.bkashPayment.transactionNumber || "-"}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-[var(--text-muted)]">Notes</span>
+                    <span className="text-right">{selectedOrder.bkashPayment.notes || "-"}</span>
+                  </div>
+                  {(selectedOrder.status === "Pending Bkash Verification" || selectedOrder.status === "Bkash Paid") && (
+                    <div className="pt-2">
+                      <button
+                        onClick={verifyBkashAndConfirm}
+                        disabled={verifyingBkash}
+                        className="px-3 py-1.5 text-[10px] uppercase tracking-wider bg-[rgb(227,35,132)] text-white rounded hover:bg-[rgb(205,28,118)] transition-colors disabled:opacity-50"
+                      >
+                        {verifyingBkash ? "Verifying..." : "Verify bKash & Confirm Order"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {selectedOrder.paymentMethod === "Bank Manual" && selectedOrder.bankPayment && (
+                <>
+                  <div className="gold-line my-3" />
+                  <h4 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bank Payment Details</h4>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Account/Card Name</span>
+                    <span>{selectedOrder.bankPayment.accountName || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Account/Card Number</span>
+                    <span>{selectedOrder.bankPayment.accountNumber || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--text-muted)]">Transaction Ref</span>
+                    <span className="font-mono">{selectedOrder.bankPayment.transactionNumber || "-"}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-[var(--text-muted)]">Notes</span>
+                    <span className="text-right">{selectedOrder.bankPayment.notes || "-"}</span>
+                  </div>
+                  {selectedOrder.status === "Pending Bank Verification" && (
+                    <div className="pt-2">
+                      <button
+                        onClick={verifyBankAndMarkPaid}
+                        disabled={verifyingBkash}
+                        className="px-3 py-1.5 text-[10px] uppercase tracking-wider bg-[rgb(59,130,246)] text-white rounded hover:bg-[rgb(37,99,235)] transition-colors disabled:opacity-50"
+                      >
+                        {verifyingBkash ? "Verifying..." : "Verify Bank & Mark Paid"}
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
 

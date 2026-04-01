@@ -5,6 +5,13 @@ import { requireAdmin } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
 import { splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
+import {
+  generateOrderConfirmedEmail,
+  generateOrderDeliveredEmail,
+  generateOrderDispatchedEmail,
+  sendEmail,
+} from "@/lib/email";
+import { validateString } from "@/lib/validation";
 
 function normalizeOrderStatus(status?: string): string {
   if (!status) return "Pending";
@@ -56,7 +63,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const previousStatus = normalizeOrderStatus(order.status || "Pending");
-  const newStatus = typeof orderPatch.status === "string" ? normalizeOrderStatus(orderPatch.status) : undefined;
+  const requestedStatus = typeof orderPatch.status === "string" ? String(orderPatch.status).trim() : undefined;
+  const mappedStatus = requestedStatus === "Processing"
+    ? "Confirmed"
+    : requestedStatus === "Ready"
+      ? "Out for Delivery"
+      : requestedStatus;
+  const newStatus = mappedStatus ? normalizeOrderStatus(mappedStatus) : undefined;
+  if (newStatus && newStatus !== requestedStatus) {
+    orderPatch.status = newStatus;
+  }
+
+  if (newStatus === "Cancelled") {
+    const reasonValidation = validateString(orderPatch.cancelReason, "cancelReason", {
+      minLength: 5,
+      maxLength: 500,
+    });
+    if (!reasonValidation.valid) {
+      return NextResponse.json({ error: "Cancellation reason is required", errors: reasonValidation.errors }, { status: 400 });
+    }
+  }
 
   // Fetch settings once (needed for profit crediting & reversal)
   const settingsDoc = await db.collection(Collections.settings).doc("default").get();
@@ -476,6 +502,60 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   const updatedData = updatedDoc.data()!;
+  const emailItems = items.map((item) => {
+    const row = item as Record<string, unknown>;
+    return {
+      perfumeName: String(row.perfumeName || "Perfume"),
+      quantity: Number(row.quantity || 0),
+      ml: Number(row.ml || 0),
+      unitPrice: Number(row.unitPrice || 0),
+    };
+  });
+
+  const customerEmail = String(updatedData.customerEmail || "").trim();
+
+  if (customerEmail && (newStatus === "Confirmed" || newStatus === "Paid") && previousStatus !== newStatus) {
+    void sendEmail(
+      generateOrderConfirmedEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+        total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+      }),
+    ).catch((error) => {
+      console.error("Failed to send confirmation email:", error);
+    });
+  }
+
+  if (customerEmail && ["Shipped", "Dispatched", "Out for Delivery"].includes(String(newStatus || "")) && previousStatus !== newStatus) {
+    void sendEmail(
+      generateOrderDispatchedEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+        trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
+        estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
+      }),
+    ).catch((error) => {
+      console.error("Failed to send shipment email:", error);
+    });
+  }
+
+  if (customerEmail && (newStatus === "Completed" || newStatus === "Delivered") && previousStatus !== newStatus) {
+    void sendEmail(
+      generateOrderDeliveredEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+      }),
+    ).catch((error) => {
+      console.error("Failed to send delivered email:", error);
+    });
+  }
+
   return NextResponse.json(serializeDoc({
     id: updatedDoc.id,
     ...updatedData,

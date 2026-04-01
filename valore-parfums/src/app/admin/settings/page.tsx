@@ -16,6 +16,17 @@ interface Settings {
   packagingCost: number;
   deliveryFeeInsideDhaka: number;
   deliveryFeeOutsideDhaka: number;
+  bkashAccountName: string;
+  bkashAccountNumber: string;
+  bkashAccountType: string;
+  bkashQrImageUrl: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankAccountType: string;
+  bankDistrict: string;
+  bankBranch: string;
+  bankQrImageUrl: string;
   tierMargins: string;
   currency: string;
   lowStockAlertMl: number;
@@ -38,6 +49,17 @@ export default function SettingsPage() {
     packagingCost: 20,
     deliveryFeeInsideDhaka: 80,
     deliveryFeeOutsideDhaka: 150,
+    bkashAccountName: "Valore Parfums",
+    bkashAccountNumber: "",
+    bkashAccountType: "Personal",
+    bkashQrImageUrl: "",
+    bankName: "",
+    bankAccountName: "",
+    bankAccountNumber: "",
+    bankAccountType: "",
+    bankDistrict: "",
+    bankBranch: "",
+    bankQrImageUrl: "",
     tierMargins: JSON.stringify(DEFAULT_TIER_MARGINS),
     currency: "BDT",
     lowStockAlertMl: 20,
@@ -52,6 +74,8 @@ export default function SettingsPage() {
   const [newRule, setNewRule] = useState({ minQuantity: 2, discountPercent: 5 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingBkashQr, setUploadingBkashQr] = useState(false);
+  const [uploadingBankQr, setUploadingBankQr] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -101,6 +125,48 @@ export default function SettingsPage() {
       ...prev,
       [tier]: { ...prev[tier], [ml]: value },
     }));
+  };
+
+  const uploadBkashQr = async (file: File) => {
+    setUploadingBkashQr(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/uploads/payment-qr", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Upload failed");
+      }
+
+      setSettings((prev) => ({ ...prev, bkashQrImageUrl: data.imageUrl || "" }));
+      toast("bKash QR uploaded", "success");
+    } catch {
+      toast("Failed to upload bKash QR", "error");
+    }
+    setUploadingBkashQr(false);
+  };
+
+  const uploadBankQr = async (file: File) => {
+    setUploadingBankQr(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/uploads/payment-qr", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Upload failed");
+      setSettings((prev) => ({ ...prev, bankQrImageUrl: data.imageUrl || "" }));
+      toast("Bank QR uploaded", "success");
+    } catch {
+      toast("Failed to upload Bank QR", "error");
+    }
+    setUploadingBankQr(false);
   };
 
   if (loading) {
@@ -238,6 +304,143 @@ export default function SettingsPage() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">bKash Manual Payment</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Account Name</label>
+            <input
+              type="text"
+              value={settings.bkashAccountName}
+              onChange={(e) => setSettings({ ...settings, bkashAccountName: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Account Number</label>
+            <input
+              type="text"
+              value={settings.bkashAccountNumber}
+              onChange={(e) => setSettings({ ...settings, bkashAccountNumber: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="01XXXXXXXXX"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Account Type</label>
+            <input
+              type="text"
+              value={settings.bkashAccountType}
+              onChange={(e) => setSettings({ ...settings, bkashAccountType: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="Personal / Merchant"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">QR Code Image</label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadBkashQr(file);
+              }}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm file:mr-3 file:border-0 file:bg-[var(--gold)] file:text-black file:px-3 file:py-1.5 file:rounded file:text-xs file:uppercase"
+            />
+            <p className="text-xs text-[var(--text-muted)] mt-1">{uploadingBkashQr ? "Uploading QR..." : "Upload a clear QR for quick scan payments."}</p>
+          </div>
+        </div>
+
+        {settings.bkashQrImageUrl ? (
+          <div className="mt-4 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)] inline-block">
+            <img
+              src={settings.bkashQrImageUrl}
+              alt="bKash QR"
+              className="w-40 h-40 object-contain rounded"
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Bank Manual Payment</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Bank Name</label>
+            <input
+              type="text"
+              value={settings.bankName}
+              onChange={(e) => setSettings({ ...settings, bankName: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Account Name</label>
+            <input
+              type="text"
+              value={settings.bankAccountName}
+              onChange={(e) => setSettings({ ...settings, bankAccountName: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Account Number</label>
+            <input
+              type="text"
+              value={settings.bankAccountNumber}
+              onChange={(e) => setSettings({ ...settings, bankAccountNumber: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Account Type</label>
+            <input
+              type="text"
+              value={settings.bankAccountType}
+              onChange={(e) => setSettings({ ...settings, bankAccountType: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">District</label>
+            <input
+              type="text"
+              value={settings.bankDistrict}
+              onChange={(e) => setSettings({ ...settings, bankDistrict: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Branch</label>
+            <input
+              type="text"
+              value={settings.bankBranch}
+              onChange={(e) => setSettings({ ...settings, bankBranch: e.target.value })}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Optional Bank QR Image</label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadBankQr(file);
+              }}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm file:mr-3 file:border-0 file:bg-[var(--gold)] file:text-black file:px-3 file:py-1.5 file:rounded file:text-xs file:uppercase"
+            />
+            <p className="text-xs text-[var(--text-muted)] mt-1">{uploadingBankQr ? "Uploading QR..." : "Optional for faster scan-based payment."}</p>
+          </div>
+        </div>
+
+        {settings.bankQrImageUrl ? (
+          <div className="mt-4 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)] inline-block">
+            <img src={settings.bankQrImageUrl} alt="Bank QR" className="w-40 h-40 object-contain rounded" />
+          </div>
+        ) : null}
       </div>
 
       {/* Bulk Pricing Rules */}

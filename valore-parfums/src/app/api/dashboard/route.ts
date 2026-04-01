@@ -76,6 +76,8 @@ export async function GET() {
   const totalOrders = normalizedOrders.length;
   const completedOrders = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched").length;
   const pendingOrders = normalizedOrders.filter((o) => ["Pending", "Confirmed", "Sourcing", "Ready"].includes(o.normalizedStatus)).length;
+  const pendingBkashVerifications = allOrders.filter((o) => o.status === "Pending Bkash Verification").length;
+  const pendingBankVerifications = allOrders.filter((o) => o.status === "Pending Bank Verification").length;
   const completedOrderList = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched");
   const totalRevenue = completedOrderList.reduce((s, o) => s + (o.total ?? 0), 0);
   const totalProfitVal = completedOrderList.reduce((s, o) => s + (o.profit ?? 0), 0);
@@ -209,6 +211,8 @@ export async function GET() {
     totalOrders,
     completedOrders,
     pendingOrders,
+    pendingBkashVerifications,
+    pendingBankVerifications,
     totalRevenue,
     totalProfit: totalProfitVal + requestProfitTotal,
     todayOrders,

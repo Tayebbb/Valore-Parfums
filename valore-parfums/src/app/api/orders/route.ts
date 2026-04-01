@@ -5,6 +5,33 @@ import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
+import { validateBatch, validateEmail, validateOrderData, validateString } from "@/lib/validation";
+import { generateOrderConfirmationEmail, sendEmail } from "@/lib/email";
+
+async function notifyAdminViaWebhook(payload: {
+  title: string;
+  message: string;
+  orderId: string;
+  paymentMethod: string;
+  customerName: string;
+}) {
+  const webhookUrl = process.env.ADMIN_ALERT_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "Valore Parfums",
+        type: "manual_payment_submitted",
+        ...payload,
+      }),
+    });
+  } catch (error) {
+    console.error("Admin webhook notification failed:", error);
+  }
+}
 
 // GET all orders — admin only
 export async function GET(req: Request) {
@@ -95,11 +122,36 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { items, voucherCode, ...orderData } = body;
+    const { items, voucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
     const sessionUser = await getSessionUser();
     const pickupMethod = String(orderData.pickupMethod || "Pickup");
     const isDelivery = pickupMethod === "Delivery";
     const deliveryZone = String(orderData.deliveryZone || "");
+    const normalizedPaymentMethod = String(paymentMethod || "Cash on Delivery");
+    const isBkashManualPayment = normalizedPaymentMethod === "Bkash Manual";
+    const isBankManualPayment = normalizedPaymentMethod === "Bank Manual";
+
+    const orderValidation = validateOrderData({
+      customerName: orderData.customerName,
+      customerEmail: orderData.customerEmail || sessionUser?.email,
+      customerPhone: orderData.customerPhone,
+      deliveryAddress: isDelivery ? orderData.deliveryAddress : undefined,
+    });
+    const pickupValidation = validateString(orderData.pickupMethod, "pickupMethod", {
+      minLength: 4,
+      maxLength: 20,
+    });
+    const validation = validateBatch([orderValidation, pickupValidation]);
+    if (!validation.valid) {
+      return NextResponse.json({ error: "Invalid order input", errors: validation.errors }, { status: 400 });
+    }
+
+    if (orderData.customerEmail || sessionUser?.email) {
+      const emailValidation = validateEmail(orderData.customerEmail || sessionUser?.email, "customerEmail");
+      if (!emailValidation.valid) {
+        return NextResponse.json({ error: "Invalid customer email", errors: emailValidation.errors }, { status: 400 });
+      }
+    }
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Cart items are required" }, { status: 400 });
@@ -164,6 +216,60 @@ export async function POST(req: Request) {
       ? (deliveryZone === "Outside Dhaka" ? deliveryFeeOutsideDhaka : deliveryFeeInsideDhaka)
       : 0;
     const margins = parseTierMargins(settings?.tierMargins);
+
+    const normalizedBkashPayment = {
+      customerName: String(bkashPayment?.customerName || "").trim(),
+      paidFromNumber: String(bkashPayment?.paidFromNumber || "").trim(),
+      transactionNumber: String(bkashPayment?.transactionNumber || "").trim(),
+      notes: String(bkashPayment?.notes || "").trim(),
+    };
+
+    const normalizedBankPayment = {
+      accountName: String(bankPayment?.accountName || "").trim(),
+      accountNumber: String(bankPayment?.accountNumber || "").trim(),
+      transactionNumber: String(bankPayment?.transactionNumber || "").trim(),
+      notes: String(bankPayment?.notes || "").trim(),
+    };
+
+    if (isBkashManualPayment) {
+      const fieldErrors: Record<string, string> = {};
+      if (!normalizedBkashPayment.customerName || normalizedBkashPayment.customerName.length < 2) {
+        fieldErrors.customerName = "Customer name is required";
+      }
+      if (!/^01\d{9}$/.test(normalizedBkashPayment.paidFromNumber)) {
+        fieldErrors.paidFromNumber = "Paid from number must be exactly 11 digits and start with 01";
+      }
+      if (normalizedBkashPayment.transactionNumber.length < 6 || normalizedBkashPayment.transactionNumber.length > 40) {
+        fieldErrors.transactionNumber = "Transaction number must be 6-40 characters";
+      } else if (!/^[A-Za-z0-9-]+$/.test(normalizedBkashPayment.transactionNumber)) {
+        fieldErrors.transactionNumber = "Transaction number must be 6-40 characters (letters, numbers, hyphen)";
+      }
+      if (Object.keys(fieldErrors).length > 0) {
+        return NextResponse.json({ error: "Invalid bKash payment details", fieldErrors }, { status: 400 });
+      }
+    }
+
+    if (isBankManualPayment) {
+      const fieldErrors: Record<string, string> = {};
+      if (!normalizedBankPayment.accountName || normalizedBankPayment.accountName.length < 2) {
+        fieldErrors.accountName = "Account/Card name is required";
+      }
+      if (normalizedBankPayment.accountNumber.length < 8 || normalizedBankPayment.accountNumber.length > 32) {
+        fieldErrors.accountNumber = "Account/Card number must be 8-32 characters";
+      } else if (!/^[0-9A-Za-z-]+$/.test(normalizedBankPayment.accountNumber)) {
+        fieldErrors.accountNumber = "Account/Card number can only contain letters, numbers, and hyphen";
+      }
+      if (normalizedBankPayment.transactionNumber) {
+        if (normalizedBankPayment.transactionNumber.length < 6 || normalizedBankPayment.transactionNumber.length > 40) {
+          fieldErrors.transactionNumber = "Transaction number/reference must be 6-40 characters";
+        } else if (!/^[A-Za-z0-9-]+$/.test(normalizedBankPayment.transactionNumber)) {
+          fieldErrors.transactionNumber = "Transaction number/reference can only contain letters, numbers, and hyphen";
+        }
+      }
+      if (Object.keys(fieldErrors).length > 0) {
+        return NextResponse.json({ error: "Invalid bank payment details", fieldErrors }, { status: 400 });
+      }
+    }
 
     // Load bulk pricing rules — fetch all, filter/sort in memory to avoid composite index
     const bulkSnap = await db.collection(Collections.bulkPricingRules).get();
@@ -323,7 +429,22 @@ export async function POST(req: Request) {
     pickupLocationName: orderData.pickupLocationName || "",
     deliveryAddress: orderData.deliveryAddress || "",
     deliveryFee: isDelivery ? deliveryFee : 0,
-    status: "Pending",
+    status: isBkashManualPayment ? "Pending Bkash Verification" : isBankManualPayment ? "Pending Bank Verification" : "Pending",
+    paymentMethod: normalizedPaymentMethod,
+    bkashPayment: isBkashManualPayment
+      ? {
+        ...normalizedBkashPayment,
+        amount: total,
+        submittedAt: now,
+      }
+      : null,
+    bankPayment: isBankManualPayment
+      ? {
+        ...normalizedBankPayment,
+        amount: total,
+        submittedAt: now,
+      }
+      : null,
     voucherCode: voucherCode || null,
     discount,
     subtotal,
@@ -333,6 +454,34 @@ export async function POST(req: Request) {
     updatedAt: now,
     };
     await db.collection(Collections.orders).doc(orderId).set(orderDoc);
+
+    if (isBankManualPayment) {
+      const notificationId = uuid();
+      await db.collection(Collections.notifications).doc(notificationId).set({
+        message: `New Bank Payment submitted for order ${orderId.slice(0, 8)} (${orderData.customerName || "Customer"})`,
+        isActive: true,
+        sortOrder: Date.now(),
+        createdAt: now,
+      });
+
+      await notifyAdminViaWebhook({
+        title: "New Bank Payment Submitted",
+        message: `Order ${orderId.slice(0, 8)} is pending bank verification`,
+        orderId,
+        paymentMethod: normalizedPaymentMethod,
+        customerName: String(orderData.customerName || "Customer"),
+      });
+    }
+
+    if (isBkashManualPayment) {
+      await notifyAdminViaWebhook({
+        title: "New bKash Payment Submitted",
+        message: `Order ${orderId.slice(0, 8)} is pending bKash verification`,
+        orderId,
+        paymentMethod: normalizedPaymentMethod,
+        customerName: String(orderData.customerName || "Customer"),
+      });
+    }
 
     if (orderCountByPerfume.size > 0) {
       await Promise.all(
@@ -355,6 +504,31 @@ export async function POST(req: Request) {
       const itemId = uuid();
       await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set({ ...oi, orderId });
       createdItems.push({ id: itemId, ...oi });
+    }
+
+    // Send confirmation email asynchronously (non-blocking)
+    const customerEmail = String(orderDoc.customerEmail || "").trim();
+    if (customerEmail) {
+      void sendEmail(
+        generateOrderConfirmationEmail({
+          orderId,
+          customerName: String(orderData.customerName || "Customer"),
+          customerEmail,
+          items: createdItems.map((it) => ({
+            perfumeName: String(it.perfumeName || "Perfume"),
+            quantity: Number(it.quantity || 0),
+            ml: Number(it.ml || 0),
+            unitPrice: Number(it.unitPrice || 0),
+          })),
+          subtotal,
+          discount,
+          deliveryFee,
+          total,
+          paymentMethod: normalizedPaymentMethod,
+        }),
+      ).catch((error) => {
+        console.error("Failed to send order confirmation email:", error);
+      });
     }
 
     return NextResponse.json(serializeDoc({ id: orderId, ...orderDoc, items: createdItems }), { status: 201 });
