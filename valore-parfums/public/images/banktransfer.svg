@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="80" viewBox="0 0 260 80" role="img" aria-label="Bank payment logo">
+  <rect width="260" height="80" rx="14" fill="#1d4ed8"/>
+  <g fill="#ffffff">
+    <path d="M24 52v-3l15-7 15 7v3H24zm2-6h26l-13-6-13 6zm4 8h4v10h-4V54zm8 0h4v10h-4V54zm8 0h4v10h-4V54zm8 0h4v10h-4V54z"/>
+    <path d="M82 26h14c10 0 16 5 16 13 0 9-6 14-16 14h-4v11H82V26zm13 19c5 0 8-2 8-6 0-4-3-6-8-6h-3v12h3z"/>
+    <path d="M116 36h9v5c2-4 6-6 11-6 8 0 14 6 14 16v13h-9V52c0-5-2-8-7-8-5 0-8 3-8 9v11h-9V36z"/>
+    <path d="M174 35c9 0 16 6 16 15s-7 15-16 15-16-6-16-15 7-15 16-15zm0 22c4 0 7-3 7-7s-3-7-7-7-7 3-7 7 3 7 7 7z"/>
+    <path d="M193 36h9l6 18 6-18h9l-11 28h-8L193 36z"/>
+    <path d="M226 26h9v38h-9V26z"/>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -8,6 +8,15 @@ import { useAuth } from "@/store/auth";
 interface OrderResult {
   id: string;
   status: string;
+  paymentMethod?: string;
+  bkashPayment?: {
+    transactionNumber?: string;
+    paidFromNumber?: string;
+  } | null;
+  bankPayment?: {
+    transactionNumber?: string;
+    accountNumber?: string;
+  } | null;
   totalAmount: number;
   discount: number;
   voucherCode?: string | null;
@@ -29,8 +38,10 @@ interface OrderResult {
   }[];
 }
 
-const statusSteps = ["Pending", "Processing", "Out for Delivery", "Completed"];
-const activeStatuses = new Set(["pending", "processing", "out for delivery", "confirmed", "ready"]);
+const standardStatusSteps = ["Pending", "Processing", "Out for Delivery", "Completed"];
+const bkashStatusSteps = ["Pending Bkash Verification", "Confirmed", "Out for Delivery", "Completed"];
+const bankStatusSteps = ["Pending Bank Verification", "Paid", "Out for Delivery", "Completed"];
+const activeStatuses = new Set(["pending", "processing", "out for delivery", "confirmed", "ready", "pending bkash verification", "bkash paid", "pending bank verification", "paid"]);
 const pastStatuses = new Set(["completed", "delivered", "cancelled"]);
 
 const statusClass = (status: string) => {
@@ -155,7 +166,13 @@ export default function TrackOrderPage() {
 
   const renderOrderCard = (order: OrderResult, emphasize = false) => {
     const normalized = (order.status ?? "").toLowerCase();
-    const currentStep = statusSteps.findIndex((step) => step.toLowerCase() === normalized);
+    const statusSteps = order.paymentMethod === "Bkash Manual"
+      ? bkashStatusSteps
+      : order.paymentMethod === "Bank Manual"
+        ? bankStatusSteps
+        : standardStatusSteps;
+    const effectiveNormalized = normalized === "bkash paid" ? "confirmed" : normalized;
+    const currentStep = statusSteps.findIndex((step) => step.toLowerCase() === effectiveNormalized);
 
     return (
       <div
@@ -175,30 +192,43 @@ export default function TrackOrderPage() {
         </div>
 
         {normalized !== "cancelled" && normalized !== "delivered" && (
-          <div className="flex items-center mt-2 mb-1">
+          <div className="relative flex items-start mt-2 mb-1">
             {statusSteps.map((step, i) => (
-              <div key={step} className="flex-1 flex items-center">
-                <div className="flex flex-col items-center flex-1">
+              <div key={step} className="flex-1 flex flex-col items-center relative">
+                {/* Connector line — left half */}
+                {i > 0 && (
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
-                      i <= currentStep
-                        ? "bg-[var(--gold)] text-black"
-                        : "border border-[var(--border)] text-[var(--text-muted)]"
+                    className={`absolute top-4 right-1/2 left-0 h-px -translate-y-1/2 ${
+                      i <= currentStep ? "bg-[var(--gold)]" : "bg-[var(--border)]"
                     }`}
-                  >
-                    {i + 1}
-                  </div>
-                  <span
-                    className={`text-[9px] uppercase tracking-wider mt-1.5 ${
-                      i <= currentStep ? "text-[var(--gold)]" : "text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {step}
-                  </span>
-                </div>
-                {i < statusSteps.length - 1 && (
-                  <div className={`flex-1 h-px ${i < currentStep ? "bg-[var(--gold)]" : "bg-[var(--border)]"}`} />
+                  />
                 )}
+                {/* Connector line — right half */}
+                {i < statusSteps.length - 1 && (
+                  <div
+                    className={`absolute top-4 left-1/2 right-0 h-px -translate-y-1/2 ${
+                      i < currentStep ? "bg-[var(--gold)]" : "bg-[var(--border)]"
+                    }`}
+                  />
+                )}
+                {/* Circle */}
+                <div
+                  className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                    i <= currentStep
+                      ? "bg-[var(--gold)] text-black"
+                      : "border border-[var(--border)] text-[var(--text-muted)] bg-[var(--bg-card)]"
+                  }`}
+                >
+                  {i + 1}
+                </div>
+                {/* Label */}
+                <span
+                  className={`text-[9px] uppercase tracking-wider mt-1.5 text-center leading-tight ${
+                    i <= currentStep ? "text-[var(--gold)]" : "text-[var(--text-muted)]"
+                  }`}
+                >
+                  {step}
+                </span>
               </div>
             ))}
           </div>
@@ -298,6 +328,32 @@ export default function TrackOrderPage() {
             </div>
           </div>
         )}
+
+        {order.paymentMethod === "Bkash Manual" ? (
+          <div className="rounded border border-[rgba(227,35,132,0.35)] bg-[rgba(227,35,132,0.08)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Payment</p>
+            <p className="text-sm text-[var(--text-primary)] mt-1">bKash Manual</p>
+            {normalized === "pending bkash verification" ? (
+              <p className="text-xs text-[var(--warning)] mt-1">Pending payment confirmation by admin. Your order will be confirmed once your payment is verified.</p>
+            ) : null}
+            {order.bkashPayment?.transactionNumber ? (
+              <p className="text-xs text-[var(--text-secondary)] mt-1">TXN: {order.bkashPayment.transactionNumber}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {order.paymentMethod === "Bank Manual" ? (
+          <div className="rounded border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.08)] px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Payment</p>
+            <p className="text-sm text-[var(--text-primary)] mt-1">Bank Manual</p>
+            {normalized === "pending bank verification" ? (
+              <p className="text-xs text-[var(--warning)] mt-1">Our team will verify your payment manually within 24-48 hours.</p>
+            ) : null}
+            {order.bankPayment?.transactionNumber ? (
+              <p className="text-xs text-[var(--text-secondary)] mt-1">Ref: {order.bankPayment.transactionNumber}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   };

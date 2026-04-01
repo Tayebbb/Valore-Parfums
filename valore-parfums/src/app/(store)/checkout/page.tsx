@@ -20,6 +20,17 @@ interface PickupLocation {
 interface CheckoutConfig {
   deliveryFeeInsideDhaka: number;
   deliveryFeeOutsideDhaka: number;
+  bkashAccountName: string;
+  bkashAccountNumber: string;
+  bkashAccountType: string;
+  bkashQrImageUrl: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankAccountType: string;
+  bankDistrict: string;
+  bankBranch: string;
+  bankQrImageUrl: string;
   pickupLocations: PickupLocation[];
 }
 
@@ -40,11 +51,37 @@ export default function CheckoutPage() {
     area: "",
     city: "",
     fullAddress: "",
+    paymentMethod: "Cash on Delivery" as "Cash on Delivery" | "Bkash Manual" | "Bank Manual",
+  });
+
+  const [bkashPayment, setBkashPayment] = useState({
+    customerName: "",
+    paidFromNumber: "",
+    transactionNumber: "",
+    notes: "",
+  });
+
+  const [bankPayment, setBankPayment] = useState({
+    accountName: "",
+    accountNumber: "",
+    transactionNumber: "",
+    notes: "",
   });
 
   const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig>({
     deliveryFeeInsideDhaka: 0,
     deliveryFeeOutsideDhaka: 0,
+    bkashAccountName: "",
+    bkashAccountNumber: "",
+    bkashAccountType: "",
+    bkashQrImageUrl: "",
+    bankName: "",
+    bankAccountName: "",
+    bankAccountNumber: "",
+    bankAccountType: "",
+    bankDistrict: "",
+    bankBranch: "",
+    bankQrImageUrl: "",
     pickupLocations: [],
   });
   const [loadingCheckoutConfig, setLoadingCheckoutConfig] = useState(true);
@@ -53,6 +90,7 @@ export default function CheckoutPage() {
   const [appliedVoucher, setAppliedVoucher] = useState("");
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [placedPaymentMethod, setPlacedPaymentMethod] = useState<"Cash on Delivery" | "Bkash Manual" | "Bank Manual">("Cash on Delivery");
 
   const sub = subtotal();
   const hasFullBottle = items.some((item) => item.isFullBottle);
@@ -98,6 +136,17 @@ export default function CheckoutPage() {
         setCheckoutConfig({
           deliveryFeeInsideDhaka: Number(data.deliveryFeeInsideDhaka || 0),
           deliveryFeeOutsideDhaka: Number(data.deliveryFeeOutsideDhaka || 0),
+          bkashAccountName: String(data.bkashAccountName || ""),
+          bkashAccountNumber: String(data.bkashAccountNumber || ""),
+          bkashAccountType: String(data.bkashAccountType || ""),
+          bkashQrImageUrl: String(data.bkashQrImageUrl || ""),
+          bankName: String(data.bankName || ""),
+          bankAccountName: String(data.bankAccountName || ""),
+          bankAccountNumber: String(data.bankAccountNumber || ""),
+          bankAccountType: String(data.bankAccountType || ""),
+          bankDistrict: String(data.bankDistrict || ""),
+          bankBranch: String(data.bankBranch || ""),
+          bankQrImageUrl: String(data.bankQrImageUrl || ""),
           pickupLocations: Array.isArray(data.pickupLocations) ? data.pickupLocations : [],
         });
       } catch {
@@ -169,8 +218,21 @@ export default function CheckoutPage() {
 
     const missingSize = items.some((item) => item.isFullBottle && !String(item.fullBottleSize || "").trim());
 
-    return items.length > 0 && contactComplete && (pickupComplete || deliveryComplete) && !missingSize;
-  }, [form, items]);
+    const bkashComplete =
+      form.paymentMethod !== "Bkash Manual" ||
+      (bkashPayment.customerName.trim().length > 1 &&
+        bkashPayment.paidFromNumber.trim().length === 11 &&
+        bkashPayment.transactionNumber.trim().length >= 6 &&
+        bkashPayment.transactionNumber.trim().length <= 40);
+
+    const bankComplete =
+      form.paymentMethod !== "Bank Manual" ||
+      (bankPayment.accountName.trim().length > 1 &&
+        bankPayment.accountNumber.trim().length >= 8 &&
+        bankPayment.accountNumber.trim().length <= 32);
+
+    return items.length > 0 && contactComplete && (pickupComplete || deliveryComplete) && !missingSize && bkashComplete && bankComplete;
+  }, [bankPayment, bkashPayment, form, items]);
 
   const placeOrder = async () => {
     if (!form.customerName.trim()) {
@@ -197,6 +259,34 @@ export default function CheckoutPage() {
     if (!canPlaceOrder) {
       return toast("Please complete all required checkout fields", "error");
     }
+    if (form.paymentMethod === "Bkash Manual") {
+      if (!bkashPayment.customerName.trim()) {
+        return toast("bKash customer name is required", "error");
+      }
+      if (!/^[0-9]{11}$/.test(bkashPayment.paidFromNumber.trim())) {
+        return toast("Paid from number must be exactly 11 digits", "error");
+      }
+      if (!bkashPayment.transactionNumber.trim()) {
+        return toast("Transaction number is required", "error");
+      }
+      if (bkashPayment.transactionNumber.trim().length < 6 || bkashPayment.transactionNumber.trim().length > 40) {
+        return toast("Transaction number must be 6-40 characters", "error");
+      }
+    }
+    if (form.paymentMethod === "Bank Manual") {
+      if (!bankPayment.accountName.trim()) {
+        return toast("Account/Card name is required", "error");
+      }
+      if (!bankPayment.accountNumber.trim()) {
+        return toast("Account/Card number is required", "error");
+      }
+      if (bankPayment.accountNumber.trim().length < 8 || bankPayment.accountNumber.trim().length > 32) {
+        return toast("Account/Card number must be 8-32 characters", "error");
+      }
+      if (bankPayment.transactionNumber.trim() && (bankPayment.transactionNumber.trim().length < 6 || bankPayment.transactionNumber.trim().length > 40)) {
+        return toast("Transaction number/reference must be 6-40 characters", "error");
+      }
+    }
 
     setPlacing(true);
     const res = await fetch("/api/orders", {
@@ -212,6 +302,19 @@ export default function CheckoutPage() {
         pickupLocationName: form.pickupMethod === "Pickup" ? selectedPickupLocation?.name || "" : "",
         deliveryAddress,
         deliveryFee,
+        paymentMethod: form.paymentMethod,
+        bkashPayment: form.paymentMethod === "Bkash Manual" ? {
+          customerName: bkashPayment.customerName.trim(),
+          paidFromNumber: bkashPayment.paidFromNumber.trim(),
+          transactionNumber: bkashPayment.transactionNumber.trim(),
+          notes: bkashPayment.notes.trim(),
+        } : null,
+        bankPayment: form.paymentMethod === "Bank Manual" ? {
+          accountName: bankPayment.accountName.trim(),
+          accountNumber: bankPayment.accountNumber.trim(),
+          transactionNumber: bankPayment.transactionNumber.trim(),
+          notes: bankPayment.notes.trim(),
+        } : null,
         voucherCode: appliedVoucher || null,
         hasFullBottle,
         items: items.map((i) => ({
@@ -227,6 +330,7 @@ export default function CheckoutPage() {
     if (res.ok) {
       const order = await res.json();
       setOrderId(order.id);
+      setPlacedPaymentMethod(form.paymentMethod);
       clearCart();
       toast("Order placed successfully!", "success");
     } else {
@@ -249,8 +353,14 @@ export default function CheckoutPage() {
     return (
       <div className="px-[5%] py-20 text-center max-w-md mx-auto">
         <CheckCircle size={56} className="mx-auto text-[var(--success)] mb-4" />
-        <h1 className="font-serif text-3xl font-light mb-2">Order Confirmed!</h1>
-        <p className="text-sm text-[var(--text-secondary)] mb-4">Your order has been placed successfully.</p>
+        <h1 className="font-serif text-3xl font-light mb-2">Order Submitted!</h1>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
+          {placedPaymentMethod === "Bkash Manual"
+            ? "Payment info saved. Your order will be confirmed once your bKash payment is verified."
+            : placedPaymentMethod === "Bank Manual"
+              ? "Payment info saved. Our team will verify your payment manually within 24-48 hours."
+            : "Your order has been placed successfully."}
+        </p>
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-4 mb-6 shadow-sm">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Order ID</p>
           <p className="font-mono text-sm break-all text-[var(--text-primary)]">{orderId}</p>
@@ -469,6 +579,225 @@ export default function CheckoutPage() {
             </section>
 
             <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-[0_12px_40px_var(--shadow-color)] transition-all duration-300">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-muted)] mb-4">Step 3</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] mb-6">Payment Method</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                {([
+                  { key: "Cash on Delivery", label: "Cash on Delivery", logoSrc: "/cod.png", logoAlt: "Cash on Delivery" },
+                  { key: "Bkash Manual", label: "bKash Payment", logoSrc: "/bkash.png?v=4", logoAlt: "bKash" },
+                  { key: "Bank Manual", label: "Bank Transfer", logoSrc: "/banktransfer.svg?v=4", logoAlt: "Bank Transfer" },
+                ] as const).map((method) => (
+                  <button
+                    type="button"
+                    key={method.key}
+                    onClick={() => setField("paymentMethod", method.key)}
+                    className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                      form.paymentMethod === method.key
+                        ? "border-[var(--gold)] bg-[var(--gold-tint)]"
+                        : "border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--gold)]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={method.logoSrc} alt={method.logoAlt} className="h-6 w-auto" />
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{method.label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {form.paymentMethod === "Bkash Manual" ? (
+                <div className="rounded-2xl border border-[rgba(227,35,132,0.45)] bg-[rgba(227,35,132,0.06)] p-4 md:p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <img src="/bkash.png?v=4" alt="bKash" className="h-7 w-auto" />
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">bKash Payment Instructions</p>
+                  </div>
+
+                  <ol className="list-decimal pl-5 space-y-1.5 text-sm text-[var(--text-secondary)]">
+                    <li>Send the required payment amount to our bKash account.</li>
+                    <li>Use your bKash app to complete the transfer.</li>
+                    <li>Copy the transaction number (TXN ID) from your payment receipt.</li>
+                    <li>Fill in the form below with your payment details.</li>
+                  </ol>
+
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Account Name</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bkashAccountName || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Account Number</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bkashAccountNumber || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Account Type</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bkashAccountType || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Amount to Pay</p>
+                      <p className="text-sm font-semibold text-[var(--gold)] mt-1">{total.toLocaleString("en-BD")} BDT</p>
+                    </div>
+                  </div>
+
+                  {checkoutConfig.bkashQrImageUrl ? (
+                    <div className="mt-4 rounded-2xl border border-[rgba(227,35,132,0.45)] bg-[var(--bg-card)] p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Scan QR to Pay Quickly</p>
+                      <img
+                        src={checkoutConfig.bkashQrImageUrl}
+                        alt="bKash payment QR"
+                        className="w-48 max-w-full h-auto rounded border border-[var(--border)]"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Customer Name</span>
+                      <input
+                        type="text"
+                        value={bkashPayment.customerName}
+                        onChange={(e) => setBkashPayment((prev) => ({ ...prev, customerName: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Paid From Number</span>
+                      <input
+                        type="text"
+                        value={bkashPayment.paidFromNumber}
+                        onChange={(e) => setBkashPayment((prev) => ({ ...prev, paidFromNumber: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)]"
+                        placeholder="01XXXXXXXXX"
+                      />
+                    </label>
+                    <label className="block md:col-span-2">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Transaction Number (TXN ID)</span>
+                      <input
+                        type="text"
+                        value={bkashPayment.transactionNumber}
+                        onChange={(e) => setBkashPayment((prev) => ({ ...prev, transactionNumber: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)]"
+                      />
+                    </label>
+                    <label className="block md:col-span-2">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Notes / Description</span>
+                      <textarea
+                        value={bkashPayment.notes}
+                        onChange={(e) => setBkashPayment((prev) => ({ ...prev, notes: e.target.value }))}
+                        rows={3}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)] resize-none"
+                        placeholder="Add sender details or timing of payment"
+                      />
+                    </label>
+                  </div>
+
+                  <p className="text-sm text-[var(--text-secondary)] mt-3">Your order will be confirmed once your payment is verified.</p>
+                </div>
+              ) : null}
+
+              {form.paymentMethod === "Bank Manual" ? (
+                <div className="rounded-2xl border border-[rgba(59,130,246,0.45)] bg-[rgba(59,130,246,0.06)] p-4 md:p-5 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <img src="/banktransfer.svg?v=4" alt="Bank Transfer" className="h-7 w-auto" />
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">Bank Transfer Instructions</p>
+                  </div>
+
+                  <ol className="list-decimal pl-5 space-y-1.5 text-sm text-[var(--text-secondary)]">
+                    <li>Transfer the required payment amount to our bank account using NPSB only (no BEFTN allowed).</li>
+                    <li>If available, copy the transaction number/reference from your payment receipt.</li>
+                    <li>Fill in the form below with your payment details.</li>
+                  </ol>
+
+                  <p className="mt-3 text-xs text-[var(--text-muted)]">Fields marked (Required) must be filled. Others are optional.</p>
+
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Bank Name</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bankName || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Account Name</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bankAccountName || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Account Number</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bankAccountNumber || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Account Type</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bankAccountType || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">District</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bankDistrict || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Branch</p>
+                      <p className="text-sm text-[var(--text-primary)] mt-1">{checkoutConfig.bankBranch || "Not set"}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5 sm:col-span-2">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Amount to Pay</p>
+                      <p className="text-sm font-semibold text-[var(--gold)] mt-1">{total.toLocaleString("en-BD")} BDT</p>
+                    </div>
+                  </div>
+
+                  {checkoutConfig.bankQrImageUrl ? (
+                    <div className="mt-4 rounded-2xl border border-[rgba(59,130,246,0.45)] bg-[var(--bg-card)] p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Optional Bank QR</p>
+                      <img
+                        src={checkoutConfig.bankQrImageUrl}
+                        alt="Bank payment QR"
+                        className="w-48 max-w-full h-auto rounded border border-[var(--border)]"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Account/Card Name (Required)</span>
+                      <input
+                        type="text"
+                        value={bankPayment.accountName}
+                        onChange={(e) => setBankPayment((prev) => ({ ...prev, accountName: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Account/Card Number (Required)</span>
+                      <input
+                        type="text"
+                        value={bankPayment.accountNumber}
+                        onChange={(e) => setBankPayment((prev) => ({ ...prev, accountNumber: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)]"
+                      />
+                    </label>
+                    <label className="block md:col-span-2">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Transaction Number / Reference (Optional)</span>
+                      <input
+                        type="text"
+                        value={bankPayment.transactionNumber}
+                        onChange={(e) => setBankPayment((prev) => ({ ...prev, transactionNumber: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)]"
+                      />
+                    </label>
+                    <label className="block md:col-span-2">
+                      <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Notes / Description (Optional)</span>
+                      <textarea
+                        value={bankPayment.notes}
+                        onChange={(e) => setBankPayment((prev) => ({ ...prev, notes: e.target.value }))}
+                        rows={3}
+                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--gold)] resize-none"
+                      />
+                    </label>
+                  </div>
+
+                  <p className="text-sm text-[var(--text-secondary)] mt-3">Our team will verify your payment manually within 24-48 hours.</p>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-[0_12px_40px_var(--shadow-color)] transition-all duration-300">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-muted)] mb-4">Step 4</p>
               <h2 className="text-xl font-semibold tracking-tight text-[var(--text-primary)] mb-4">Voucher</h2>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -562,7 +891,11 @@ export default function CheckoutPage() {
                 disabled={!canPlaceOrder || placing}
                 className="hidden lg:block w-full mt-6 rounded-2xl bg-[var(--gold)] text-black py-4 text-sm uppercase tracking-[0.16em] font-medium transition-all duration-200 hover:bg-[var(--gold-light)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
-                {placing ? "Placing..." : "Place Order"}
+                {placing
+                  ? "Submitting..."
+                  : form.paymentMethod === "Bkash Manual" || form.paymentMethod === "Bank Manual"
+                    ? "Submit Payment & Place Order"
+                    : "Place Order"}
               </button>
 
               {!canPlaceOrder ? (
@@ -583,7 +916,11 @@ export default function CheckoutPage() {
               disabled={!canPlaceOrder || placing}
               className="rounded-2xl bg-[var(--gold)] text-black px-5 py-3 text-xs uppercase tracking-[0.16em] font-medium transition-colors hover:bg-[var(--gold-light)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {placing ? "Placing..." : "Place Order"}
+              {placing
+                ? "Submitting..."
+                : form.paymentMethod === "Bkash Manual" || form.paymentMethod === "Bank Manual"
+                  ? "Submit Payment"
+                  : "Place Order"}
             </button>
           </div>
         </div>

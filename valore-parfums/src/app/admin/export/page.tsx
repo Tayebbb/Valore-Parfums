@@ -7,6 +7,7 @@ const exportTypes = [
   { type: "stock", label: "Stock / Inventory", desc: "All perfumes with current stock levels" },
   { type: "profit", label: "Profit Report", desc: "Revenue, cost & profit per order" },
   { type: "transactions", label: "Transactions", desc: "Individual line items across all orders" },
+  { type: "payment-reconciliation", label: "Payment Reconciliation", desc: "Manual payment submissions, references, and verification trail" },
   { type: "customers", label: "Customer List", desc: "Unique customers with total orders & spend" },
   { type: "stock-requests", label: "Stock Requests", desc: "Customer stock requests with status" },
 ];

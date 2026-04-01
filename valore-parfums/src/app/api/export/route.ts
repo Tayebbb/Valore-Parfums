@@ -195,6 +195,62 @@ export async function GET(req: Request) {
       break;
     }
 
+    case "payment-reconciliation": {
+      const ordersSnap = await db.collection(Collections.orders).orderBy("createdAt", "desc").get();
+      const headers = [
+        "Order ID",
+        "Date",
+        "Customer",
+        "Phone",
+        "Payment Method",
+        "Status",
+        "Amount",
+        "Reference/Txn",
+        "Submitted At",
+        "Verified At",
+        "Verified By",
+      ];
+
+      const rows = ordersSnap.docs
+        .map((d) => {
+          const o = asRecord(d.data());
+          const method = asString(o.paymentMethod);
+          if (method !== "Bkash Manual" && method !== "Bank Manual") return null;
+
+          const bkash = asRecord(o.bkashPayment);
+          const bank = asRecord(o.bankPayment);
+          const bkashVerification = asRecord(o.bkashPaymentVerification);
+          const bankVerification = asRecord(o.bankPaymentVerification);
+
+          const ref = method === "Bkash Manual"
+            ? asString(bkash.transactionNumber)
+            : asString(bank.transactionNumber);
+          const submittedAt = method === "Bkash Manual"
+            ? bkash.submittedAt
+            : bank.submittedAt;
+          const verification = method === "Bkash Manual" ? bkashVerification : bankVerification;
+
+          return [
+            d.id.slice(0, 8),
+            toDate(o.createdAt).toLocaleDateString(),
+            asString(o.customerName),
+            asString(o.customerPhone),
+            method,
+            asString(o.status),
+            asNumber(o.total).toString(),
+            ref,
+            submittedAt ? toDate(submittedAt).toLocaleString() : "",
+            verification.verifiedAt ? toDate(verification.verifiedAt).toLocaleString() : "",
+            asString(verification.verifiedBy),
+          ];
+        })
+        .filter((row): row is string[] => Array.isArray(row));
+
+      csv = toCSV(headers, rows);
+      filename = "payment_reconciliation.csv";
+      break;
+    }
+
     default:
       return NextResponse.json({ error: "Invalid export type" }, { status: 400 });
   }

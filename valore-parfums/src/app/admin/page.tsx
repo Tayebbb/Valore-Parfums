@@ -33,6 +33,8 @@ interface DashboardData {
   totalOrders: number;
   completedOrders: number;
   pendingOrders: number;
+  pendingBkashVerifications: number;
+  pendingBankVerifications: number;
   totalRevenue: number;
   totalProfit: number;
   todayOrders: number;
@@ -134,6 +136,8 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={DollarSign} label="Monthly Revenue" value={`${fmt(data.monthRevenue)} BDT`} />
         <StatCard icon={TrendingUp} label="Monthly Profit" value={`${fmt(data.monthProfit)} BDT`} />
+        <StatCard icon={Package} label="bKash Verification" value={`${data.pendingBkashVerifications || 0}`} sub="Awaiting admin verification" />
+        <StatCard icon={Package} label="Bank Verification" value={`${data.pendingBankVerifications || 0}`} sub="Awaiting admin verification" />
         <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={`${data.lowStockPerfumes.length}`} sub="Perfumes below threshold" />
         <StatCard icon={Inbox} label="Stock Requests" value={`${data.stockRequests}`} sub="Pending requests" />
       </div>
