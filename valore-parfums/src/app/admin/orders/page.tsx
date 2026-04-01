@@ -497,10 +497,16 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-serif text-3xl font-light">Order Management</h1>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-[10px] font-mono text-[var(--text-muted)] break-all">{o.id}</p>
-                          <CopyOrderIdButton orderId={o.id} className="h-8 w-8 min-w-8" stopPropagation />
-                        </div>
+        {selectedOrder && (
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] font-mono text-[var(--text-muted)] break-all">{selectedOrder.id}</p>
+            <CopyOrderIdButton
+              orderId={selectedOrder.id}
+              className="h-8 w-8 min-w-8"
+              stopPropagation
+            />
+          </div>
+        )}
         <div className="gold-line mt-3" />
       </div>
 

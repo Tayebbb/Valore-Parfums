@@ -386,8 +386,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
-    // Only reverse profit if profit was previously credited (order was Completed)
-    if (previousStatus === "Completed") {
+    // Only reverse profit if profit was previously credited (order was Dispatched)
+    if (previousStatus === "Dispatched") {
       const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -543,7 +543,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     });
   }
 
-  if (customerEmail && (newStatus === "Completed" || newStatus === "Delivered") && previousStatus !== newStatus) {
+  if (customerEmail && newStatus === "Delivered" && previousStatus !== newStatus) {
     void sendEmail(
       generateOrderDeliveredEmail({
         customerName: String(updatedData.customerName || "Customer"),

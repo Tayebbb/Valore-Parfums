@@ -44,8 +44,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     updates.sellingPrice = sp;
   }
 
-  // When marking as fulfilled, calculate profit and distribute to owners
-  if ((body.status === "Fulfilled" || body.status === "Dispatched") && existingData.status !== body.status) {
+  // When marking as fulfilled, calculate profit and distribute to owners.
+  // Treat both "Fulfilled" and "Dispatched" as the same terminal state to avoid
+  // double-crediting when a legacy "Fulfilled" record is later updated to "Dispatched".
+  const TERMINAL_REQUEST_STATUSES = ["Fulfilled", "Dispatched"];
+  const isNewTerminal = TERMINAL_REQUEST_STATUSES.includes(body.status);
+  const wasAlreadyTerminal = TERMINAL_REQUEST_STATUSES.includes(existingData.status);
+  if (isNewTerminal && !wasAlreadyTerminal) {
     const buyingPrice = updates.buyingPrice ?? existingData.buyingPrice;
     const sellingPrice = updates.sellingPrice ?? existingData.sellingPrice;
 

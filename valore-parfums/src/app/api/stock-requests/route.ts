@@ -37,6 +37,16 @@ export async function POST(req: Request) {
   const perfumeDoc = await db.collection(Collections.perfumes).doc(body.perfumeId).get();
   if (!perfumeDoc.exists) return NextResponse.json({ error: "Perfume not found" }, { status: 404 });
 
+  const desiredMl = Number(body.desiredMl);
+  if (!Number.isFinite(desiredMl) || desiredMl <= 0) {
+    return NextResponse.json({ error: "desiredMl must be a positive number" }, { status: 400 });
+  }
+  const rawQuantity = Number(body.quantity);
+  if (!Number.isFinite(rawQuantity) || rawQuantity < 1) {
+    return NextResponse.json({ error: "quantity must be at least 1" }, { status: 400 });
+  }
+  const clampedQuantity = Math.min(Math.round(rawQuantity), 50);
+
   const id = uuid();
   const now = Timestamp.now();
   const data = {
@@ -55,8 +65,8 @@ export async function POST(req: Request) {
     requestId: id,
     perfumeId: String(body.perfumeId || ""),
     perfumeName: data.perfumeName,
-    desiredMl: Number(body.desiredMl || 0),
-    quantity: Math.max(1, Math.min(Number(body.quantity) || 1, 50)),
+    desiredMl: desiredMl,
+    quantity: clampedQuantity,
     notes: String(body.notes || "").slice(0, 500),
     subtotal: 0,
     total: 0,
@@ -72,10 +82,10 @@ export async function POST(req: Request) {
     db.collection(Collections.orders).doc(id).collection("items").doc(uuid()).set({
       perfumeId: String(body.perfumeId || ""),
       perfumeName: data.perfumeName,
-      ml: Number(body.desiredMl || 0),
+      ml: desiredMl,
       isFullBottle: false,
       fullBottleSize: null,
-      quantity: Math.max(1, Math.min(Number(body.quantity) || 1, 50)),
+      quantity: clampedQuantity,
       unitPrice: 0,
       totalPrice: 0,
       costPrice: 0,
