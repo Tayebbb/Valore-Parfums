@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCart } from "@/store/cart";
 import { toast } from "@/components/ui/Toaster";
+import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, ChevronDown } from "lucide-react";
@@ -253,7 +254,10 @@ export default function CheckoutPage() {
         <p className="text-sm text-[var(--text-secondary)] mb-4">Your order has been placed successfully.</p>
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-4 mb-6 shadow-sm">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Order ID</p>
-          <p className="font-mono text-sm break-all text-[var(--text-primary)]">{orderId}</p>
+          <div className="flex items-center gap-2 justify-center">
+            <p className="font-mono text-sm break-all text-[var(--text-primary)]">{orderId}</p>
+            <CopyOrderIdButton orderId={orderId} />
+          </div>
         </div>
         {!user && (
           <div className="bg-[rgba(251,191,36,0.1)] border border-[var(--warning)]/50 rounded-2xl p-4 mb-6 text-left">
@@ -280,7 +284,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="bg-[var(--bg-base)] min-h-screen pb-28 lg:pb-12">
-      <div className="max-w-7xl mx-auto px-5 md:px-10 lg:px-14 py-10 lg:py-14">
+      <div className="max-w-7xl mx-auto px-4 sm:px-5 md:px-10 lg:px-14 py-8 sm:py-10 lg:py-14">
       <Link
         href="/cart"
           className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-10"
@@ -288,7 +292,7 @@ export default function CheckoutPage() {
         <ArrowLeft size={14} /> Back to Cart
       </Link>
 
-        <h1 className="text-4xl lg:text-5xl font-semibold tracking-tight text-[var(--text-primary)]">Checkout</h1>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-[var(--text-primary)]">Checkout</h1>
         <p className="mt-3 text-[var(--text-secondary)] max-w-2xl">
           A fast, secure checkout flow. Review your details and place your order in seconds.
         </p>
@@ -339,13 +343,13 @@ export default function CheckoutPage() {
               <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-muted)] mb-4">Step 2</p>
               <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] mb-6">Delivery Method</h2>
 
-              <div className="inline-flex bg-[var(--bg-surface)] rounded-2xl p-1 mb-6 border border-[var(--border)]">
+              <div className="flex flex-wrap bg-[var(--bg-surface)] rounded-2xl p-1 mb-6 border border-[var(--border)] gap-1">
                 {(["Pickup", "Delivery"] as const).map((method) => (
                   <button
                     key={method}
                     type="button"
                     onClick={() => setForm((prev) => ({ ...prev, pickupMethod: method }))}
-                    className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    className={`flex-1 min-w-[120px] px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
                       form.pickupMethod === method
                         ? "bg-[var(--gold)] text-black shadow-[0_2px_12px_var(--gold-glow)]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -400,13 +404,13 @@ export default function CheckoutPage() {
                 >
                   <div className="mb-4">
                     <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Delivery Zone</span>
-                    <div className="inline-flex bg-[var(--bg-surface)] rounded-2xl p-1 border border-[var(--border)]">
+                    <div className="flex flex-wrap bg-[var(--bg-surface)] rounded-2xl p-1 border border-[var(--border)] gap-1">
                       {(["Inside Dhaka", "Outside Dhaka"] as const).map((zone) => (
                         <button
                           type="button"
                           key={zone}
                           onClick={() => setField("deliveryZone", zone)}
-                          className={`px-4 py-2 text-xs uppercase tracking-[0.12em] rounded-xl transition-all ${
+                          className={`flex-1 min-w-[140px] px-4 py-2 text-xs uppercase tracking-[0.12em] rounded-xl transition-all ${
                             form.deliveryZone === zone
                               ? "bg-[var(--gold)] text-black"
                               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"

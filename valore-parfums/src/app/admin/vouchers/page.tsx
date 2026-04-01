@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface Voucher {
   id: string;
@@ -34,6 +35,7 @@ export default function VouchersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const load = () =>
     fetch("/api/vouchers")
@@ -87,10 +89,10 @@ export default function VouchersPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this voucher?")) return;
     await fetch(`/api/vouchers/${id}`, { method: "DELETE" });
     toast("Voucher deleted", "success");
     load();
+    setDeleteId(null);
   };
 
   return (
@@ -210,50 +212,103 @@ export default function VouchersPage() {
           {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-14 rounded" />)}
         </div>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)]">
-              <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Code</th>
-              <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Discount</th>
-              <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Uses</th>
-              <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Expires</th>
-              <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
-              <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="space-y-3 md:hidden">
             {vouchers.map((v) => (
-              <tr key={v.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
-                <td className="py-3 px-4 font-mono text-[var(--gold)]">{v.code}</td>
-                <td className="py-3 px-4">
-                  {v.discountType === "percentage" ? `${v.discountValue}%` : `${v.discountValue} BDT`}
-                </td>
-                <td className="py-3 px-4 text-right font-mono">{v.usedCount}/{v.usageLimit}</td>
-                <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
-                  {v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : "Never"}
-                </td>
-                <td className="py-3 px-4 text-center">
+              <div key={v.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-mono text-[var(--gold)] text-base">{v.code}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Code</p>
+                  </div>
                   <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${
                     v.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"
                   }`}>
                     {v.isActive ? "Active" : "Inactive"}
                   </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => edit(v)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
-                      <Pencil size={15} />
-                    </button>
-                    <button onClick={() => remove(v.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
-                      <Trash2 size={15} />
-                    </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Discount</p>
+                    <p>{v.discountType === "percentage" ? `${v.discountValue}%` : `${v.discountValue} BDT`}</p>
                   </div>
-                </td>
-              </tr>
+                  <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Uses</p>
+                    <p className="font-mono">{v.usedCount}/{v.usageLimit}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm border-t border-[var(--border)] pt-3">
+                  <span className="text-[var(--text-muted)]">Expires</span>
+                  <span className="text-[var(--text-secondary)]">{v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : "Never"}</span>
+                </div>
+                <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] pt-3">
+                  <button onClick={() => edit(v)} className="p-2 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                    <Pencil size={15} />
+                  </button>
+                  <button onClick={() => setDeleteId(v.id)} className="p-2 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+          <table className="hidden md:table w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Code</th>
+                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Discount</th>
+                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Uses</th>
+                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Expires</th>
+                <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
+                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vouchers.map((v) => (
+                <tr key={v.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
+                  <td className="py-3 px-4 font-mono text-[var(--gold)]">{v.code}</td>
+                  <td className="py-3 px-4">
+                    {v.discountType === "percentage" ? `${v.discountValue}%` : `${v.discountValue} BDT`}
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono">{v.usedCount}/{v.usageLimit}</td>
+                  <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
+                    {v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : "Never"}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${
+                      v.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"
+                    }`}>
+                      {v.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => edit(v)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => setDeleteId(v.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        title="Delete Voucher"
+        message="This will permanently remove the voucher from the system."
+        confirmLabel="Delete"
+        danger
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) void remove(deleteId);
+        }}
+      />
     </div>
   );
 }

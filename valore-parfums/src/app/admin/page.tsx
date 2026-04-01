@@ -6,6 +6,7 @@ import {
   TrendingUp, DollarSign, ShoppingCart, Package, AlertTriangle, Inbox, Wallet
 } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
+import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 import { useAuth } from "@/store/auth";
 
 const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
@@ -343,7 +344,10 @@ export default function AdminDashboard() {
               <div key={o.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                 <div>
                   <p className="text-sm">{o.customerName}</p>
-                  <p className="text-[10px] font-mono text-[var(--text-muted)]">{o.id.slice(0, 8)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-mono text-[var(--text-muted)] break-all">{o.id}</p>
+                    <CopyOrderIdButton orderId={o.id} className="h-8 w-8 min-w-8" />
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="font-serif text-sm text-[var(--gold)]">{fmt(o.total)} BDT</span>
@@ -490,28 +494,56 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
       ) : withdrawals.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)] text-center py-4">No withdrawals yet</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
-                <th className="text-right py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Amount</th>
-                <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">By</th>
-                <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Note</th>
-              </tr>
-            </thead>
-            <tbody>
-              {withdrawals.map((w) => (
-                <tr key={w.id} className="border-b border-[var(--border)]">
-                  <td className="py-2 px-3 text-xs text-[var(--text-secondary)]">{new Date(w.createdAt).toLocaleDateString()}</td>
-                  <td className="py-2 px-3 text-right font-serif text-[var(--error)]">{fmt(w.amount)} BDT</td>
-                  <td className="py-2 px-3 text-xs">{w.withdrawnBy}</td>
-                  <td className="py-2 px-3 text-xs text-[var(--text-secondary)]">{w.note || "—"}</td>
+        <>
+          <div className="space-y-3 md:hidden">
+            {withdrawals.map((w) => (
+              <div key={w.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-[var(--text-primary)]">{new Date(w.createdAt).toLocaleDateString()}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Date</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-serif text-[var(--error)]">{fmt(w.amount)} BDT</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Amount</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm border-t border-[var(--border)] pt-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">By</p>
+                    <p>{w.withdrawnBy}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Note</p>
+                    <p className="text-[var(--text-secondary)]">{w.note || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
+                  <th className="text-right py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Amount</th>
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">By</th>
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Note</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {withdrawals.map((w) => (
+                  <tr key={w.id} className="border-b border-[var(--border)]">
+                    <td className="py-2 px-3 text-xs text-[var(--text-secondary)]">{new Date(w.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2 px-3 text-right font-serif text-[var(--error)]">{fmt(w.amount)} BDT</td>
+                    <td className="py-2 px-3 text-xs">{w.withdrawnBy}</td>
+                    <td className="py-2 px-3 text-xs text-[var(--text-secondary)]">{w.note || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

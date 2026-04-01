@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface Bottle {
   id: string;
@@ -16,6 +17,7 @@ export default function BottlesPage() {
   const [bottles, setBottles] = useState<Bottle[]>([]);
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ ml: 0, costPerBottle: 0, availableCount: 0, lowStockThreshold: 10 });
 
   const load = () =>
@@ -54,10 +56,10 @@ export default function BottlesPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this bottle entry?")) return;
     await fetch(`/api/bottles/${id}`, { method: "DELETE" });
     toast("Bottle removed", "success");
     load();
+    setDeleteId(null);
   };
 
   return (
@@ -136,45 +138,90 @@ export default function BottlesPage() {
           {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-14 rounded" />)}
         </div>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)]">
-              <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Bottle Size</th>
-              <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Cost (BDT)</th>
-              <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Available</th>
-              <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="space-y-3 md:hidden">
             {bottles.map((b) => (
-              <tr key={b.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
-                <td className="py-3 px-4 font-serif text-base">{b.ml} ml</td>
-                <td className="py-3 px-4 text-right font-serif text-[var(--gold)]">{b.costPerBottle} BDT</td>
-                <td className="py-3 px-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {b.availableCount <= b.lowStockThreshold && (
-                      <AlertTriangle size={14} className="text-[var(--warning)]" />
-                    )}
-                    <span className={`font-mono ${b.availableCount <= b.lowStockThreshold ? "text-[var(--warning)]" : ""}`}>
-                      {b.availableCount}
-                    </span>
+              <div key={b.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-serif text-lg">{b.ml} ml</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Bottle Size</p>
                   </div>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => edit(b)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
-                      <Pencil size={15} />
-                    </button>
-                    <button onClick={() => remove(b.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
-                      <Trash2 size={15} />
-                    </button>
+                  <div className="text-right">
+                    <p className="font-serif text-[var(--gold)]">{b.costPerBottle} BDT</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Cost</p>
                   </div>
-                </td>
-              </tr>
+                </div>
+                <div className="flex items-center justify-between text-sm border-t border-[var(--border)] pt-3">
+                  <span className="text-[var(--text-muted)]">Available</span>
+                  <span className={`font-mono flex items-center gap-2 ${b.availableCount <= b.lowStockThreshold ? "text-[var(--warning)]" : ""}`}>
+                    {b.availableCount <= b.lowStockThreshold && <AlertTriangle size={14} className="text-[var(--warning)]" />}
+                    {b.availableCount}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] pt-3">
+                  <button onClick={() => edit(b)} className="p-2 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                    <Pencil size={15} />
+                  </button>
+                  <button onClick={() => setDeleteId(b.id)} className="p-2 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+          <table className="hidden md:table w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Bottle Size</th>
+                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Cost (BDT)</th>
+                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Available</th>
+                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bottles.map((b) => (
+                <tr key={b.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
+                  <td className="py-3 px-4 font-serif text-base">{b.ml} ml</td>
+                  <td className="py-3 px-4 text-right font-serif text-[var(--gold)]">{b.costPerBottle} BDT</td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {b.availableCount <= b.lowStockThreshold && (
+                        <AlertTriangle size={14} className="text-[var(--warning)]" />
+                      )}
+                      <span className={`font-mono ${b.availableCount <= b.lowStockThreshold ? "text-[var(--warning)]" : ""}`}>
+                        {b.availableCount}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => edit(b)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => setDeleteId(b.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        title="Delete Bottle Entry"
+        message="This will permanently remove the bottle entry from inventory."
+        confirmLabel="Delete"
+        danger
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) void remove(deleteId);
+        }}
+      />
     </div>
   );
 }

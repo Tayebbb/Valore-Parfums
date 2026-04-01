@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
+import { DecisionDrawer } from "@/components/ui/DecisionDrawer";
+import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 
 interface OrderItem {
   id: string;
@@ -34,9 +36,60 @@ interface Order {
   items: OrderItem[];
 }
 
-const statuses = ["Pending", "Confirmed", "Ready", "Completed", "Cancelled"];
+interface UserRequest {
+  id: string;
+  perfumeName: string;
+  brand: string;
+  type: "decant" | "full_bottle";
+  ml: number | null;
+  quantity: number;
+  notes: string;
+  userName: string;
+  userEmail: string;
+  status: string;
+  adminNote: string;
+  buyingPrice: number | null;
+  sellingPrice: number | null;
+  profit: number | null;
+  fulfilledAt: string | null;
+  createdAt: string;
+}
+
+interface StockRequest {
+  id: string;
+  perfumeName: string;
+  customerName: string;
+  customerPhone: string;
+  desiredMl: number;
+  quantity: number;
+  status: string;
+  createdAt: string;
+}
+
+const statuses = ["Pending", "Confirmed", "Sourcing", "Ready", "Dispatched", "Cancelled"];
+const requestStatuses = ["Pending", "Confirmed", "Dispatched", "Cancelled"];
+const procurementStatuses = ["Pending", "Sourcing", "Ready", "Dispatched", "Cancelled"];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
 type SortType = "newest" | "oldest" | "highest-total" | "highest-profit";
+type AdminTab = "orders" | "requests" | "procurement";
+type StatusChangeKind = "order" | "request" | "procurement";
+
+interface PendingStatusChange {
+  id: string;
+  kind: StatusChangeKind;
+  targetName: string;
+  fromStatus: string;
+  toStatus: string;
+}
+
+const normalizeStatus = (status?: string) => {
+  if (!status) return "Pending";
+  if (status === "Completed") return "Dispatched";
+  if (status === "Approved") return "Confirmed";
+  if (status === "Fulfilled") return "Dispatched";
+  if (status === "Declined") return "Cancelled";
+  return status;
+};
 
 const getOrderSizeType = (order: Order): Exclude<SizeTypeFilter, "all"> => {
   const hasFullBottle = order.items?.some((i) => Boolean(i.isFullBottle)) ?? false;
@@ -52,24 +105,64 @@ const hasPendingVoucherForFullBottle = (order: Order) => {
   return (order.items || []).some((item) => Boolean(item.isFullBottle) && Number(item.unitPrice ?? 0) <= 0);
 };
 
+const normalizeRequestStatus = (status?: string) => {
+  if (!status) return "Pending";
+  if (status === "Approved") return "Confirmed";
+  if (status === "Fulfilled") return "Dispatched";
+  if (status === "Declined") return "Cancelled";
+  return status;
+};
+
+const normalizeProcurementStatus = (status?: string) => {
+  if (!status) return "Pending";
+  if (status === "Approved") return "Sourcing";
+  if (status === "Fulfilled") return "Dispatched";
+  if (status === "Declined") return "Cancelled";
+  return status;
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [requests, setRequests] = useState<UserRequest[]>([]);
+  const [procurementRequests, setProcurementRequests] = useState<StockRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<AdminTab>("orders");
   const [statusFilter, setStatusFilter] = useState("");
   const [sizeTypeFilter, setSizeTypeFilter] = useState<SizeTypeFilter>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [manualPrices, setManualPrices] = useState<Record<string, string>>({});
   const [savingPrices, setSavingPrices] = useState(false);
+  const [requestEditingId, setRequestEditingId] = useState<string | null>(null);
+  const [requestBuyingPrice, setRequestBuyingPrice] = useState("");
+  const [requestSellingPrice, setRequestSellingPrice] = useState("");
+  const [savingRequestPrices, setSavingRequestPrices] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
+  const [applyingStatusChange, setApplyingStatusChange] = useState(false);
 
-  const load = () =>
-    fetch("/api/orders")
-      .then((r) => r.json())
-      .then(setOrders)
-      .finally(() => setLoading(false));
+  const load = async () => {
+    setLoading(true);
+    const [ordersRes, requestsRes, procurementRes] = await Promise.all([
+      fetch("/api/orders"),
+      fetch("/api/requests?all=true"),
+      fetch("/api/stock-requests"),
+    ]);
+
+    const ordersData = await ordersRes.json().catch(() => []);
+    const requestsData = await requestsRes.json().catch(() => []);
+    const procurementData = await procurementRes.json().catch(() => []);
+
+    setOrders(Array.isArray(ordersData) ? ordersData : []);
+    setRequests(Array.isArray(requestsData) ? requestsData : []);
+    setProcurementRequests(Array.isArray(procurementData) ? procurementData : []);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const fmt = (n: number) => n.toLocaleString("en-BD");
@@ -93,12 +186,13 @@ export default function OrdersPage() {
     if (!res.ok) {
       const err = await res.json().catch(() => null);
       toast(err?.error || "Failed to update order status", "error");
-      return;
+      return false;
     }
 
     const updated = await res.json();
     updateOrderInState(updated);
     toast(`Order ${status.toLowerCase()}`, "success");
+    return true;
   };
 
   const saveFullBottlePrices = async () => {
@@ -173,8 +267,111 @@ export default function OrdersPage() {
     toast("Voucher removed for this order", "success");
   };
 
+  const updateRequestStatus = async (id: string, status: string) => {
+    const request = requests.find((item) => item.id === id);
+
+    if (status === "Dispatched") {
+      if ((!request?.buyingPrice && request?.buyingPrice !== 0) || (!request?.sellingPrice && request?.sellingPrice !== 0)) {
+        toast("Set buying and selling price before dispatching", "error");
+        setRequestEditingId(id);
+        setRequestBuyingPrice(String(request?.buyingPrice ?? ""));
+        setRequestSellingPrice(String(request?.sellingPrice ?? ""));
+        return false;
+      }
+    }
+
+    const res = await fetch(`/api/requests/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to update request", "error");
+      return false;
+    }
+
+    toast(`Request ${status.toLowerCase()}`, "success");
+    load();
+    return true;
+  };
+
+  const saveRequestPrices = async (id: string) => {
+    const buying = Number(requestBuyingPrice);
+    const selling = Number(requestSellingPrice);
+
+    if (!Number.isFinite(buying) || buying < 0) {
+      toast("Invalid buying price", "error");
+      return;
+    }
+    if (!Number.isFinite(selling) || selling < 0) {
+      toast("Invalid selling price", "error");
+      return;
+    }
+
+    setSavingRequestPrices(true);
+    const res = await fetch(`/api/requests/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ buyingPrice: buying, sellingPrice: selling }),
+    });
+    setSavingRequestPrices(false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to save prices", "error");
+      return;
+    }
+
+    toast("Prices saved", "success");
+    setRequestEditingId(null);
+    load();
+  };
+
+  const updateProcurementStatus = async (id: string, status: string) => {
+    const res = await fetch(`/api/stock-requests/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to update procurement request", "error");
+      return false;
+    }
+
+    toast(`Procurement ${status.toLowerCase()}`, "success");
+    load();
+    return true;
+  };
+
+  const queueStatusChange = (change: PendingStatusChange) => {
+    if (change.fromStatus === change.toStatus) return;
+    setPendingStatusChange(change);
+  };
+
+  const applyPendingStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    setApplyingStatusChange(true);
+    let ok = false;
+
+    if (pendingStatusChange.kind === "order") {
+      ok = await updateStatus(pendingStatusChange.id, pendingStatusChange.toStatus);
+    } else if (pendingStatusChange.kind === "request") {
+      ok = await updateRequestStatus(pendingStatusChange.id, pendingStatusChange.toStatus);
+    } else {
+      ok = await updateProcurementStatus(pendingStatusChange.id, pendingStatusChange.toStatus);
+    }
+
+    setApplyingStatusChange(false);
+    if (ok) setPendingStatusChange(null);
+  };
+
   const filtered = useMemo(() => {
-    const byStatus = statusFilter ? orders.filter((o) => o.status === statusFilter) : orders;
+    const byStatus = statusFilter ? orders.filter((o) => normalizeStatus(o.status) === statusFilter) : orders;
     const bySize = sizeTypeFilter === "all"
       ? byStatus
       : byStatus.filter((o) => getOrderSizeType(o) === sizeTypeFilter);
@@ -192,14 +389,49 @@ export default function OrdersPage() {
     return sorted;
   }, [orders, statusFilter, sizeTypeFilter, sortBy]);
 
+  const openOrderDetails = (order: Order) => {
+    setSelectedOrder(order);
+    const initialDrafts = (order.items || []).reduce<Record<string, string>>((acc, item) => {
+      if (item.isFullBottle) {
+        acc[item.id] = String(item.unitPrice ?? 0);
+      }
+      return acc;
+    }, {});
+    setManualPrices(initialDrafts);
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-light">Orders</h1>
+        <h1 className="font-serif text-3xl font-light">Order Management</h1>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[10px] font-mono text-[var(--text-muted)] break-all">{o.id}</p>
+                          <CopyOrderIdButton orderId={o.id} className="h-8 w-8 min-w-8" stopPropagation />
+                        </div>
         <div className="gold-line mt-3" />
       </div>
 
-      <div className="space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {[
+          { key: "orders", label: "Orders" },
+          { key: "requests", label: "Customer Requests" },
+          { key: "procurement", label: "Procurement" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as AdminTab)}
+            className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded transition-colors ${
+              activeTab === tab.key
+                ? "bg-[var(--gold)] text-black"
+                : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={activeTab === "orders" ? "space-y-2" : "hidden"}>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setStatusFilter("")}
@@ -212,7 +444,7 @@ export default function OrdersPage() {
             All ({orders.length})
           </button>
           {statuses.map((s) => {
-            const count = orders.filter((o) => o.status === s).length;
+            const count = orders.filter((o) => normalizeStatus(o.status) === s).length;
             return (
               <button
                 key={s}
@@ -276,60 +508,46 @@ export default function OrdersPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order ID</th>
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Items</th>
-                <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Type</th>
-                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Total</th>
-                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
-                <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
-                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((o) => {
-                const orderType = getOrderSizeType(o);
-                const voucherPending = hasPendingVoucherForFullBottle(o);
-                const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
-                const orderTypeClass = orderType === "full-bottle"
-                  ? "bg-[rgba(250,204,21,0.18)] text-[var(--gold)]"
-                  : orderType === "mixed"
-                    ? "bg-[rgba(96,165,250,0.14)] text-[rgb(125,176,255)]"
-                    : "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
+        <>
+          <div className="space-y-3 md:hidden">
+            {filtered.map((o) => {
+              const orderType = getOrderSizeType(o);
+              const currentStatus = normalizeStatus(o.status);
+              const voucherPending = hasPendingVoucherForFullBottle(o);
+              const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
+              const orderTypeClass = orderType === "full-bottle"
+                ? "bg-[rgba(250,204,21,0.18)] text-[var(--gold)]"
+                : orderType === "mixed"
+                  ? "bg-[rgba(96,165,250,0.14)] text-[rgb(125,176,255)]"
+                  : "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
 
-                return (
-                  <tr
-                    key={o.id}
-                    className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors cursor-pointer"
-                    onClick={() => {
-                      setSelectedOrder(o);
-                      const initialDrafts = (o.items || []).reduce<Record<string, string>>((acc, item) => {
-                        if (item.isFullBottle) {
-                          acc[item.id] = String(item.unitPrice ?? 0);
-                        }
-                        return acc;
-                      }, {});
-                      setManualPrices(initialDrafts);
-                    }}
-                  >
-                    <td className="py-3 px-4 font-mono text-xs text-[var(--text-secondary)]">{o.id.slice(0, 8)}</td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm">{o.customerName}</p>
+              return (
+                <div
+                  key={o.id}
+                  onClick={() => openOrderDetails(o)}
+                  className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3 cursor-pointer hover:bg-[var(--gold-tint)] transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-mono text-xs text-[var(--text-secondary)]">{o.id.slice(0, 8)}</p>
+                      <p className="text-sm mt-1">{o.customerName}</p>
                       <p className="text-xs text-[var(--text-muted)]">{o.customerPhone}</p>
                       {o.voucherCode && (
                         <p className="text-[10px] text-[var(--success)] mt-1 uppercase tracking-wider">Voucher: {o.voucherCode}</p>
                       )}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
-                      {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
+                    </div>
+                    <div className="text-right">
+                      <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
+                      {o.voucherCode && (o.discount ?? 0) > 0 && (
+                        <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Type</p>
+                      <div className="flex flex-col items-start gap-1">
                         <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${orderTypeClass}`}>
                           {orderTypeLabel}
                         </span>
@@ -339,41 +557,161 @@ export default function OrdersPage() {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
-                      {o.voucherCode && (o.discount ?? 0) > 0 && (
-                        <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)} via {o.voucherCode}</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(o.status || "Pending")}`}>
-                        {o.status || "Pending"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</td>
-                    <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={o.status}
-                        onChange={(e) => updateStatus(o.id, e.target.value)}
-                        className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
-                      >
-                        {statuses.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                    <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Profit</p>
+                      <p className="font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</p>
+                    </div>
+                    <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] col-span-2">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Items</p>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
+                      </p>
+                    </div>
+                  </div>
 
+                  <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Date</p>
+                      <p className="text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
+                      {currentStatus}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => openOrderDetails(o)}
+                      className="text-[10px] uppercase tracking-wider border border-[var(--border)] text-[var(--text-secondary)] px-3 py-2 rounded hover:border-[var(--gold)] transition-colors"
+                    >
+                      View Details
+                    </button>
+                    <select
+                      value={currentStatus}
+                      onChange={(e) => queueStatusChange({
+                        id: o.id,
+                        kind: "order",
+                        targetName: o.customerName,
+                        fromStatus: currentStatus,
+                        toStatus: e.target.value,
+                      })}
+                      className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-2 text-xs focus:border-[var(--gold)] outline-none"
+                    >
+                      {statuses.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order ID</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Items</th>
+                  <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Type</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Total</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
+                  <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((o) => {
+                  const orderType = getOrderSizeType(o);
+                  const currentStatus = normalizeStatus(o.status);
+                  const voucherPending = hasPendingVoucherForFullBottle(o);
+                  const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
+                  const orderTypeClass = orderType === "full-bottle"
+                    ? "bg-[rgba(250,204,21,0.18)] text-[var(--gold)]"
+                    : orderType === "mixed"
+                      ? "bg-[rgba(96,165,250,0.14)] text-[rgb(125,176,255)]"
+                      : "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
+
+                  return (
+                    <tr
+                      key={o.id}
+                      className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors cursor-pointer"
+                      onClick={() => openOrderDetails(o)}
+                    >
+                      <td className="py-3 px-4 font-mono text-xs text-[var(--text-secondary)]">
+                        <div className="inline-flex items-center gap-2">
+                          <span>{o.id}</span>
+                          <CopyOrderIdButton orderId={o.id} className="h-8 w-8 min-w-8" stopPropagation />
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="text-sm">{o.customerName}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{o.customerPhone}</p>
+                        {o.voucherCode && (
+                          <p className="text-[10px] text-[var(--success)] mt-1 uppercase tracking-wider">Voucher: {o.voucherCode}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
+                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${orderTypeClass}`}>
+                            {orderTypeLabel}
+                          </span>
+                          {voucherPending && (
+                            <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[rgba(251,191,36,0.2)] text-[rgb(251,191,36)]">
+                              Voucher Pending
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
+                        {o.voucherCode && (o.discount ?? 0) > 0 && (
+                          <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)} via {o.voucherCode}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
+                          {currentStatus}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</td>
+                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={currentStatus}
+                          onChange={(e) => queueStatusChange({
+                            id: o.id,
+                            kind: "order",
+                            targetName: o.customerName,
+                            fromStatus: currentStatus,
+                            toStatus: e.target.value,
+                          })}
+                          className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                        >
+                          {statuses.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-[var(--text-secondary)]">No orders found</div>
+            )}
+          </div>
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-[var(--text-secondary)]">No orders found</div>
+            <div className="text-center py-12 text-[var(--text-secondary)] md:hidden">No orders found</div>
           )}
-        </div>
+        </>
       )}
 
       {selectedOrder && (
@@ -388,7 +726,10 @@ export default function OrdersPage() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Order ID</span>
-                <span className="font-mono">{selectedOrder.id.slice(0, 8)}</span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="font-mono break-all">{selectedOrder.id}</span>
+                  <CopyOrderIdButton orderId={selectedOrder.id} className="h-8 w-8 min-w-8" />
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Customer</span>
@@ -499,6 +840,372 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      <div className={activeTab === "requests" ? "space-y-4" : "hidden"}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-2xl font-light">Customer Requests</h2>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">Unified request queue with pricing and fulfillment control</p>
+          </div>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{requests.length} requests</span>
+        </div>
+
+        {requests.length === 0 ? (
+          <div className="text-center py-12 text-[var(--text-secondary)]">No customer requests yet</div>
+        ) : (
+          <>
+            <div className="space-y-3 md:hidden">
+              {requests.map((request) => {
+                const currentStatus = normalizeRequestStatus(request.status);
+                return (
+                  <div key={request.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-serif">{request.perfumeName}</p>
+                        {request.brand && <p className="text-[10px] text-[var(--text-muted)]">{request.brand}</p>}
+                        {request.notes && <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 italic">{request.notes}</p>}
+                      </div>
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${request.type === "full_bottle" ? "bg-[rgba(139,92,246,0.1)] text-purple-400" : "bg-[var(--gold-tint)] text-[var(--gold)]"}`}>
+                        {request.type === "full_bottle" ? "Full Bottle" : "Decant"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Customer</p>
+                        <p className="text-sm">{request.userName}</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{request.userEmail}</p>
+                        <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` · ${request.ml}ml` : ""}</p>
+                      </div>
+                      <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Profit</p>
+                        {request.profit != null ? (
+                          <span className={request.profit >= 0 ? "text-green-400" : "text-red-400"}>{request.profit >= 0 ? "+" : ""}{request.profit}</span>
+                        ) : request.buyingPrice != null && request.sellingPrice != null ? (
+                          <span className="text-[var(--text-muted)] text-[10px]">~{(request.sellingPrice ?? 0) - (request.buyingPrice ?? 0)}</span>
+                        ) : (
+                          <span className="text-[var(--text-muted)]">—</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] space-y-2">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Buy / Sell</p>
+                      {requestEditingId === request.id ? (
+                        <div className="flex flex-col gap-1.5 items-end">
+                          <input
+                            type="number"
+                            min="0"
+                            value={requestBuyingPrice}
+                            onChange={(e) => setRequestBuyingPrice(e.target.value)}
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
+                            placeholder="Buy"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            value={requestSellingPrice}
+                            onChange={(e) => setRequestSellingPrice(e.target.value)}
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
+                            placeholder="Sell"
+                          />
+                          <div className="flex gap-1">
+                            <button onClick={() => saveRequestPrices(request.id)} disabled={savingRequestPrices} className="px-2 py-0.5 text-[9px] uppercase bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] disabled:opacity-50">Save</button>
+                            <button onClick={() => setRequestEditingId(null)} className="px-2 py-0.5 text-[9px] uppercase border border-[var(--border)] rounded hover:border-[var(--gold)]">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-mono text-xs">
+                            <span className="text-[var(--text-muted)]">{request.buyingPrice ?? 0}</span>
+                            <span className="text-[var(--text-muted)] mx-1">/</span>
+                            <span>{request.sellingPrice ?? 0}</span>
+                          </div>
+                          {(currentStatus === "Pending" || currentStatus === "Confirmed") && (
+                            <button
+                              onClick={() => {
+                                setRequestEditingId(request.id);
+                                setRequestBuyingPrice(String(request.buyingPrice ?? ""));
+                                setRequestSellingPrice(String(request.sellingPrice ?? ""));
+                              }}
+                              className="text-[9px] text-[var(--gold)] uppercase tracking-wider hover:underline"
+                            >
+                              edit
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>{currentStatus}</span>
+                      <select
+                        value={currentStatus}
+                        onChange={(e) => queueStatusChange({
+                          id: request.id,
+                          kind: "request",
+                          targetName: request.userName,
+                          fromStatus: currentStatus,
+                          toStatus: e.target.value,
+                        })}
+                        className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                      >
+                        {requestStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Perfume</th>
+                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Type</th>
+                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Buy / Sell</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
+                    <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((request) => {
+                    const currentStatus = normalizeRequestStatus(request.status);
+                    return (
+                      <tr key={request.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-serif">{request.perfumeName}</p>
+                          {request.brand && <p className="text-[10px] text-[var(--text-muted)]">{request.brand}</p>}
+                          {request.notes && <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 italic">{request.notes}</p>}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${request.type === "full_bottle" ? "bg-[rgba(139,92,246,0.1)] text-purple-400" : "bg-[var(--gold-tint)] text-[var(--gold)]"}`}>
+                            {request.type === "full_bottle" ? "Full Bottle" : "Decant"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="text-sm">{request.userName}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">{request.userEmail}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` · ${request.ml}ml` : ""}</p>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {requestEditingId === request.id ? (
+                            <div className="flex flex-col gap-1.5 items-end">
+                              <input
+                                type="number"
+                                min="0"
+                                value={requestBuyingPrice}
+                                onChange={(e) => setRequestBuyingPrice(e.target.value)}
+                                className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
+                                placeholder="Buy"
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                value={requestSellingPrice}
+                                onChange={(e) => setRequestSellingPrice(e.target.value)}
+                                className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
+                                placeholder="Sell"
+                              />
+                              <div className="flex gap-1">
+                                <button onClick={() => saveRequestPrices(request.id)} disabled={savingRequestPrices} className="px-2 py-0.5 text-[9px] uppercase bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] disabled:opacity-50">Save</button>
+                                <button onClick={() => setRequestEditingId(null)} className="px-2 py-0.5 text-[9px] uppercase border border-[var(--border)] rounded hover:border-[var(--gold)]">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="font-mono text-xs">
+                              <span className="text-[var(--text-muted)]">{request.buyingPrice ?? 0}</span>
+                              <span className="text-[var(--text-muted)] mx-1">/</span>
+                              <span>{request.sellingPrice ?? 0}</span>
+                              {(currentStatus === "Pending" || currentStatus === "Confirmed") && (
+                                <button
+                                  onClick={() => {
+                                    setRequestEditingId(request.id);
+                                    setRequestBuyingPrice(String(request.buyingPrice ?? ""));
+                                    setRequestSellingPrice(String(request.sellingPrice ?? ""));
+                                  }}
+                                  className="ml-1.5 text-[9px] text-[var(--gold)] hover:underline"
+                                >
+                                  edit
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono">
+                          {request.profit != null ? (
+                            <span className={request.profit >= 0 ? "text-green-400" : "text-red-400"}>{request.profit >= 0 ? "+" : ""}{request.profit}</span>
+                          ) : request.buyingPrice != null && request.sellingPrice != null ? (
+                            <span className="text-[var(--text-muted)] text-[10px]">~{(request.sellingPrice ?? 0) - (request.buyingPrice ?? 0)}</span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>{currentStatus}</span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <select
+                            value={currentStatus}
+                            onChange={(e) => queueStatusChange({
+                              id: request.id,
+                              kind: "request",
+                              targetName: request.userName,
+                              fromStatus: currentStatus,
+                              toStatus: e.target.value,
+                            })}
+                            className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                          >
+                            {requestStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className={activeTab === "procurement" ? "space-y-4" : "hidden"}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-2xl font-light">Procurement</h2>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">Out-of-stock sourcing requests handled in the same workflow</p>
+          </div>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{procurementRequests.length} requests</span>
+        </div>
+
+        {procurementRequests.length === 0 ? (
+          <div className="text-center py-12 text-[var(--text-secondary)]">No procurement requests yet</div>
+        ) : (
+          <>
+            <div className="space-y-3 md:hidden">
+              {procurementRequests.map((request) => {
+                const currentStatus = normalizeProcurementStatus(request.status);
+                return (
+                  <div key={request.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-serif">{request.perfumeName}</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{request.customerName}</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{request.customerPhone}</p>
+                      </div>
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>{currentStatus}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">ML</p>
+                        <p className="font-mono">{request.desiredMl}</p>
+                      </div>
+                      <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Qty</p>
+                        <p className="font-mono">{request.quantity}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end border-t border-[var(--border)] pt-3">
+                      <select
+                        value={currentStatus}
+                        onChange={(e) => queueStatusChange({
+                          id: request.id,
+                          kind: "procurement",
+                          targetName: request.customerName,
+                          fromStatus: currentStatus,
+                          toStatus: e.target.value,
+                        })}
+                        className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                      >
+                        {procurementStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Perfume</th>
+                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">ML</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Qty</th>
+                    <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
+                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {procurementRequests.map((request) => {
+                    const currentStatus = normalizeProcurementStatus(request.status);
+                    return (
+                      <tr key={request.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
+                        <td className="py-3 px-4 font-serif">{request.perfumeName}</td>
+                        <td className="py-3 px-4">{request.customerName}<p className="text-[10px] text-[var(--text-muted)]">{request.customerPhone}</p></td>
+                        <td className="py-3 px-4 text-right font-mono">{request.desiredMl}</td>
+                        <td className="py-3 px-4 text-right font-mono">{request.quantity}</td>
+                        <td className="py-3 px-4 text-center"><span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>{currentStatus}</span></td>
+                        <td className="py-3 px-4 text-right">
+                          <select
+                            value={currentStatus}
+                            onChange={(e) => queueStatusChange({
+                              id: request.id,
+                              kind: "procurement",
+                              targetName: request.customerName,
+                              fromStatus: currentStatus,
+                              toStatus: e.target.value,
+                            })}
+                            className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                          >
+                            {procurementStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      <DecisionDrawer
+        open={Boolean(pendingStatusChange)}
+        title="Confirm Status Transition"
+        message="Review this update before it is applied. This keeps order operations deliberate and traceable without disruptive browser popups."
+        confirmLabel="Apply Change"
+        cancelLabel="Keep Current"
+        busy={applyingStatusChange}
+        onCancel={() => {
+          if (!applyingStatusChange) setPendingStatusChange(null);
+        }}
+        onConfirm={() => {
+          void applyPendingStatusChange();
+        }}
+      >
+        {pendingStatusChange && (
+          <div className="space-y-2 text-sm">
+            <p className="text-[var(--text-secondary)]">
+              Target: <span className="text-[var(--text-primary)]">{pendingStatusChange.targetName}</span>
+            </p>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider">
+              <span className={`rounded-full px-2 py-1 ${statusClass(pendingStatusChange.fromStatus)}`}>
+                {pendingStatusChange.fromStatus}
+              </span>
+              <span className="text-[var(--text-muted)]">to</span>
+              <span className={`rounded-full px-2 py-1 ${statusClass(pendingStatusChange.toStatus)}`}>
+                {pendingStatusChange.toStatus}
+              </span>
+            </div>
+          </div>
+        )}
+      </DecisionDrawer>
     </div>
   );
 }

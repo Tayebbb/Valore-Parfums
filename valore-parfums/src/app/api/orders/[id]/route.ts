@@ -6,6 +6,12 @@ import { v4 as uuid } from "uuid";
 import { splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
 
+function normalizeOrderStatus(status?: string): string {
+  if (!status) return "Pending";
+  if (status === "Completed") return "Dispatched";
+  return status;
+}
+
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,8 +55,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const order = orderDoc.exists ? (orderDoc.data() as any) : null;
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const previousStatus = order.status || "Pending";
-  const newStatus = typeof orderPatch.status === "string" ? orderPatch.status : undefined;
+  const previousStatus = normalizeOrderStatus(order.status || "Pending");
+  const newStatus = typeof orderPatch.status === "string" ? normalizeOrderStatus(orderPatch.status) : undefined;
 
   // Fetch settings once (needed for profit crediting & reversal)
   const settingsDoc = await db.collection(Collections.settings).doc("default").get();
@@ -233,8 +239,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     });
   }
 
-  // ── Credit profit when status changes to "Completed" (only if not already Completed) ──
-  if (newStatus === "Completed" && previousStatus !== "Completed") {
+  // ── Credit profit when status changes to "Dispatched" (only if not already dispatched) ──
+  if (newStatus === "Dispatched" && previousStatus !== "Dispatched") {
     const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
 
     const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};

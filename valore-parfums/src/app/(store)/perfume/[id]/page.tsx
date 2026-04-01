@@ -53,7 +53,6 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   const [bulkRules, setBulkRules] = useState<BulkRule[]>([]);
   const [selectedMl, setSelectedMl] = useState<number | null>(null);
   const [selectedOption, setSelectedOption] = useState<"decant" | "full-bottle">("decant");
-  const [fullBottleSize, setFullBottleSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showRequest, setShowRequest] = useState(false);
@@ -112,22 +111,20 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   const decantUnitPrice = selectedPrice ? Math.ceil(selectedPrice.sellingPrice * (1 - bulkDiscountPercent / 100)) : 0;
   const effectiveUnitPrice = selectedOption === "full-bottle" ? 0 : decantUnitPrice;
   const totalDisplayPrice = effectiveUnitPrice * quantity;
+  const requestHref = perfume
+    ? `/requests?perfumeName=${encodeURIComponent(perfume.name)}&brand=${encodeURIComponent(perfume.brand || "")}&type=full_bottle`
+    : "/requests?type=full_bottle";
 
   const handleAddToCart = () => {
     if (!perfume) return;
 
     if (selectedOption === "decant" && !selectedPrice) return;
-    if (selectedOption === "full-bottle" && !fullBottleSize.trim()) {
-      toast("Please enter desired bottle size (e.g., 50ml, 100ml)", "error");
-      return;
-    }
 
     addItem({
       perfumeId: perfume.id,
       perfumeName: perfume.name,
       ml: selectedOption === "full-bottle" ? 0 : (selectedPrice?.ml ?? 0),
       isFullBottle: selectedOption === "full-bottle",
-      fullBottleSize: selectedOption === "full-bottle" ? fullBottleSize.trim() : undefined,
       quantity,
       unitPrice: effectiveUnitPrice,
       image: images[0],
@@ -139,7 +136,6 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
       "success",
     );
     setQuantity(1);
-    if (selectedOption === "full-bottle") setFullBottleSize("");
   };
 
   const submitRequest = async () => {
@@ -343,23 +339,6 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
               </div>
             )}
 
-            {selectedOption === "full-bottle" && (
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] block">
-                  Desired Bottle Size *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., 50ml, 100ml"
-                  value={fullBottleSize}
-                  onChange={(e) => setFullBottleSize(e.target.value)}
-                  className="w-full md:w-[320px] bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
-                />
-                <p className="text-xs text-[var(--text-muted)]">
-                  Price is not fixed for Full Bottle requests. Admin will confirm pricing manually after order placement.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Quantity */}
@@ -417,8 +396,15 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Add to Cart */}
-          {selectedOption === "full-bottle" || selectedPrice?.available ? (
+          {/* Add to Cart / Request */}
+          {selectedOption === "full-bottle" ? (
+            <Link
+              href={requestHref}
+              className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
+            >
+              <ShoppingBag size={18} /> Request Perfume
+            </Link>
+          ) : selectedPrice?.available ? (
             <button
               onClick={handleAddToCart}
               className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"

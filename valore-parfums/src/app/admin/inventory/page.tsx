@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface FragranceNotes {
   top: string[];
@@ -18,23 +19,15 @@ interface FragranceNoteIds {
   all?: string[];
 }
 
-interface NotesLibraryCategory {
-  id: string;
-  label: string;
-  emphasis?: "high" | "trending" | "core";
-  notes: string[];
-}
-
 interface NotesLibraryNote {
   id: string;
   label: string;
-  categoryId: string;
-  categoryLabel: string;
-  emphasis?: "high" | "trending" | "core";
+  categoryId?: string;
+  categoryLabel?: string;
 }
 
 interface NotesLibraryPayload {
-  categories: NotesLibraryCategory[];
+  categories: Array<{ id: string; label: string }>;
   notes: NotesLibraryNote[];
   noteLabels: string[];
 }
@@ -129,66 +122,87 @@ function normalizeImages(images: string): string {
   return JSON.stringify([images.trim()]);
 }
 
-function NoteSelector({
+function useDebouncedValue<T>(value: T, delayMs = 120): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [delayMs, value]);
+
+  return debounced;
+}
+
+function NoteGroupSelector({
   label,
   selectedIds,
-  categories,
-  notesByCategory,
-  noteLabel,
+  selectedLabels,
+  visibleNotes,
+  rawSearch,
+  onSearchChange,
   onToggle,
+  onRemove,
 }: {
   label: string;
   selectedIds: string[];
-  categories: NotesLibraryCategory[];
-  notesByCategory: Record<string, NotesLibraryNote[]>;
-  noteLabel: (id: string) => string;
+  selectedLabels: string[];
+  visibleNotes: NotesLibraryNote[];
+  rawSearch: string;
+  onSearchChange: (value: string) => void;
   onToggle: (noteId: string) => void;
+  onRemove: (noteId: string) => void;
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] block">{label}</label>
-      <div className="max-h-56 overflow-y-auto rounded border border-[var(--border)] bg-[var(--bg-input)] p-2 space-y-2">
-        {categories.map((category) => {
-          const notes = notesByCategory[category.id] || [];
-          if (notes.length === 0) return null;
-
-          const categoryClass = category.emphasis === "high"
-            ? "border-[var(--gold)] bg-[var(--gold-tint)]"
-            : category.emphasis === "trending"
-              ? "border-[rgba(245,158,11,0.45)] bg-[rgba(245,158,11,0.07)]"
-              : "border-[var(--border)] bg-[var(--bg-surface)]";
-
-          return (
-            <div key={`${label}-${category.id}`} className={`rounded border p-2 ${categoryClass}`}>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-secondary)] mb-2">{category.label}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {notes.map((note) => {
-                  const active = selectedIds.includes(note.id);
-                  return (
-                    <button
-                      key={`${label}-${note.id}`}
-                      type="button"
-                      onClick={() => onToggle(note.id)}
-                      className={`px-2 py-1 rounded text-[10px] uppercase tracking-wider transition-colors border ${
-                        active
-                          ? "bg-[var(--gold)] text-black border-[var(--gold)]"
-                          : "text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)] hover:text-[var(--text-primary)]"
-                      }`}
-                    >
-                      {note.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+      <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">{label}</label>
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+        <input
+          type="text"
+          value={rawSearch}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={`Search ${label.toLowerCase()}...`}
+          className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded pl-10 pr-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
+        />
       </div>
+      <div className="max-h-52 overflow-y-auto rounded border border-[var(--border)] bg-[var(--bg-input)] p-2">
+        <div className="flex flex-wrap gap-1.5">
+          {visibleNotes.map((note) => {
+            const active = selectedIds.includes(note.id);
+            return (
+              <button
+                key={note.id}
+                type="button"
+                onClick={() => onToggle(note.id)}
+                className={`px-2 py-1 rounded text-[10px] uppercase tracking-wider transition-colors border ${
+                  active
+                    ? "bg-[var(--gold)] text-black border-[var(--gold)]"
+                    : "text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--gold)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {note.label}
+              </button>
+            );
+          })}
+        </div>
+        {visibleNotes.length === 0 && (
+          <p className="text-xs text-[var(--text-muted)] px-1 py-2">No matching notes found.</p>
+        )}
+      </div>
+      <p className="text-xs text-[var(--text-muted)]">
+        Showing {visibleNotes.length} note{visibleNotes.length === 1 ? "" : "s"} · Selected {selectedIds.length}
+      </p>
       <div className="flex flex-wrap gap-1.5 min-h-6">
-        {selectedIds.length > 0 ? selectedIds.map((noteId) => (
-          <span key={`${label}-tag-${noteId}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
-            {noteLabel(noteId)}
-          </span>
+        {selectedIds.length > 0 ? selectedIds.map((noteId, index) => (
+          <button
+            key={`selected-note-${noteId}`}
+            type="button"
+            onClick={() => onRemove(noteId)}
+            className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)] hover:bg-[var(--gold)] hover:text-black transition-colors"
+            title="Remove note"
+          >
+            {selectedLabels[index] || noteId}
+          </button>
         )) : <span className="text-xs text-[var(--text-muted)]">No notes selected</span>}
       </div>
     </div>
@@ -204,6 +218,14 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [notesLibrary, setNotesLibrary] = useState<NotesLibraryPayload>({ categories: [], notes: [], noteLabels: [] });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [noteSearchTop, setNoteSearchTop] = useState("");
+  const [noteSearchMiddle, setNoteSearchMiddle] = useState("");
+  const [noteSearchBase, setNoteSearchBase] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const debouncedNoteSearchTop = useDebouncedValue(noteSearchTop, 120);
+  const debouncedNoteSearchMiddle = useDebouncedValue(noteSearchMiddle, 120);
+  const debouncedNoteSearchBase = useDebouncedValue(noteSearchBase, 120);
 
   const load = () =>
     fetch("/api/perfumes")
@@ -214,31 +236,69 @@ export default function InventoryPage() {
   const loadNotesLibrary = () =>
     fetch("/api/notes-library")
       .then((r) => r.json())
-      .then((data) => setNotesLibrary({
-        categories: Array.isArray(data?.categories) ? data.categories : [],
-        notes: Array.isArray(data?.notes) ? data.notes : [],
-        noteLabels: Array.isArray(data?.noteLabels) ? data.noteLabels : [],
-      }));
+      .then((data) => {
+        const sortedNotes = Array.isArray(data?.notes)
+          ? [...data.notes].sort((a, b) => String(a?.label || "").localeCompare(String(b?.label || "")))
+          : [];
+        setNotesLibrary({
+          categories: Array.isArray(data?.categories) ? data.categories : [],
+          notes: sortedNotes,
+          noteLabels: sortedNotes.map((note) => note.label),
+        });
+      });
 
   useEffect(() => {
     load();
     loadNotesLibrary();
   }, []);
 
-  const noteById = Object.fromEntries(notesLibrary.notes.map((note) => [note.id, note])) as Record<string, NotesLibraryNote>;
-  const notesByCategory = notesLibrary.notes.reduce<Record<string, NotesLibraryNote[]>>((acc, note) => {
-    const list = acc[note.categoryId] || [];
-    list.push(note);
-    acc[note.categoryId] = list;
-    return acc;
-  }, {});
+  const noteById = useMemo(
+    () => Object.fromEntries(notesLibrary.notes.map((note) => [note.id, note])) as Record<string, NotesLibraryNote>,
+    [notesLibrary.notes],
+  );
 
-  const noteLabel = (id: string) => noteById[id]?.label || id;
-  const noteIdByLabel = (label: string) => notesLibrary.notes.find((note) => note.label.toLowerCase() === label.toLowerCase())?.id || "";
+  const noteIdByLowerLabel = useMemo(
+    () => new Map(notesLibrary.notes.map((note) => [note.label.toLowerCase(), note.id])),
+    [notesLibrary.notes],
+  );
+
+  const noteLabel = useCallback((id: string) => noteById[id]?.label || id, [noteById]);
+  const noteIdByLabel = useCallback((label: string) => noteIdByLowerLabel.get(label.toLowerCase()) || "", [noteIdByLowerLabel]);
+
+  const sortNoteIdsByLabel = useCallback(
+    (ids: string[]) => [...ids].sort((a, b) => noteLabel(a).localeCompare(noteLabel(b))),
+    [noteLabel],
+  );
+
+  const filterNotes = useCallback((query: string) => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return notesLibrary.notes;
+    return notesLibrary.notes.filter((note) => note.label.toLowerCase().includes(normalized));
+  }, [notesLibrary.notes]);
+
+  const visibleTopNotes = useMemo(() => {
+    return filterNotes(debouncedNoteSearchTop);
+  }, [debouncedNoteSearchTop, filterNotes]);
+
+  const visibleMiddleNotes = useMemo(() => {
+    return filterNotes(debouncedNoteSearchMiddle);
+  }, [debouncedNoteSearchMiddle, filterNotes]);
+
+  const visibleBaseNotes = useMemo(() => {
+    return filterNotes(debouncedNoteSearchBase);
+  }, [debouncedNoteSearchBase, filterNotes]);
+
+  const uniqueSortedByLabel = useCallback((ids: string[]) => {
+    const unique = Array.from(new Set(ids));
+    return sortNoteIdsByLabel(unique);
+  }, [sortNoteIdsByLabel]);
 
   const openNew = () => {
     setEditing(null);
     setForm(createEmptyPerfumeForm());
+    setNoteSearchTop("");
+    setNoteSearchMiddle("");
+    setNoteSearchBase("");
     setShowModal(true);
   };
 
@@ -248,10 +308,13 @@ export default function InventoryPage() {
     const marketPricePerMl = Number(p.marketPricePerMl || 0);
     const purchasePricePerMl = Number(p.purchasePricePerMl || 0);
 
-    const topIds = p.fragranceNoteIds?.top || (p.fragranceNotes?.top || []).map(noteIdByLabel).filter(Boolean);
-    const middleIds = p.fragranceNoteIds?.middle || (p.fragranceNotes?.middle || []).map(noteIdByLabel).filter(Boolean);
-    const baseIds = p.fragranceNoteIds?.base || (p.fragranceNotes?.base || []).map(noteIdByLabel).filter(Boolean);
-    const allIds = Array.from(new Set([...(p.fragranceNoteIds?.all || []), ...topIds, ...middleIds, ...baseIds]));
+    const topIds = uniqueSortedByLabel(p.fragranceNoteIds?.top || (p.fragranceNotes?.top || []).map(noteIdByLabel).filter(Boolean));
+    const middleIds = uniqueSortedByLabel(p.fragranceNoteIds?.middle || (p.fragranceNotes?.middle || []).map(noteIdByLabel).filter(Boolean));
+    const baseIds = uniqueSortedByLabel(p.fragranceNoteIds?.base || (p.fragranceNotes?.base || []).map(noteIdByLabel).filter(Boolean));
+
+    const fallbackAll = uniqueSortedByLabel(p.fragranceNoteIds?.all || (p.fragranceNotes?.all || []).map(noteIdByLabel).filter(Boolean));
+    const normalizedTop = topIds.length > 0 ? topIds : fallbackAll;
+    const allIds = uniqueSortedByLabel([...normalizedTop, ...middleIds, ...baseIds]);
 
     setEditing(p);
     setForm({
@@ -270,13 +333,13 @@ export default function InventoryPage() {
       owner: p.owner || "Store",
       isPersonalCollection: p.isPersonalCollection || false,
       fragranceNoteIds: {
-        top: topIds,
+        top: normalizedTop,
         middle: middleIds,
         base: baseIds,
         all: allIds,
       },
       fragranceNotes: {
-        top: topIds.map(noteLabel),
+        top: normalizedTop.map(noteLabel),
         middle: middleIds.map(noteLabel),
         base: baseIds.map(noteLabel),
         all: allIds.map(noteLabel),
@@ -285,17 +348,31 @@ export default function InventoryPage() {
       marketPriceWhole: bottleSizeMl > 0 ? Number((marketPricePerMl * bottleSizeMl).toFixed(2)) : 0,
       purchasePriceWhole: bottleSizeMl > 0 ? Number((purchasePricePerMl * bottleSizeMl).toFixed(2)) : 0,
     });
+    setNoteSearchTop("");
+    setNoteSearchMiddle("");
+    setNoteSearchBase("");
     setShowModal(true);
   };
 
   useEffect(() => {
     if (!editing || notesLibrary.notes.length === 0) return;
-    if ((form.fragranceNoteIds?.top?.length || 0) + (form.fragranceNoteIds?.middle?.length || 0) + (form.fragranceNoteIds?.base?.length || 0) > 0) return;
+    const hasAnyIds = (form.fragranceNoteIds?.top?.length || 0) + (form.fragranceNoteIds?.middle?.length || 0) + (form.fragranceNoteIds?.base?.length || 0) > 0;
+    if (hasAnyIds) return;
 
-    const top = (form.fragranceNotes?.top || []).map(noteIdByLabel).filter(Boolean);
-    const middle = (form.fragranceNotes?.middle || []).map(noteIdByLabel).filter(Boolean);
-    const base = (form.fragranceNotes?.base || []).map(noteIdByLabel).filter(Boolean);
-    const all = Array.from(new Set([...top, ...middle, ...base]));
+    const top = uniqueSortedByLabel([
+      ...(form.fragranceNoteIds?.top || []),
+      ...(form.fragranceNotes?.top || []).map(noteIdByLabel).filter(Boolean),
+      ...(form.fragranceNotes?.all || []).map(noteIdByLabel).filter(Boolean),
+    ]);
+    const middle = uniqueSortedByLabel([
+      ...(form.fragranceNoteIds?.middle || []),
+      ...(form.fragranceNotes?.middle || []).map(noteIdByLabel).filter(Boolean),
+    ]);
+    const base = uniqueSortedByLabel([
+      ...(form.fragranceNoteIds?.base || []),
+      ...(form.fragranceNotes?.base || []).map(noteIdByLabel).filter(Boolean),
+    ]);
+    const all = uniqueSortedByLabel([...top, ...middle, ...base]);
     if (all.length === 0) return;
 
     setForm((prev) => ({
@@ -308,7 +385,7 @@ export default function InventoryPage() {
         all: all.map(noteLabel),
       },
     }));
-  }, [editing, form.fragranceNoteIds?.base?.length, form.fragranceNoteIds?.middle?.length, form.fragranceNoteIds?.top?.length, form.fragranceNotes?.base, form.fragranceNotes?.middle, form.fragranceNotes?.top, noteIdByLabel, noteLabel, notesLibrary.notes.length]);
+  }, [editing, form.fragranceNoteIds?.base, form.fragranceNoteIds?.base?.length, form.fragranceNoteIds?.middle, form.fragranceNoteIds?.middle?.length, form.fragranceNoteIds?.top, form.fragranceNoteIds?.top?.length, form.fragranceNotes?.all, form.fragranceNotes?.base, form.fragranceNotes?.middle, form.fragranceNotes?.top, noteIdByLabel, noteLabel, notesLibrary.notes.length, uniqueSortedByLabel]);
 
   const save = async () => {
     if (!form.name) return toast("Name is required", "error");
@@ -361,37 +438,35 @@ export default function InventoryPage() {
     const current = form.fragranceNoteIds?.[group] || [];
     const next = current.includes(noteId)
       ? current.filter((id) => id !== noteId)
-      : [...current, noteId].sort((a, b) => a.localeCompare(b));
+      : [...current, noteId];
 
-    const nextIds = {
-      top: group === "top" ? next : (form.fragranceNoteIds?.top || []),
-      middle: group === "middle" ? next : (form.fragranceNoteIds?.middle || []),
-      base: group === "base" ? next : (form.fragranceNoteIds?.base || []),
-    };
-
-    const all = Array.from(new Set([...nextIds.top, ...nextIds.middle, ...nextIds.base])).sort((a, b) => a.localeCompare(b));
-    const nextNotes = {
-      top: nextIds.top.map(noteLabel),
-      middle: nextIds.middle.map(noteLabel),
-      base: nextIds.base.map(noteLabel),
-      all: all.map(noteLabel),
-    };
+    const top = group === "top" ? uniqueSortedByLabel(next) : uniqueSortedByLabel(form.fragranceNoteIds?.top || []);
+    const middle = group === "middle" ? uniqueSortedByLabel(next) : uniqueSortedByLabel(form.fragranceNoteIds?.middle || []);
+    const base = group === "base" ? uniqueSortedByLabel(next) : uniqueSortedByLabel(form.fragranceNoteIds?.base || []);
+    const all = uniqueSortedByLabel([...top, ...middle, ...base]);
 
     setForm((prev) => ({
       ...prev,
       fragranceNoteIds: {
-        ...nextIds,
+        top,
+        middle,
+        base,
         all,
       },
       fragranceNotes: {
-        ...nextNotes,
+        top: top.map(noteLabel),
+        middle: middle.map(noteLabel),
+        base: base.map(noteLabel),
+        all: all.map(noteLabel),
       },
     }));
   };
 
   const uploadPngImage = async (file: File | null) => {
     if (!file) return;
-    if (file.type !== "image/png") {
+    const fileType = (file.type || "").toLowerCase();
+    const looksLikePng = /\.png$/i.test(file.name);
+    if (fileType && fileType !== "image/png" && fileType !== "image/x-png" && !looksLikePng) {
       toast("Please upload a PNG file", "error");
       return;
     }
@@ -415,10 +490,10 @@ export default function InventoryPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this perfume?")) return;
     await fetch(`/api/perfumes/${id}`, { method: "DELETE" });
     toast("Perfume deleted", "success");
     load();
+    setDeleteId(null);
   };
 
   const filtered = perfumes.filter(
@@ -461,70 +536,137 @@ export default function InventoryPage() {
           {[...Array(5)].map((_, i) => <div key={i} className="skeleton h-14 rounded" />)}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Name</th>
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Inspired By</th>
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Category</th>
-                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Price/ml</th>
-                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Stock (ml)</th>
-                <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Owner</th>
-                <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
-                <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
-                  <td className="py-3 px-4">
+        <div>
+          <div className="space-y-3 md:hidden">
+            {filtered.map((p) => (
+              <div key={p.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
                     <p className="font-serif text-base">{p.name}</p>
                     <p className="text-xs text-[var(--text-muted)]">{p.brand}</p>
-                  </td>
-                  <td className="py-3 px-4 text-[var(--text-secondary)]">{p.inspiredBy || "—"}</td>
-                  <td className="py-3 px-4">
-                    <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)]">
+                  </div>
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"}`}>
+                    {p.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Inspired By</p>
+                    <p className="text-[var(--text-secondary)]">{p.inspiredBy || "—"}</p>
+                  </div>
+                  <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Price/ml</p>
+                    <p className="font-serif text-[var(--gold)]">{p.marketPricePerMl}</p>
+                  </div>
+                  <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Category</p>
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] inline-flex">
                       {p.category}
                     </span>
-                  </td>
-                  <td className="py-3 px-4 text-right font-serif text-[var(--gold)]">{p.marketPricePerMl}</td>
-                  <td className="py-3 px-4 text-right font-mono">
-                    <span className={p.totalStockMl <= p.lowStockThreshold ? "text-[var(--error)]" : ""}>
-                      {p.totalStockMl}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border ${p.owner === "Store" ? "border-[var(--border)] text-[var(--text-muted)]" : "border-[var(--border-gold)] text-[var(--gold)]"}`}>
-                      {p.owner || "Store"}{p.isPersonalCollection ? " · PC" : ""}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"}`}>
-                      {p.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(p)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
-                        <Pencil size={15} />
-                      </button>
-                      <button onClick={() => remove(p.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
+                  </div>
+                  <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Stock</p>
+                    <p className={`font-mono ${p.totalStockMl <= p.lowStockThreshold ? "text-[var(--error)]" : ""}`}>{p.totalStockMl} ml</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm border-t border-[var(--border)] pt-3">
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border ${p.owner === "Store" ? "border-[var(--border)] text-[var(--text-muted)]" : "border-[var(--border-gold)] text-[var(--gold)]"}`}>
+                    {p.owner || "Store"}{p.isPersonalCollection ? " · PC" : ""}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => openEdit(p)} className="p-2 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => setDeleteId(p.id)} className="p-2 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Name</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Inspired By</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Category</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Price/ml</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Stock (ml)</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Owner</th>
+                  <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((p) => (
+                  <tr key={p.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
+                    <td className="py-3 px-4">
+                      <p className="font-serif text-base">{p.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{p.brand}</p>
+                    </td>
+                    <td className="py-3 px-4 text-[var(--text-secondary)]">{p.inspiredBy || "—"}</td>
+                    <td className="py-3 px-4">
+                      <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)]">
+                        {p.category}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-serif text-[var(--gold)]">{p.marketPricePerMl}</td>
+                    <td className="py-3 px-4 text-right font-mono">
+                      <span className={p.totalStockMl <= p.lowStockThreshold ? "text-[var(--error)]" : ""}>
+                        {p.totalStockMl}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border ${p.owner === "Store" ? "border-[var(--border)] text-[var(--text-muted)]" : "border-[var(--border-gold)] text-[var(--gold)]"}`}>
+                        {p.owner || "Store"}{p.isPersonalCollection ? " · PC" : ""}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"}`}>
+                        {p.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => openEdit(p)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => setDeleteId(p.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-[var(--text-secondary)]">
+                {search ? "No perfumes match your search" : "No perfumes yet. Add your first one!"}
+              </div>
+            )}
+          </div>
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-[var(--text-secondary)]">
+            <div className="text-center py-12 text-[var(--text-secondary)] md:hidden">
               {search ? "No perfumes match your search" : "No perfumes yet. Add your first one!"}
             </div>
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        title="Delete Perfume"
+        message="This will permanently remove the perfume entry and its inventory data."
+        confirmLabel="Delete"
+        danger
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) void remove(deleteId);
+        }}
+      />
 
       {/* Modal */}
       {showModal && (
@@ -688,7 +830,7 @@ export default function InventoryPage() {
                 <div className="space-y-2">
                   <input
                     type="file"
-                    accept="image/png"
+                    accept="image/png,.png"
                     onChange={(e) => uploadPngImage(e.target.files?.[0] || null)}
                     className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm file:mr-3 file:rounded file:border-0 file:bg-[var(--gold)] file:px-3 file:py-1 file:text-xs file:uppercase file:tracking-wider file:text-black"
                   />
@@ -712,29 +854,35 @@ export default function InventoryPage() {
                 </div>
               </div>
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <NoteSelector
+                <NoteGroupSelector
                   label="Top Notes"
                   selectedIds={form.fragranceNoteIds?.top || []}
-                  categories={notesLibrary.categories}
-                  notesByCategory={notesByCategory}
-                  noteLabel={noteLabel}
+                  selectedLabels={form.fragranceNotes?.top || []}
+                  visibleNotes={visibleTopNotes}
+                  rawSearch={noteSearchTop}
+                  onSearchChange={setNoteSearchTop}
                   onToggle={(noteId) => toggleNote("top", noteId)}
+                  onRemove={(noteId) => toggleNote("top", noteId)}
                 />
-                <NoteSelector
+                <NoteGroupSelector
                   label="Middle Notes"
                   selectedIds={form.fragranceNoteIds?.middle || []}
-                  categories={notesLibrary.categories}
-                  notesByCategory={notesByCategory}
-                  noteLabel={noteLabel}
+                  selectedLabels={form.fragranceNotes?.middle || []}
+                  visibleNotes={visibleMiddleNotes}
+                  rawSearch={noteSearchMiddle}
+                  onSearchChange={setNoteSearchMiddle}
                   onToggle={(noteId) => toggleNote("middle", noteId)}
+                  onRemove={(noteId) => toggleNote("middle", noteId)}
                 />
-                <NoteSelector
+                <NoteGroupSelector
                   label="Base Notes"
                   selectedIds={form.fragranceNoteIds?.base || []}
-                  categories={notesLibrary.categories}
-                  notesByCategory={notesByCategory}
-                  noteLabel={noteLabel}
+                  selectedLabels={form.fragranceNotes?.base || []}
+                  visibleNotes={visibleBaseNotes}
+                  rawSearch={noteSearchBase}
+                  onSearchChange={setNoteSearchBase}
                   onToggle={(noteId) => toggleNote("base", noteId)}
+                  onRemove={(noteId) => toggleNote("base", noteId)}
                 />
               </div>
               <div className="md:col-span-2">

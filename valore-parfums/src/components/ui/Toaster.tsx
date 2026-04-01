@@ -6,6 +6,7 @@ interface Toast {
   id: string;
   message: string;
   type: "success" | "error" | "info";
+  leaving?: boolean;
 }
 
 let addToastFn: ((t: Omit<Toast, "id">) => void) | null = null;
@@ -22,8 +23,11 @@ export function Toaster() {
       const id = Math.random().toString(36).slice(2);
       setToasts((prev) => [...prev, { ...t, id }]);
       setTimeout(() => {
+        setToasts((prev) => prev.map((x) => (x.id === id ? { ...x, leaving: true } : x)));
+      }, 3000);
+      setTimeout(() => {
         setToasts((prev) => prev.filter((x) => x.id !== id));
-      }, 3500);
+      }, 3400);
     };
     return () => { addToastFn = null; };
   }, []);
@@ -37,16 +41,23 @@ export function Toaster() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed bottom-5 right-5 z-[9999] flex max-w-sm flex-col gap-2 pointer-events-none">
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pointer-events-auto animate-fade-up bg-[var(--bg-elevated)] border border-[var(--border)] rounded px-4 py-3 shadow-xl flex items-center gap-3 min-w-[280px]"
+          className={`pointer-events-auto relative overflow-hidden rounded-xl border px-4 py-3 shadow-[0_16px_36px_rgba(0,0,0,0.45)] backdrop-blur-sm flex items-center gap-3 min-w-[280px] ${
+            t.leaving
+              ? "animate-toast-out border-[var(--border)] bg-[var(--bg-elevated)]"
+              : "animate-toast-in border-[var(--border-gold)] bg-[linear-gradient(135deg,var(--bg-elevated),var(--bg-card))]"
+          }`}
         >
           <span className={`text-lg ${iconColor(t.type)}`}>
             {t.type === "success" ? "✓" : t.type === "error" ? "✕" : "ℹ"}
           </span>
           <span className="text-sm text-[var(--text-primary)]">{t.message}</span>
+          <div className="absolute bottom-0 left-0 h-[2px] w-full bg-[var(--gold-tint)]">
+            <div className="h-full bg-[var(--gold)] animate-toast-timer" />
+          </div>
         </div>
       ))}
     </div>

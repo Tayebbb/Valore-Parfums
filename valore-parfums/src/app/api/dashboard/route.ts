@@ -62,23 +62,33 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
 
+  const normalizeOrderStatus = (status?: string) => {
+    if (!status) return "Pending";
+    if (status === "Completed") return "Dispatched";
+    if (status === "Approved") return "Confirmed";
+    if (status === "Fulfilled") return "Dispatched";
+    if (status === "Declined") return "Cancelled";
+    return status;
+  };
+
   // Aggregates (replaces prisma.order.count, prisma.order.aggregate)
-  const totalOrders = allOrders.length;
-  const completedOrders = allOrders.filter((o) => o.status === "Completed").length;
-  const pendingOrders = allOrders.filter((o) => o.status === "Pending").length;
-  const completedOrderList = allOrders.filter((o) => o.status === "Completed");
+  const normalizedOrders = allOrders.map((order) => ({ ...order, normalizedStatus: normalizeOrderStatus(order.status) }));
+  const totalOrders = normalizedOrders.length;
+  const completedOrders = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched").length;
+  const pendingOrders = normalizedOrders.filter((o) => ["Pending", "Confirmed", "Sourcing", "Ready"].includes(o.normalizedStatus)).length;
+  const completedOrderList = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched");
   const totalRevenue = completedOrderList.reduce((s, o) => s + (o.total ?? 0), 0);
   const totalProfitVal = completedOrderList.reduce((s, o) => s + (o.profit ?? 0), 0);
 
   // Today aggregates
-  const todayOrdersNonCancelled = allOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.status !== "Cancelled");
-  const todayCompleted = allOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.status === "Completed");
+  const todayOrdersNonCancelled = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.normalizedStatus !== "Cancelled");
+  const todayCompleted = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.normalizedStatus === "Dispatched");
   const todayOrders = todayOrdersNonCancelled.length;
   const todayRevenue = todayCompleted.reduce((s, o) => s + (o.total ?? 0), 0);
   const todayProfitVal = todayCompleted.reduce((s, o) => s + (o.profit ?? 0), 0);
 
   // Month aggregates
-  const monthCompleted = allOrders.filter((o) => toDate(o.createdAt) >= startOfMonth && o.status === "Completed");
+  const monthCompleted = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfMonth && o.normalizedStatus === "Dispatched");
   const monthRevenue = monthCompleted.reduce((s, o) => s + (o.total ?? 0), 0);
   const monthProfitVal = monthCompleted.reduce((s, o) => s + (o.profit ?? 0), 0);
 
@@ -90,7 +100,7 @@ export async function GET() {
   const lowStockBottles = bottles.filter((b) => b.availableCount <= (b.lowStockThreshold ?? 5));
 
   // Stock requests count (replaces prisma.stockRequest.count with status Pending)
-  const stockRequests = stockRequestsList.filter((r) => r.status === "Pending").length;
+  const stockRequests = normalizedOrders.filter((o) => o.orderSource === "stock_request" && o.normalizedStatus === "Sourcing").length || stockRequestsList.filter((r) => r.status === "Pending").length;
 
   // Recent orders (last 5) — items already in memory from collectionGroup
   const sortedOrders = [...allOrders].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
@@ -160,7 +170,7 @@ export async function GET() {
   }
 
   // Ownership profit breakdown from actual order items (replaces prisma.orderItem.findMany with order include)
-  const completedItems = allItems.filter((i) => i.orderStatus === "Completed");
+  const completedItems = allItems.filter((i) => normalizeOrderStatus(i.orderStatus) === "Dispatched");
   const ownershipBreakdown: Record<string, { total: number; today: number; month: number }> = {};
   let crossOwnerTotal = 0, crossOwnerToday = 0, crossOwnerMonth = 0;
 

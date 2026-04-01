@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/ui/Toaster";
 import { Send, Package, FlaskConical } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface UserRequest {
   id: string;
@@ -12,6 +13,7 @@ interface UserRequest {
   brand: string;
   type: "decant" | "full_bottle";
   ml: number | null;
+  fullBottleSize?: string | null;
   quantity: number;
   notes: string;
   status: string;
@@ -23,16 +25,29 @@ const mlOptions = [3, 6, 10, 15];
 
 export default function RequestsPage() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const requestDefaults = useMemo(() => {
+    const perfumeNameParam = searchParams.get("perfumeName") || "";
+    const brandParam = searchParams.get("brand") || "";
+    const typeParam = searchParams.get("type");
+    return {
+      perfumeName: perfumeNameParam,
+      brand: brandParam,
+      type: typeParam === "full_bottle" ? ("full_bottle" as const) : ("decant" as const),
+      showForm: Boolean(perfumeNameParam || brandParam || typeParam),
+    };
+  }, [searchParams]);
   const [requests, setRequests] = useState<UserRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(requestDefaults.showForm);
   const [submitting, setSubmitting] = useState(false);
 
   // Form state
-  const [perfumeName, setPerfumeName] = useState("");
-  const [brand, setBrand] = useState("");
-  const [type, setType] = useState<"decant" | "full_bottle">("decant");
+  const [perfumeName, setPerfumeName] = useState(requestDefaults.perfumeName);
+  const [brand, setBrand] = useState(requestDefaults.brand);
+  const [type, setType] = useState<"decant" | "full_bottle">(requestDefaults.type);
   const [ml, setMl] = useState(6);
+  const [fullBottleSize, setFullBottleSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
 
@@ -62,6 +77,7 @@ export default function RequestsPage() {
     setBrand("");
     setType("decant");
     setMl(6);
+    setFullBottleSize("");
     setQuantity(1);
     setNotes("");
     setShowForm(false);
@@ -78,6 +94,10 @@ export default function RequestsPage() {
       toast("Select a decant size", "error");
       return;
     }
+    if (type === "full_bottle" && !fullBottleSize.trim()) {
+      toast("Please enter desired bottle size (e.g., 50ml, 100ml)", "error");
+      return;
+    }
 
     setSubmitting(true);
     const res = await fetch("/api/requests", {
@@ -88,6 +108,7 @@ export default function RequestsPage() {
         brand: brand.trim(),
         type,
         ml: type === "decant" ? ml : null,
+        fullBottleSize: type === "full_bottle" ? fullBottleSize.trim() : null,
         quantity,
         notes: notes.trim(),
       }),
@@ -146,7 +167,7 @@ export default function RequestsPage() {
             <p className="text-sm text-[var(--text-secondary)] mt-1">Request decants or full bottles</p>
           </div>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => setShowForm((current) => !current)}
             className="flex items-center gap-2 px-4 py-2 bg-[var(--gold)] text-black text-[10px] uppercase tracking-wider rounded hover:bg-[var(--gold-hover)] transition-colors"
           >
             <Send size={14} /> New Request
@@ -250,6 +271,23 @@ export default function RequestsPage() {
                 </div>
               </div>
 
+              {type === "full_bottle" && (
+                <div className="space-y-2">
+                  <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Desired Bottle Size *</label>
+                  <input
+                    type="text"
+                    value={fullBottleSize}
+                    onChange={(e) => setFullBottleSize(e.target.value)}
+                    maxLength={100}
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    placeholder="e.g. 50ml, 100ml"
+                  />
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Price is not fixed for Full Bottle requests. Admin will confirm pricing manually after order placement.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Notes (optional)</label>
                 <textarea
@@ -317,6 +355,7 @@ export default function RequestsPage() {
                     {r.brand && <p className="text-xs text-[var(--text-muted)]">{r.brand}</p>}
                     <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                       {r.ml && <span>{r.ml}ml</span>}
+                      {r.type === "full_bottle" && r.fullBottleSize && <span>Bottle: {r.fullBottleSize}</span>}
                       <span>Qty: {r.quantity}</span>
                       <span>{new Date(r.createdAt).toLocaleDateString()}</span>
                     </div>

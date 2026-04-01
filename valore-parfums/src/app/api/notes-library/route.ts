@@ -5,6 +5,10 @@ import { Collections, db, serializeDoc } from "@/lib/prisma";
 import { getCanonicalNotesLibrary } from "@/lib/fragrance-notes";
 
 const NOTES_DOC_ID = "global";
+const CACHE_TTL = 5 * 60_000;
+const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
+
+let notesLibraryCache: { data: unknown; ts: number } | null = null;
 
 function stripUndefined<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -20,6 +24,10 @@ function stripUndefined<T>(value: T): T {
 }
 
 async function getLibraryDoc() {
+  if (notesLibraryCache && Date.now() - notesLibraryCache.ts < CACHE_TTL) {
+    return notesLibraryCache.data;
+  }
+
   const canonical = getCanonicalNotesLibrary();
   const ref = db.collection(Collections.notesLibrary).doc(NOTES_DOC_ID);
   const snap = await ref.get();
@@ -34,12 +42,17 @@ async function getLibraryDoc() {
       createdAt: now,
       updatedAt: now,
     }));
-    return serializeDoc({ ...canonical, createdAt: now, updatedAt: now });
+    const data = serializeDoc({ ...canonical, createdAt: now, updatedAt: now });
+    notesLibraryCache = { data, ts: Date.now() };
+    return data;
   }
 
-  const data = snap.data() || {};
-  const hasCanonicalSchema = Array.isArray(data.categories) && Array.isArray(data.notes);
-  if (!hasCanonicalSchema) {
+  const currentData = snap.data() || {};
+  const hasCanonicalSchema = Array.isArray(currentData.categories) && Array.isArray(currentData.notes);
+  const currentVersion = Number(currentData.version || 0);
+  const isStale = !hasCanonicalSchema || currentVersion < canonical.version;
+
+  if (isStale) {
     const now = Timestamp.now();
     await ref.set(
       stripUndefined({
@@ -51,21 +64,25 @@ async function getLibraryDoc() {
       }),
       { merge: true },
     );
-    return serializeDoc({ ...canonical, updatedAt: now });
+    const serializedData = serializeDoc({ ...canonical, updatedAt: now });
+    notesLibraryCache = { data: serializedData, ts: Date.now() };
+    return serializedData;
   }
 
-  return serializeDoc({
-    version: Number(data.version || canonical.version),
-    categories: data.categories,
-    notes: data.notes,
-    noteLabels: Array.isArray(data.noteLabels) ? data.noteLabels : canonical.noteLabels,
-    updatedAt: data.updatedAt || data.createdAt || null,
+  const serializedData = serializeDoc({
+    version: Number(currentData.version || canonical.version),
+    categories: currentData.categories,
+    notes: currentData.notes,
+    noteLabels: Array.isArray(currentData.noteLabels) ? currentData.noteLabels : canonical.noteLabels,
+    updatedAt: currentData.updatedAt || currentData.createdAt || null,
   });
+  notesLibraryCache = { data: serializedData, ts: Date.now() };
+  return serializedData;
 }
 
 export async function GET() {
   const data = await getLibraryDoc();
-  return NextResponse.json(data);
+  return NextResponse.json(data, { headers: { "Cache-Control": CACHE_CONTROL } });
 }
 
 export async function PUT(req: Request) {
@@ -88,7 +105,9 @@ export async function PUT(req: Request) {
       }),
       { merge: true },
     );
-    return NextResponse.json(serializeDoc({ ...canonical, updatedAt: now }));
+    const serializedData = serializeDoc({ ...canonical, updatedAt: now });
+    notesLibraryCache = { data: serializedData, ts: Date.now() };
+    return NextResponse.json(serializedData, { headers: { "Cache-Control": CACHE_CONTROL } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update notes library";
     return NextResponse.json({ error: message }, { status: 500 });

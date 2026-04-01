@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
 import { MapPin, Plus, Pencil, Trash2, X } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface PickupLocation {
   id: string;
@@ -23,6 +24,7 @@ export default function PickupLocationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const load = () =>
     fetch("/api/pickup-locations?all=1")
@@ -79,7 +81,6 @@ export default function PickupLocationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this pickup location?")) return;
     const res = await fetch(`/api/pickup-locations/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast("Location deleted", "success");
@@ -87,6 +88,7 @@ export default function PickupLocationsPage() {
     } else {
       toast("Failed to delete", "error");
     }
+    setDeleteId(null);
   };
 
   return (
@@ -209,7 +211,7 @@ export default function PickupLocationsPage() {
                   <button onClick={() => startEdit(loc)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={() => handleDelete(loc.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
+                  <button onClick={() => setDeleteId(loc.id)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -219,6 +221,18 @@ export default function PickupLocationsPage() {
               {loc.notes && <p className="text-xs text-[var(--text-muted)] mt-1 italic">{loc.notes}</p>}
             </div>
           ))}
+
+          <ConfirmDialog
+            open={Boolean(deleteId)}
+            title="Delete Pickup Location"
+            message="This will permanently remove the pickup location."
+            confirmLabel="Delete"
+            danger
+            onCancel={() => setDeleteId(null)}
+            onConfirm={() => {
+              if (deleteId) void handleDelete(deleteId);
+            }}
+          />
         </div>
       )}
     </div>

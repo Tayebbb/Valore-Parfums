@@ -2,6 +2,24 @@ import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
+async function getOrderItemsMap(orderIds: string[]) {
+  if (orderIds.length === 0) return new Map<string, Array<Record<string, unknown> & { id: string }>>();
+
+  const itemsSnap = await db.collectionGroup("items").get();
+  const orderIdSet = new Set(orderIds);
+  const map = new Map<string, Array<Record<string, unknown> & { id: string }>>();
+
+  for (const doc of itemsSnap.docs) {
+    const orderId = doc.ref.parent.parent?.id;
+    if (!orderId || !orderIdSet.has(orderId)) continue;
+    const list = map.get(orderId) || [];
+    list.push({ id: doc.id, ...doc.data() });
+    map.set(orderId, list);
+  }
+
+  return map;
+}
+
 function toCSV(headers: string[], rows: string[][]): string {
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
   return [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
@@ -89,18 +107,18 @@ export async function GET(req: Request) {
 
     case "profit": {
       // Replaces prisma.order.findMany where status not Cancelled, include items
-      // Firestore has no "not equal" filter with include — fetch all, filter in memory
       const snap = await db.collection(Collections.orders).orderBy("createdAt", "desc").get();
+      const orderIds = snap.docs.map((doc) => doc.id);
+      const itemsByOrder = await getOrderItemsMap(orderIds);
       const headers = ["Order ID", "Date", "Revenue", "Cost", "Profit"];
       const rows: string[][] = [];
       for (const d of snap.docs) {
         const o = asRecord(d.data());
         if (asString(o.status) === "Cancelled") continue;
-        // Fetch items subcollection (replaces Prisma include)
-        const itemsSnap = await db.collection(Collections.orders).doc(d.id).collection("items").get();
-        const cost = itemsSnap.docs.reduce((s, i) => {
-          const item = asRecord(i.data());
-          return s + asNumber(item.costPrice);
+        const items = itemsByOrder.get(d.id) || [];
+        const cost = items.reduce((s, item) => {
+          const entry = asRecord(item);
+          return s + asNumber(entry.costPrice);
         }, 0);
         rows.push([
           d.id.slice(0, 8),
@@ -117,15 +135,16 @@ export async function GET(req: Request) {
 
     case "transactions": {
       // Replaces prisma.orderItem.findMany with include order, orderBy order.createdAt desc
-      // Firestore: items are subcollections — iterate orders and collect items
       const ordersSnap = await db.collection(Collections.orders).orderBy("createdAt", "desc").get();
+      const orderIds = ordersSnap.docs.map((doc) => doc.id);
+      const itemsByOrder = await getOrderItemsMap(orderIds);
       const headers = ["Order ID", "Perfume", "ML", "Qty", "Unit Price", "Total", "Cost", "Date"];
       const rows: string[][] = [];
       for (const od of ordersSnap.docs) {
         const order = asRecord(od.data());
-        const itemsSnap = await db.collection(Collections.orders).doc(od.id).collection("items").get();
-        for (const id of itemsSnap.docs) {
-          const i = asRecord(id.data());
+        const items = itemsByOrder.get(od.id) || [];
+        for (const itemDoc of items) {
+          const i = asRecord(itemDoc);
           rows.push([
             od.id.slice(0, 8),
             asString(i.perfumeName),

@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { buildStructuredNotes, getCanonicalNotesLibrary } from "@/lib/fragrance-notes";
 
 const PERFUMES_CACHE_TTL = 20_000;
+const PERFUMES_CACHE_CONTROL = "public, s-maxage=20, stale-while-revalidate=60";
 const perfumesCache = new Map<string, { data: unknown[]; ts: number }>();
 const canonicalNotesLibrary = getCanonicalNotesLibrary();
 
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
   const cacheKey = active === "true" ? "active:true" : "active:all";
   const cached = perfumesCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < PERFUMES_CACHE_TTL) {
-    return NextResponse.json(cached.data);
+    return NextResponse.json(cached.data, { headers: { "Cache-Control": PERFUMES_CACHE_CONTROL } });
   }
 
   const baseQuery = active === "true"
@@ -41,7 +42,23 @@ export async function GET(req: Request) {
 
   const payload = perfumes.map((perfume) => {
     const hasKeyNotes = Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0;
-    if (hasKeyNotes) return serializeDoc(perfume);
+
+    if (active === "true") {
+      return serializeDoc({
+        id: perfume.id,
+        name: perfume.name,
+        brand: perfume.brand,
+        inspiredBy: perfume.inspiredBy,
+        category: perfume.category,
+        images: perfume.images,
+        totalStockMl: perfume.totalStockMl,
+        isBestSeller: perfume.isBestSeller,
+        totalOrders: perfume.totalOrders,
+        isActive: perfume.isActive,
+        createdAt: perfume.createdAt,
+        keyNotes: hasKeyNotes ? perfume.keyNotes : [],
+      });
+    }
 
     const notes = buildStructuredNotes(perfume, canonicalNotesLibrary);
     return serializeDoc({
@@ -53,7 +70,7 @@ export async function GET(req: Request) {
     });
   });
   perfumesCache.set(cacheKey, { data: payload, ts: Date.now() });
-  return NextResponse.json(payload);
+  return NextResponse.json(payload, { headers: { "Cache-Control": PERFUMES_CACHE_CONTROL } });
 }
 
 // CREATE perfume — admin only

@@ -38,64 +38,48 @@ export interface StructuredFragranceSelection {
   noteIdIndex: Record<string, 1>;
 }
 
+const RAW_CANONICAL_NOTE_LABELS = [
+  "Acai Berry", "Acerola", "Acorn", "Akebia fruit", "Algae", "Aloe Vera", "Aldehydes", "Almond", "Amber", "Ambergris",
+  "Ambroxan", "Amaretto", "Angelica", "Anise", "Apple", "Apple Juice", "Apple Mint", "Apple Pulp", "Apricot", "Apricot Blossom",
+  "Argan", "Artichoke", "Ashberry", "Aquatic Notes", "Avocado", "Bamboo", "Banana", "Balsamic Notes", "Barberry", "Basil",
+  "Bay Leaf", "Bearberry", "Beetroot", "Benzoin", "Bergamot", "Berries", "Bitter Orange", "Black Cherry", "Black Currant", "Black Pepper",
+  "Blackberry", "Black Sapote", "Black Walnut", "Blackthorn", "Blood Orange", "Blueberry", "Boysenberry", "Brazil Nut", "Bread", "Breadnut",
+  "Brown Sugar", "Buckwheat", "Bulrush", "Burnt Sugar", "Butter", "Cacao", "Cacao Butter", "Cactus", "Calamus", "Calone",
+  "Candied Lemon", "Candied Orange", "Caramel", "Caraway", "Cardamom", "Carnation", "Carrot", "Cashew", "Cassia", "Cashmeran",
+  "Cedar", "Celery", "Celery Seeds", "Chamomile", "Cherry", "Cherry Blossom", "Chestnut", "Chia Seed", "Chickpeas", "Chicory",
+  "Chocolate", "Cinnamon", "Cilantro", "Cistus Incanus", "Citron", "Clary Sage", "Clove", "Cloves", "Cocoa", "Coconut",
+  "Coconut Blossom", "Coconut Water", "Coffee", "Cognac", "Corn", "Corn Silk", "Coriander", "Coumarin", "Cream", "Cranberry",
+  "Cucumber", "Cumin", "Currant Leaf and Bud", "Cypress", "Davana", "Dihydromyrcenol", "Dried Fruits", "Durian", "Elderberry", "Elderflower",
+  "Espresso", "Ethyl Maltol", "Eucalyptus", "Feijoa Fruit", "Fig", "Fig Leaf", "Fir", "Floral Notes", "Forest Fruits", "Freesia",
+  "Fruity Notes", "Galbanum", "Gardenia", "Geranium", "Ginger", "Ginseng", "Goji Berries", "Goldenberry", "Gooseberry", "Grape Seed",
+  "Grapefruit", "Grapes", "Green Apple", "Green Grape", "Green Notes", "Green Pear", "Green Tea", "Guaiac Wood", "Guarana", "Guava",
+  "Hazel", "Hazelnut", "Hedione", "Heliotrope", "Herbal Notes", "Hibiscus", "Honey", "Hops", "Hyacinth", "Ice cream",
+  "Incense", "Indole", "Indian Spices", "Iris", "Iso E Super", "Jasmine", "Jasmine Tea", "Juniper", "Juniper Berries", "Kiwi",
+  "Kumquat", "Labdanum", "Lavender", "Leather", "Lemon", "Lemon Zest", "Lemongrass", "Licorice", "Lily", "Lily-of-the-Valley",
+  "Lime", "Lime Blossom", "Linalool", "Litchi", "Lychee", "Loganberry", "Lotus", "Macadamia", "Magnolia", "Malta",
+  "Mandarin", "Mandarin Orange", "Mango", "Marine Notes", "Marshmallow", "Mate", "Melilotus", "Melon", "Milk", "Millet",
+  "Mint", "Mirabelle", "Molasses", "Moss", "Muguet", "Mulberry", "Mushroom", "Musk", "Myrrh", "Narcissus",
+  "Nectarine", "Neroli", "Nutmeg", "Nutty Notes", "Oakmoss", "Oat", "Olibanum (Frankincense)", "Olive", "Olive Leaf", "Onion",
+  "Orange", "Orange Blossom", "Oregano", "Orris Root", "Oud", "Papaya", "Parsley", "Passionfruit", "Patchouli", "Peach",
+  "Peanut", "Pear", "Pecan", "Pepper", "Peppermint", "Petitgrain", "Pine", "Pine Resin", "Pineapple", "Pink Pepper",
+  "Pistachio", "Plantain", "Plum", "Pomegranate", "Potato", "Praline", "Prickly Pear", "Pumpkin", "Quince", "Rambutan",
+  "Raspberry", "Red Apple", "Red Berries", "Red Currant", "Resins", "Rhubarb", "Rice", "Rose", "Rose Hip", "Rosemary",
+  "Rowanberry", "Rum", "Rye", "Safflower", "Saffron", "Sage", "Salt", "Sandalwood", "Savory", "Sea Notes",
+  "Sea Water", "Seaweed", "Sesame", "Sesame Seed", "Smoke", "Sour Cherry", "Soybean", "Spearmint", "Spicy Notes", "Spinach",
+  "Star Anise", "Star Fruit", "Strawberry", "Strawberry Leaf", "Sugar", "Sugar Cane", "Suede", "Sweet Pea", "Tamarind", "Tangerine",
+  "Tapioca", "Taro", "Tea", "Tea Leaf", "Thyme", "Thistle", "Tobacco", "Tomato", "Tomato Leaf", "Tonka Bean",
+  "Tropical Fruits", "Truffle", "Tuberose", "Turmeric", "Turnip", "Vanilla", "Vanilla Bean", "Vegetal Notes", "Vetiver", "Violet",
+  "Water Fruit", "Watermelon", "Wheat", "Whiskey", "White Chocolate", "White Currant", "White Grape", "White Musk", "White Woods", "Wild Strawberry",
+  "Wine", "Woodsy Notes", "Ylang-Ylang", "Yogurt", "Yuzu", "Zucchini",
+];
+
+const CANONICAL_NOTE_LABELS = uniqueSorted(RAW_CANONICAL_NOTE_LABELS);
+
 const CANONICAL_CATEGORIES: NotesLibraryCategory[] = [
   {
-    id: "citrus-top-notes",
-    label: "Citrus (Top Notes)",
-    notes: ["Bergamot", "Lemon", "Orange", "Mandarin Orange", "Grapefruit", "Lime", "Yuzu", "Neroli", "Petitgrain"],
-  },
-  {
-    id: "fruity",
-    label: "Fruity",
-    notes: ["Apple", "Pear", "Peach", "Apricot", "Cherry", "Strawberry", "Raspberry", "Blackberry", "Plum", "Pineapple", "Mango", "Coconut", "Watermelon", "Pomegranate", "Lychee", "Fig"],
-  },
-  {
-    id: "floral",
-    label: "Floral",
-    emphasis: "high",
-    notes: ["Rose", "Jasmine", "Orange Blossom", "Tuberose", "Ylang-Ylang", "Lavender", "Violet", "Iris", "Lily-of-the-Valley", "Peony", "Magnolia", "Gardenia", "Freesia", "Geranium", "Hibiscus", "Narcissus"],
-  },
-  {
-    id: "green-fresh",
-    label: "Green/Fresh",
-    notes: ["Green Notes", "Mint", "Basil", "Rosemary", "Thyme", "Sage", "Tea", "Matcha", "Grass", "Violet Leaf"],
-  },
-  {
-    id: "spices",
-    label: "Spices",
-    notes: ["Cinnamon", "Cardamom", "Clove", "Nutmeg", "Black Pepper", "Pink Pepper", "Saffron", "Ginger"],
-  },
-  {
-    id: "gourmand",
-    label: "Gourmand",
-    emphasis: "trending",
-    notes: ["Vanilla", "Caramel", "Chocolate", "Honey", "Coffee", "Cocoa", "Almond", "Hazelnut", "Tonka Bean", "Sugar", "Marshmallow"],
-  },
-  {
-    id: "woody",
-    label: "Woody",
-    emphasis: "core",
-    notes: ["Sandalwood", "Cedar", "Patchouli", "Vetiver", "Oud (Agarwood)", "Guaiac Wood", "Cashmere Wood"],
-  },
-  {
-    id: "resins-balsamic",
-    label: "Resins/Balsamic",
-    notes: ["Amber", "Benzoin", "Myrrh", "Frankincense (Olibanum)", "Labdanum"],
-  },
-  {
-    id: "animalic-musk",
-    label: "Animalic/Musk",
-    notes: ["Musk", "Ambergris", "Leather", "Suede"],
-  },
-  {
-    id: "aquatic-fresh",
-    label: "Aquatic/Fresh",
-    notes: ["Marine Notes", "Sea Water", "Ozonic Notes", "Aldehydes"],
-  },
-  {
-    id: "modern-synthetics",
-    label: "Modern Synthetics",
-    notes: ["Ambroxan", "Iso E Super", "Cashmeran", "Hedione", "Calone", "Coumarin", "Ethyl Maltol", "Vanillin"],
+    id: "all-notes",
+    label: "All Notes",
+    notes: [...CANONICAL_NOTE_LABELS],
   },
 ];
 
@@ -144,10 +128,10 @@ export function getCanonicalNotesLibrary(): NotesLibrary {
   });
   const notes = buildNotes(categories);
   return {
-    version: 1,
+    version: 2,
     categories,
     notes,
-    noteLabels: notes.map((note) => note.label).sort((a, b) => a.localeCompare(b)),
+    noteLabels: [...CANONICAL_NOTE_LABELS],
   };
 }
 

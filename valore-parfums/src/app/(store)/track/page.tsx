@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Package, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/store/auth";
+import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 
 interface OrderResult {
   id: string;
@@ -160,27 +161,58 @@ export default function TrackOrderPage() {
     return (
       <div
         key={order.id}
-        className={`bg-[var(--bg-card)] border rounded p-6 space-y-4 ${
+        className={`bg-[var(--bg-card)] border rounded p-4 sm:p-6 space-y-4 ${
           emphasize ? "border-[var(--gold)]" : "border-[var(--border)]"
         }`}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-0.5">Order ID</p>
-            <p className="font-mono text-[var(--gold)]">{order.id.slice(0, 8)}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-mono text-[var(--gold)] break-all">{order.id}</p>
+              <CopyOrderIdButton orderId={order.id} />
+            </div>
           </div>
-          <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 ${statusClass(order.status)}`}>
+          <span className={`w-fit px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 ${statusClass(order.status)}`}>
             {statusIcon(order.status)} {order.status}
           </span>
         </div>
 
         {normalized !== "cancelled" && normalized !== "delivered" && (
-          <div className="flex items-center mt-2 mb-1">
-            {statusSteps.map((step, i) => (
-              <div key={step} className="flex-1 flex items-center">
-                <div className="flex flex-col items-center flex-1">
+          <>
+            <div className="hidden sm:flex items-center mt-2 mb-1">
+              {statusSteps.map((step, i) => (
+                <div key={step} className="flex-1 flex items-center">
+                  <div className="flex flex-col items-center flex-1">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                        i <= currentStep
+                          ? "bg-[var(--gold)] text-black"
+                          : "border border-[var(--border)] text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                    <span
+                      className={`text-[9px] uppercase tracking-wider mt-1.5 text-center ${
+                        i <= currentStep ? "text-[var(--gold)]" : "text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {step}
+                    </span>
+                  </div>
+                  {i < statusSteps.length - 1 && (
+                    <div className={`flex-1 h-px ${i < currentStep ? "bg-[var(--gold)]" : "bg-[var(--border)]"}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="sm:hidden space-y-2 mt-2 mb-1">
+              {statusSteps.map((step, i) => (
+                <div key={`${order.id}-${step}`} className="flex items-center gap-3">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors flex-shrink-0 ${
                       i <= currentStep
                         ? "bg-[var(--gold)] text-black"
                         : "border border-[var(--border)] text-[var(--text-muted)]"
@@ -189,22 +221,19 @@ export default function TrackOrderPage() {
                     {i + 1}
                   </div>
                   <span
-                    className={`text-[9px] uppercase tracking-wider mt-1.5 ${
+                    className={`text-[10px] uppercase tracking-wider ${
                       i <= currentStep ? "text-[var(--gold)]" : "text-[var(--text-muted)]"
                     }`}
                   >
                     {step}
                   </span>
                 </div>
-                {i < statusSteps.length - 1 && (
-                  <div className={`flex-1 h-px ${i < currentStep ? "bg-[var(--gold)]" : "bg-[var(--border)]"}`} />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-[var(--text-muted)]">Placed</span>
             <p>{new Date(order.createdAt).toLocaleDateString()}</p>
@@ -332,15 +361,15 @@ export default function TrackOrderPage() {
   };
 
   return (
-    <div className="px-[5%] py-12 max-w-3xl mx-auto">
-      <h1 className="font-serif text-3xl font-light mb-2 text-center">Track Order</h1>
+    <div className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-12 max-w-3xl mx-auto">
+      <h1 className="font-serif text-2xl sm:text-3xl font-light mb-2 text-center">Track Order</h1>
       <p className="text-sm text-[var(--text-muted)] text-center mb-8">
         Enter your Order ID to check real-time order status. Sign in users can also see account-linked history below.
       </p>
 
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5 mb-8">
         <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Order ID</label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Paste full Order ID"
@@ -351,7 +380,7 @@ export default function TrackOrderPage() {
           <button
             onClick={trackByOrderId}
             disabled={trackLoading}
-            className="bg-[var(--gold)] text-black px-4 py-2.5 rounded text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
+            className="bg-[var(--gold)] text-black px-4 py-2.5 rounded text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50 sm:w-auto w-full"
           >
             {trackLoading ? "Checking..." : "Track"}
           </button>
@@ -370,16 +399,16 @@ export default function TrackOrderPage() {
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-8 text-center">
           <Package size={40} className="mx-auto text-[var(--text-muted)] mb-3" />
           <p className="text-sm text-[var(--text-secondary)]">Guest tracking works with Order ID. Log in to view your full account-linked order history.</p>
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2">
             <Link
               href="/login"
-              className="bg-[var(--gold)] text-black px-4 py-2 text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors"
+              className="text-center bg-[var(--gold)] text-black px-4 py-2 text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors"
             >
               Log In
             </Link>
             <Link
               href="/signup"
-              className="border border-[var(--border)] px-4 py-2 text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors"
+              className="text-center border border-[var(--border)] px-4 py-2 text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors"
             >
               Create Account
             </Link>

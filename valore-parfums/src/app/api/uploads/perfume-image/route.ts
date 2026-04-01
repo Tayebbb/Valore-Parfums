@@ -7,6 +7,9 @@ import { requireAdmin } from "@/lib/auth";
 export const runtime = "nodejs";
 
 const MAX_SIZE_MB = 8;
+const ACCEPTED_PNG_MIME_TYPES = new Set(["image/png", "image/x-png"]);
+const CANVAS_SIZE = 1200;
+const GRADIENT_SVG = Buffer.from(`<svg width="1200" height="1200" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g" cx="50%" cy="40%" r="70%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/><stop offset="100%" stop-color="#e5ddd1" stop-opacity="1"/></radialGradient></defs><rect width="1200" height="1200" fill="url(#g)"/></svg>`);
 
 export async function POST(req: Request) {
   const admin = await requireAdmin();
@@ -19,7 +22,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "PNG file is required" }, { status: 400 });
     }
 
-    if (file.type !== "image/png") {
+    const fileType = (file.type || "").toLowerCase();
+    if (fileType && !ACCEPTED_PNG_MIME_TYPES.has(fileType)) {
       return NextResponse.json({ error: "Only PNG files are allowed" }, { status: 400 });
     }
 
@@ -28,22 +32,24 @@ export async function POST(req: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const metadata = await sharp(buffer).metadata();
+    if (metadata.format !== "png") {
+      return NextResponse.json({ error: "Only PNG files are allowed" }, { status: 400 });
+    }
+
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const relativeDir = path.join("images", "perfumes");
     const uploadDir = path.join(process.cwd(), "public", relativeDir);
     await mkdir(uploadDir, { recursive: true });
 
-    const canvas = 1200;
     const base = sharp({
       create: {
-        width: canvas,
-        height: canvas,
+        width: CANVAS_SIZE,
+        height: CANVAS_SIZE,
         channels: 4,
         background: "#f4f1ea",
       },
     });
-
-    const gradientSvg = Buffer.from(`<svg width=\"1200\" height=\"1200\" xmlns=\"http://www.w3.org/2000/svg\"><defs><radialGradient id=\"g\" cx=\"50%\" cy=\"40%\" r=\"70%\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\"0.85\"/><stop offset=\"100%\" stop-color=\"#e5ddd1\" stop-opacity=\"1\"/></radialGradient></defs><rect width=\"1200\" height=\"1200\" fill=\"url(#g)\"/></svg>`);
 
     const image = await sharp(buffer)
       .resize(980, 980, { fit: "inside", withoutEnlargement: true })
@@ -52,7 +58,7 @@ export async function POST(req: Request) {
 
     const composed = await base
       .composite([
-        { input: gradientSvg, blend: "over" },
+        { input: GRADIENT_SVG, blend: "over" },
         { input: image, gravity: "center" },
       ])
       .toBuffer();

@@ -4,6 +4,7 @@ import { buildStructuredNotes, getCanonicalNotesLibrary, getNoteLookup } from "@
 
 const ACTIVE_CACHE_TTL = 60_000;
 const SEARCH_CACHE_TTL = 20_000;
+const CACHE_CONTROL = "public, s-maxage=20, stale-while-revalidate=60";
 
 type SearchPerfume = {
   id: string;
@@ -92,7 +93,7 @@ export async function GET(req: Request) {
   const cacheKey = getSearchCacheKey(searchParams);
   const cached = searchResultCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_CACHE_TTL) {
-    return NextResponse.json(cached.body);
+    return NextResponse.json(cached.body, { headers: { "Cache-Control": CACHE_CONTROL } });
   }
 
   const q = (searchParams.get("q") || "").toLowerCase();
@@ -184,5 +185,5 @@ export async function GET(req: Request) {
     if (firstKey) searchResultCache.delete(firstKey);
   }
 
-  return NextResponse.json(body);
+  return NextResponse.json(body, { headers: { "Cache-Control": CACHE_CONTROL } });
 }

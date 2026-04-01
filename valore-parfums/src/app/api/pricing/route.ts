@@ -4,6 +4,8 @@ import { calculateSellingPrice, calculateProfit, getBrandTier, getTierProfitMarg
 import type { OwnerType, TierMargins } from "@/lib/utils";
 import { FieldPath } from "firebase-admin/firestore";
 
+const CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=120";
+
 // ── In-memory cache for rarely-changing config (sizes, bottles, settings, bulk rules) ──
 const CACHE_TTL = 60_000; // 60 seconds
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,7 +153,7 @@ export async function GET(req: Request) {
     isPersonalCollection: perfume.isPersonalCollection,
     prices,
     bulkRules: bulkRules.map((r) => ({ minQuantity: r.minQuantity, discountPercent: r.discountPercent })),
-  });
+  }, { headers: { "Cache-Control": CACHE_CONTROL } });
 }
 
 // ── Batch pricing: POST { perfumeIds: string[] } → { [perfumeId]: { prices } } ──
@@ -166,7 +168,7 @@ export async function POST(req: Request) {
   const cacheKey = [...uniqueIds].sort().join("|");
   const cached = priceResultCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < PRICE_RESULT_CACHE_TTL) {
-    return NextResponse.json(cached.data);
+    return NextResponse.json(cached.data, { headers: { "Cache-Control": CACHE_CONTROL } });
   }
 
   // Fetch config and all requested perfumes with batched IN queries
@@ -211,5 +213,5 @@ export async function POST(req: Request) {
     if (firstKey) priceResultCache.delete(firstKey);
   }
 
-  return NextResponse.json(result);
+  return NextResponse.json(result, { headers: { "Cache-Control": CACHE_CONTROL } });
 }
