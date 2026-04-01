@@ -1,23 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCart } from "@/store/cart";
 import { toast } from "@/components/ui/Toaster";
+import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, ChevronDown } from "lucide-react";
 import { useAuth } from "@/store/auth";
+
+interface PickupLocation {
+  id: string;
+  name: string;
+  address: string;
+  phone?: string;
+  notes?: string;
+  active?: boolean;
+}
+
+interface CheckoutConfig {
+  deliveryFeeInsideDhaka: number;
+  deliveryFeeOutsideDhaka: number;
+  pickupLocations: PickupLocation[];
+}
+
+type DeliveryZone = "Inside Dhaka" | "Outside Dhaka";
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const router = useRouter();
   const { user } = useAuth();
+
   const [form, setForm] = useState({
     customerName: "",
     customerPhone: "",
     customerEmail: user?.email || "",
-    pickupMethod: "Pickup",
+    pickupMethod: "Pickup" as "Pickup" | "Delivery",
+    deliveryZone: "" as "" | DeliveryZone,
+    pickupLocationId: "",
+    area: "",
+    city: "",
+    fullAddress: "",
   });
+
+  const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig>({
+    deliveryFeeInsideDhaka: 0,
+    deliveryFeeOutsideDhaka: 0,
+    pickupLocations: [],
+  });
+  const [loadingCheckoutConfig, setLoadingCheckoutConfig] = useState(true);
   const [voucherCode, setVoucherCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [appliedVoucher, setAppliedVoucher] = useState("");
@@ -25,14 +56,91 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState("");
 
   const sub = subtotal();
-  const total = Math.max(0, sub - discount);
+  const hasFullBottle = items.some((item) => item.isFullBottle);
+  const isDelivery = form.pickupMethod === "Delivery";
+  const deliveryFee = useMemo(() => {
+    if (!isDelivery || !form.deliveryZone) return 0;
+    return form.deliveryZone === "Outside Dhaka"
+      ? checkoutConfig.deliveryFeeOutsideDhaka
+      : checkoutConfig.deliveryFeeInsideDhaka;
+  }, [checkoutConfig.deliveryFeeInsideDhaka, checkoutConfig.deliveryFeeOutsideDhaka, form.deliveryZone, isDelivery]);
+  const total = Math.max(0, sub - discount) + deliveryFee;
+  const selectedPickupLocation = useMemo(
+    () => checkoutConfig.pickupLocations.find((loc) => loc.id === form.pickupLocationId) || null,
+    [checkoutConfig.pickupLocations, form.pickupLocationId],
+  );
+
+  const deliveryAddress = useMemo(() => {
+    if (!isDelivery) return "";
+    return [form.fullAddress.trim(), `${form.area.trim()}, ${form.city.trim()}`.trim()].filter(Boolean).join(" | ");
+  }, [form.area, form.city, form.fullAddress, isDelivery]);
+
+  useEffect(() => {
+    if (!orderId && items.length === 0) {
+      router.push("/cart");
+    }
+  }, [items.length, router, orderId]);
+
+  useEffect(() => {
+    if (user?.email) {
+      setForm((prev) => ({ ...prev, customerEmail: prev.customerEmail || user.email || "" }));
+    }
+  }, [user?.email]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    const loadCheckoutConfig = async () => {
+      try {
+        const res = await fetch("/api/checkout-config", { signal: abortController.signal });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to load checkout settings");
+        }
+        setCheckoutConfig({
+          deliveryFeeInsideDhaka: Number(data.deliveryFeeInsideDhaka || 0),
+          deliveryFeeOutsideDhaka: Number(data.deliveryFeeOutsideDhaka || 0),
+          pickupLocations: Array.isArray(data.pickupLocations) ? data.pickupLocations : [],
+        });
+      } catch {
+        if (!abortController.signal.aborted) {
+          toast("Could not load checkout configuration", "error");
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          setLoadingCheckoutConfig(false);
+        }
+      }
+    };
+
+    loadCheckoutConfig();
+    return () => abortController.abort();
+  }, []);
+
+  useEffect(() => {
+    if (form.pickupMethod === "Pickup" && !form.pickupLocationId && checkoutConfig.pickupLocations.length > 0) {
+      setForm((prev) => ({ ...prev, pickupLocationId: checkoutConfig.pickupLocations[0].id }));
+    }
+  }, [checkoutConfig.pickupLocations, form.pickupLocationId, form.pickupMethod]);
+
+  useEffect(() => {
+    if (form.pickupMethod === "Pickup" && form.deliveryZone) {
+      setForm((prev) => ({ ...prev, deliveryZone: "" }));
+    }
+  }, [form.deliveryZone, form.pickupMethod]);
+
+  const setField = useCallback(
+    <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+      setForm((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
   const applyVoucher = async () => {
     if (!voucherCode) return;
     const res = await fetch("/api/vouchers/validate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: voucherCode, orderTotal: sub }),
+      body: JSON.stringify({ code: voucherCode, orderTotal: sub, hasFullBottle }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -44,22 +152,74 @@ export default function CheckoutPage() {
     toast(`Voucher applied: -${data.discount} BDT`, "success");
   };
 
+  const canPlaceOrder = useMemo(() => {
+    const email = form.customerEmail.trim();
+    const emailValid = email.length === 0 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const contactComplete =
+      form.customerName.trim().length > 1 &&
+      form.customerPhone.trim().length >= 7 &&
+      emailValid;
+
+    const pickupComplete = form.pickupMethod === "Pickup" && Boolean(form.pickupLocationId);
+    const deliveryComplete =
+      form.pickupMethod === "Delivery" &&
+      Boolean(form.deliveryZone) &&
+      form.area.trim().length > 1 &&
+      form.city.trim().length > 1 &&
+      form.fullAddress.trim().length > 8;
+
+    const missingSize = items.some((item) => item.isFullBottle && !String(item.fullBottleSize || "").trim());
+
+    return items.length > 0 && contactComplete && (pickupComplete || deliveryComplete) && !missingSize;
+  }, [form, items]);
+
   const placeOrder = async () => {
-    if (!form.customerName || !form.customerPhone) {
-      return toast("Name and phone are required", "error");
+    if (!form.customerName.trim()) {
+      return toast("Name is required", "error");
     }
-    if (items.length === 0) return;
+    if (!form.customerPhone.trim()) {
+      return toast("Phone is required", "error");
+    }
+    if (form.customerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) {
+      return toast("Please enter a valid email address", "error");
+    }
+    if (isDelivery && !form.deliveryZone) {
+      return toast("Please select a delivery zone", "error");
+    }
+    if (isDelivery && !form.area.trim()) {
+      return toast("Area is required for delivery", "error");
+    }
+    if (isDelivery && !form.city.trim()) {
+      return toast("City is required for delivery", "error");
+    }
+    if (isDelivery && !form.fullAddress.trim()) {
+      return toast("Full address is required for delivery", "error");
+    }
+    if (!canPlaceOrder) {
+      return toast("Please complete all required checkout fields", "error");
+    }
 
     setPlacing(true);
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        customerName: form.customerName.trim(),
+        customerPhone: form.customerPhone.trim(),
+        customerEmail: form.customerEmail.trim(),
+        pickupMethod: form.pickupMethod,
+        deliveryZone: form.pickupMethod === "Delivery" ? form.deliveryZone : "",
+        pickupLocationId: form.pickupMethod === "Pickup" ? form.pickupLocationId : "",
+        pickupLocationName: form.pickupMethod === "Pickup" ? selectedPickupLocation?.name || "" : "",
+        deliveryAddress,
+        deliveryFee,
         voucherCode: appliedVoucher || null,
+        hasFullBottle,
         items: items.map((i) => ({
           perfumeId: i.perfumeId,
           ml: i.ml,
+          isFullBottle: Boolean(i.isFullBottle),
+          fullBottleSize: i.fullBottleSize || "",
           quantity: i.quantity,
         })),
       }),
@@ -71,7 +231,17 @@ export default function CheckoutPage() {
       clearCart();
       toast("Order placed successfully!", "success");
     } else {
-      toast("Failed to place order", "error");
+      const raw = await res.text().catch(() => "");
+      let message = "Failed to place order";
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as { error?: string };
+          message = parsed?.error || message;
+        } catch {
+          message = raw;
+        }
+      }
+      toast(message, "error");
     }
     setPlacing(false);
   };
@@ -82,16 +252,25 @@ export default function CheckoutPage() {
         <CheckCircle size={56} className="mx-auto text-[var(--success)] mb-4" />
         <h1 className="font-serif text-3xl font-light mb-2">Order Confirmed!</h1>
         <p className="text-sm text-[var(--text-secondary)] mb-4">Your order has been placed successfully.</p>
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-4 mb-6">
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-4 mb-6 shadow-sm">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Order ID</p>
-          <p className="font-mono text-lg text-[var(--gold)]">{orderId.slice(0, 8)}</p>
+          <div className="flex items-center gap-2 justify-center">
+            <p className="font-mono text-sm break-all text-[var(--text-primary)]">{orderId}</p>
+            <CopyOrderIdButton orderId={orderId} />
+          </div>
         </div>
-        <p className="text-sm text-[var(--text-secondary)] mb-6">
-          Save your Order ID to track your order status.
-        </p>
+        {!user && (
+          <div className="bg-[rgba(251,191,36,0.1)] border border-[var(--warning)]/50 rounded-2xl p-4 mb-6 text-left">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--warning)] mb-1">Guest Order Notice</p>
+            <p className="text-sm text-[var(--text-primary)]">
+              Save your full Order ID now. Without an account, this ID is required to track your order later on the Track Order page.
+            </p>
+          </div>
+        )}
+        <p className="text-sm text-[var(--text-secondary)] mb-6">You can monitor updates anytime from My Orders.</p>
         <Link
           href="/"
-          className="inline-flex items-center gap-2 bg-[var(--gold)] text-black px-6 py-3 text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors"
+          className="inline-flex items-center gap-2 bg-[var(--gold)] text-black px-6 py-3 text-xs uppercase tracking-wider rounded-xl hover:bg-[var(--gold-light)] transition-colors"
         >
           Continue Shopping
         </Link>
@@ -100,164 +279,315 @@ export default function CheckoutPage() {
   }
 
   if (items.length === 0) {
-    router.push("/cart");
     return null;
   }
 
   return (
-    <div className="px-[5%] py-8">
+    <div className="bg-[var(--bg-base)] min-h-screen pb-28 lg:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-5 md:px-10 lg:px-14 py-8 sm:py-10 lg:py-14">
       <Link
         href="/cart"
-        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-10"
       >
         <ArrowLeft size={14} /> Back to Cart
       </Link>
 
-      <h1 className="font-serif text-3xl font-light mb-2">Checkout</h1>
-      <div className="gold-line mb-8" />
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-[var(--text-primary)]">Checkout</h1>
+        <p className="mt-3 text-[var(--text-secondary)] max-w-2xl">
+          A fast, secure checkout flow. Review your details and place your order in seconds.
+        </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Contact */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
-            <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Name *</label>
-                <input
-                  type="text"
-                  value={form.customerName}
-                  onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Phone *</label>
-                <input
-                  type="text"
-                  value={form.customerPhone}
-                  onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Email (optional)</label>
-                <input
-                  type="email"
-                  value={form.customerEmail}
-                  onChange={(e) => setForm({ ...form, customerEmail: e.target.value })}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
-                />
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 xl:gap-12 mt-10">
+          <div className="lg:col-span-3 space-y-6">
+            <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-[0_12px_40px_var(--shadow-color)] transition-all duration-300">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-muted)] mb-4">Step 1</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] mb-6">Contact Information</h2>
 
-          {/* Pickup */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
-            <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Collection Method</h3>
-            <div className="flex gap-3">
-              {["Pickup", "Delivery"].map((method) => (
-                <button
-                  key={method}
-                  onClick={() => setForm({ ...form, pickupMethod: method })}
-                  className={`flex-1 py-3 text-sm rounded transition-colors ${
-                    form.pickupMethod === method
-                      ? "bg-[var(--gold)] text-black"
-                      : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="block md:col-span-2">
+                  <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Full Name</span>
+                  <input
+                    type="text"
+                    value={form.customerName}
+                    onChange={(e) => setField("customerName", e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)]"
+                    placeholder="Your full name"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Phone</span>
+                  <input
+                    type="text"
+                    value={form.customerPhone}
+                    onChange={(e) => setField("customerPhone", e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)]"
+                    placeholder="01XXXXXXXXX"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Email</span>
+                  <input
+                    type="email"
+                    value={form.customerEmail}
+                    onChange={(e) => setField("customerEmail", e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)]"
+                    placeholder="you@email.com"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-[0_12px_40px_var(--shadow-color)] transition-all duration-300">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-muted)] mb-4">Step 2</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] mb-6">Delivery Method</h2>
+
+              <div className="flex flex-wrap bg-[var(--bg-surface)] rounded-2xl p-1 mb-6 border border-[var(--border)] gap-1">
+                {(["Pickup", "Delivery"] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, pickupMethod: method }))}
+                    className={`flex-1 min-w-[120px] px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      form.pickupMethod === method
+                        ? "bg-[var(--gold)] text-black shadow-[0_2px_12px_var(--gold-glow)]"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    form.pickupMethod === "Pickup" ? "max-h-[260px] opacity-100" : "max-h-0 opacity-0"
                   }`}
                 >
-                  {method}
-                  {method === "Delivery" && (
-                    <span className="block text-[9px] uppercase tracking-wider opacity-60 mt-0.5">Coming Soon</span>
+                  <label className="block">
+                    <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Pickup Location</span>
+                    <div className="relative">
+                      <select
+                        value={form.pickupLocationId}
+                        onChange={(e) => setField("pickupLocationId", e.target.value)}
+                        disabled={loadingCheckoutConfig || checkoutConfig.pickupLocations.length === 0}
+                        className="w-full appearance-none rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 pr-10 text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)] disabled:opacity-60"
+                      >
+                        {checkoutConfig.pickupLocations.length === 0 ? (
+                          <option value="">No locations available</option>
+                        ) : null}
+                        {checkoutConfig.pickupLocations.map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                    </div>
+                  </label>
+
+                  {selectedPickupLocation && (
+                    <div className="mt-3 rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                      <p className="font-medium text-[var(--text-primary)]">{selectedPickupLocation.name}</p>
+                      <p className="mt-1">{selectedPickupLocation.address}</p>
+                      {selectedPickupLocation.phone ? <p className="mt-1">{selectedPickupLocation.phone}</p> : null}
+                    </div>
                   )}
-                </button>
-              ))}
-            </div>
+                </div>
+
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    form.pickupMethod === "Delivery" ? "max-h-[480px] opacity-100" : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="mb-4">
+                    <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Delivery Zone</span>
+                    <div className="flex flex-wrap bg-[var(--bg-surface)] rounded-2xl p-1 border border-[var(--border)] gap-1">
+                      {(["Inside Dhaka", "Outside Dhaka"] as const).map((zone) => (
+                        <button
+                          type="button"
+                          key={zone}
+                          onClick={() => setField("deliveryZone", zone)}
+                          className={`flex-1 min-w-[140px] px-4 py-2 text-xs uppercase tracking-[0.12em] rounded-xl transition-all ${
+                            form.deliveryZone === zone
+                              ? "bg-[var(--gold)] text-black"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                          }`}
+                        >
+                          {zone}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {form.deliveryZone ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label className="block">
+                        <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Area</span>
+                        <input
+                          type="text"
+                          value={form.area}
+                          onChange={(e) => setField("area", e.target.value)}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)]"
+                          placeholder="e.g. Dhanmondi"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">City</span>
+                        <input
+                          type="text"
+                          value={form.city}
+                          onChange={(e) => setField("city", e.target.value)}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)]"
+                          placeholder="e.g. Dhaka"
+                        />
+                      </label>
+                      <label className="block md:col-span-2">
+                        <span className="block text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2">Full Address</span>
+                        <textarea
+                          value={form.fullAddress}
+                          onChange={(e) => setField("fullAddress", e.target.value)}
+                          rows={3}
+                          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3.5 text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)] resize-none"
+                          placeholder="House, road, landmark"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[var(--text-secondary)]">Choose a delivery zone to continue with address details.</p>
+                  )}
+
+                  <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                    Delivery fee: <span className="font-semibold text-[var(--text-primary)]">{deliveryFee.toLocaleString("en-BD")} BDT</span>
+                  </p>
+                </div>
+              </div>
+
+              {hasFullBottle ? (
+                <p className="text-xs text-[var(--text-muted)] mt-4">
+                  Full bottle request prices are reviewed by admin before final confirmation.
+                </p>
+              ) : null}
+            </section>
+
+            <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-[0_12px_40px_var(--shadow-color)] transition-all duration-300">
+              <h2 className="text-xl font-semibold tracking-tight text-[var(--text-primary)] mb-4">Voucher</h2>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="Enter voucher code"
+                  value={voucherCode}
+                  onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                  disabled={!!appliedVoucher}
+                  className="flex-1 rounded-2xl border border-[var(--border)] bg-[var(--bg-input)] px-4 py-3 text-sm font-mono text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[var(--gold)] focus:ring-2 focus:ring-[var(--gold-glow)] disabled:opacity-60"
+                />
+                {appliedVoucher ? (
+                  <button
+                    onClick={() => {
+                      setAppliedVoucher("");
+                      setDiscount(0);
+                      setVoucherCode("");
+                    }}
+                    className="rounded-2xl border border-[var(--border)] px-5 py-3 text-xs uppercase tracking-[0.16em] text-[var(--text-secondary)] hover:border-[var(--gold)] transition-colors"
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button
+                    onClick={applyVoucher}
+                    className="rounded-2xl bg-[var(--gold)] px-5 py-3 text-xs uppercase tracking-[0.16em] text-black hover:bg-[var(--gold-light)] transition-colors"
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
+
+              {appliedVoucher ? (
+                <p className="text-sm text-[var(--success)] mt-3">Voucher {appliedVoucher} applied successfully.</p>
+              ) : null}
+            </section>
           </div>
 
-          {/* Voucher */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
-            <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Voucher Code</h3>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Enter voucher code"
-                value={voucherCode}
-                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                disabled={!!appliedVoucher}
-                className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm font-mono focus:border-[var(--gold)] outline-none disabled:opacity-50"
-              />
-              {appliedVoucher ? (
-                <button
-                  onClick={() => { setAppliedVoucher(""); setDiscount(0); setVoucherCode(""); }}
-                  className="px-4 py-2 text-xs uppercase tracking-wider border border-[var(--error)] text-[var(--error)] hover:bg-[rgba(248,113,113,0.1)] transition-colors"
-                >
-                  Remove
-                </button>
-              ) : (
-                <button
-                  onClick={applyVoucher}
-                  className="px-4 py-2 bg-[var(--gold)] text-black text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors"
-                >
-                  Apply
-                </button>
-              )}
+          <aside className="lg:col-span-2">
+            <div className="lg:sticky lg:top-24 rounded-3xl border border-[var(--border)] bg-[var(--bg-card)] p-6 md:p-8 shadow-[0_18px_48px_var(--shadow-color)]">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-muted)] mb-3">Order Summary</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] mb-6">Your Items</h2>
+
+              <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+                {items.map((item) => (
+                  <div
+                    key={`${item.perfumeId}-${item.ml}-${item.isFullBottle ? "full" : "decant"}-${item.fullBottleSize || ""}`}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--text-primary)] leading-snug">{item.perfumeName}</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                          {item.isFullBottle ? `Full Bottle (${item.fullBottleSize || "size pending"})` : `${item.ml}ml`} x{item.quantity}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        {item.isFullBottle ? "Pending" : `${(item.unitPrice * item.quantity).toLocaleString("en-BD")} BDT`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 space-y-3 border-t border-[var(--border)] pt-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--text-secondary)]">Subtotal</span>
+                  <span className="text-[var(--text-primary)]">{sub.toLocaleString("en-BD")} BDT</span>
+                </div>
+                {discount > 0 ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Discount</span>
+                    <span className="text-emerald-600">-{discount.toLocaleString("en-BD")} BDT</span>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--text-secondary)]">Delivery Fee {form.deliveryZone ? `(${form.deliveryZone})` : ""}</span>
+                  <span className="text-[var(--text-primary)]">{deliveryFee.toLocaleString("en-BD")} BDT</span>
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-[var(--border)] pt-5">
+                <div className="flex items-end justify-between">
+                  <span className="text-sm uppercase tracking-[0.2em] text-[var(--text-secondary)]">Total</span>
+                  <span className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--gold)]">{total.toLocaleString("en-BD")} BDT</span>
+                </div>
+              </div>
+
+              <button
+                onClick={placeOrder}
+                disabled={!canPlaceOrder || placing}
+                className="hidden lg:block w-full mt-6 rounded-2xl bg-[var(--gold)] text-black py-4 text-sm uppercase tracking-[0.16em] font-medium transition-all duration-200 hover:bg-[var(--gold-light)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
+                {placing ? "Placing..." : "Place Order"}
+              </button>
+
+              {!canPlaceOrder ? (
+                <p className="mt-3 text-xs text-[var(--text-muted)]">Complete contact and fulfillment details to place the order.</p>
+              ) : null}
             </div>
-            {appliedVoucher && (
-              <p className="text-xs text-[var(--success)] mt-2">✓ Voucher {appliedVoucher} applied — {discount} BDT off</p>
-            )}
-          </div>
+          </aside>
         </div>
 
-        {/* Order Summary */}
-        <div>
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-6 sticky top-24">
-            <h2 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Order Summary</h2>
-            
-            <div className="space-y-2 mb-4">
-              {items.map((item) => (
-                <div key={`${item.perfumeId}-${item.ml}`} className="flex justify-between text-sm text-[var(--text-secondary)]">
-                  <span className="truncate mr-2">{item.perfumeName} {item.ml}ml ×{item.quantity}</span>
-                  <span className="flex-shrink-0">{(item.unitPrice * item.quantity).toLocaleString("en-BD")}</span>
-                </div>
-              ))}
+        <div className="lg:hidden fixed bottom-0 inset-x-0 border-t border-[var(--border)] bg-[var(--bg-elevated)]/95 backdrop-blur-sm px-4 py-3 z-30">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-secondary)]">Total</p>
+              <p className="text-xl font-semibold tracking-tight text-[var(--gold)]">{total.toLocaleString("en-BD")} BDT</p>
             </div>
-
-            <div className="gold-line my-4" />
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--text-muted)]">Subtotal</span>
-                <span>{sub.toLocaleString("en-BD")} BDT</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--text-muted)]">Discount</span>
-                  <span className="text-[var(--success)]">-{discount.toLocaleString("en-BD")} BDT</span>
-                </div>
-              )}
-            </div>
-
-            <div className="gold-line my-4" />
-
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-sm text-[var(--text-muted)]">Total</span>
-              <span className="font-serif text-2xl text-[var(--gold)]">{total.toLocaleString("en-BD")} BDT</span>
-            </div>
-
             <button
               onClick={placeOrder}
-              disabled={placing}
-              className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
+              disabled={!canPlaceOrder || placing}
+              className="rounded-2xl bg-[var(--gold)] text-black px-5 py-3 text-xs uppercase tracking-[0.16em] font-medium transition-colors hover:bg-[var(--gold-light)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {placing ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="spinner" style={{ width: 14, height: 14 }} /> Placing Order...
-                </span>
-              ) : (
-                "Place Order"
-              )}
+              {placing ? "Placing..." : "Place Order"}
             </button>
           </div>
         </div>

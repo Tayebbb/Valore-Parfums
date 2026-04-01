@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import {
-  TrendingUp, DollarSign, ShoppingCart, Package, AlertTriangle, Inbox
+  TrendingUp, DollarSign, ShoppingCart, Package, AlertTriangle, Inbox, Wallet
 } from "lucide-react";
+import { toast } from "@/components/ui/Toaster";
+import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
+import { useAuth } from "@/store/auth";
 
 const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
 const Bar = dynamic(() => import("recharts").then(m => m.Bar), { ssr: false });
@@ -17,6 +20,15 @@ const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: fa
 const ResponsiveContainer = dynamic(() => import("recharts").then(m => m.ResponsiveContainer), { ssr: false });
 const AreaChart = dynamic(() => import("recharts").then(m => m.AreaChart), { ssr: false });
 const Area = dynamic(() => import("recharts").then(m => m.Area), { ssr: false });
+
+interface OwnerAccount {
+  name: string;
+  email: string;
+  totalEarned: number;
+  storeShareEarned: number;
+  totalWithdrawn: number;
+  availableBalance: number;
+}
 
 interface DashboardData {
   totalOrders: number;
@@ -46,6 +58,7 @@ interface DashboardData {
     todayProfit: { owner1: number; owner2: number };
     monthProfit: { owner1: number; owner2: number };
   };
+  ownerAccounts: OwnerAccount[];
 }
 
 function StatCard({ icon: Icon, label, value, sub }: { icon: React.ElementType; label: string; value: string; sub?: string }) {
@@ -68,15 +81,22 @@ const statusClass = (s: string) => `status-${s.toLowerCase().replace(/ /g, "")}`
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading, fetchUser } = useAuth();
 
-  useEffect(() => {
+  const loadDashboard = () =>
     fetch("/api/dashboard")
       .then((r) => r.json())
-      .then(setData)
-      .finally(() => setLoading(false));
+      .then(setData);
+
+  useEffect(() => {
+    if (authLoading) fetchUser();
+  }, [authLoading, fetchUser]);
+
+  useEffect(() => {
+    loadDashboard().finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="space-y-6">
         <h1 className="font-serif text-3xl font-light">Dashboard</h1>
@@ -119,75 +139,100 @@ export default function AdminDashboard() {
         <StatCard icon={Inbox} label="Stock Requests" value={`${data.stockRequests}`} sub="Pending requests" />
       </div>
 
-      {/* Owner Profit Share */}
+      {/* Owner Profit Breakdown — Per Owner */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
-        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-5">Owner Profit Share</h3>
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-5">Owner Profit Breakdown</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Owner 1 - Tayeb */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[var(--gold-tint)] border border-[var(--gold)] flex items-center justify-center">
-                <span className="font-serif text-lg text-[var(--gold)]">{data.owners.owner1Name[0]}</span>
-              </div>
-              <div>
-                <p className="font-serif text-lg">{data.owners.owner1Name}</p>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]">{data.owners.owner1Share}% Share</p>
-              </div>
-            </div>
+          {/* Owner 1 */}
+          <div className="space-y-3">
+            <h4 className="font-serif text-lg text-[var(--gold)]">{data.owners.owner1Name}</h4>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total</p>
-                <p className="font-serif text-base text-[var(--gold)]">{fmt(data.owners.totalProfit.owner1)} BDT</p>
+                <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.owners.totalProfit.owner1)} BDT</p>
               </div>
               <div className="bg-[var(--bg-surface)] rounded p-3">
-                <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">This Month</p>
-                <p className="font-serif text-base text-[var(--success)]">{fmt(data.owners.monthProfit.owner1)} BDT</p>
+                <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Month</p>
+                <p className="font-serif text-lg text-[var(--success)]">{fmt(data.owners.monthProfit.owner1)} BDT</p>
               </div>
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Today</p>
-                <p className="font-serif text-base">{fmt(data.owners.todayProfit.owner1)} BDT</p>
+                <p className="font-serif text-lg">{fmt(data.owners.todayProfit.owner1)} BDT</p>
               </div>
             </div>
           </div>
-          {/* Owner 2 - Enid */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[rgba(74,222,128,0.08)] border border-[var(--success)] flex items-center justify-center">
-                <span className="font-serif text-lg text-[var(--success)]">{data.owners.owner2Name[0]}</span>
-              </div>
-              <div>
-                <p className="font-serif text-lg">{data.owners.owner2Name}</p>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]">{data.owners.owner2Share}% Share</p>
-              </div>
-            </div>
+          {/* Owner 2 */}
+          <div className="space-y-3">
+            <h4 className="font-serif text-lg text-[var(--gold)]">{data.owners.owner2Name}</h4>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total</p>
-                <p className="font-serif text-base text-[var(--gold)]">{fmt(data.owners.totalProfit.owner2)} BDT</p>
+                <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.owners.totalProfit.owner2)} BDT</p>
               </div>
               <div className="bg-[var(--bg-surface)] rounded p-3">
-                <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">This Month</p>
-                <p className="font-serif text-base text-[var(--success)]">{fmt(data.owners.monthProfit.owner2)} BDT</p>
+                <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Month</p>
+                <p className="font-serif text-lg text-[var(--success)]">{fmt(data.owners.monthProfit.owner2)} BDT</p>
               </div>
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Today</p>
-                <p className="font-serif text-base">{fmt(data.owners.todayProfit.owner2)} BDT</p>
+                <p className="font-serif text-lg">{fmt(data.owners.todayProfit.owner2)} BDT</p>
               </div>
             </div>
           </div>
         </div>
-        {/* Profit Share Bar */}
-        <div className="mt-5">
-          <div className="flex justify-between text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
-            <span>{data.owners.owner1Name} ({data.owners.owner1Share}%)</span>
-            <span>{data.owners.owner2Name} ({data.owners.owner2Share}%)</span>
-          </div>
-          <div className="h-3 bg-[var(--bg-surface)] rounded-full overflow-hidden flex">
-            <div className="h-full bg-[var(--gold)] rounded-l-full transition-all" style={{ width: `${data.owners.owner1Share}%` }} />
-            <div className="h-full bg-[var(--success)] rounded-r-full transition-all" style={{ width: `${data.owners.owner2Share}%` }} />
-          </div>
+        {/* Store Profit Split Info */}
+        <div className="mt-4 pt-4 border-t border-[var(--border)]">
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+            Store profit split: {data.owners.owner1Name} {data.owners.owner1Share}% / {data.owners.owner2Name} {data.owners.owner2Share}%
+          </p>
         </div>
       </div>
+
+      {/* Owner Account Balances */}
+      {data.ownerAccounts && (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+          <div className="flex items-center gap-3 mb-5">
+            <Wallet size={18} className="text-[var(--gold)]" />
+            <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Owner Accounts</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {data.ownerAccounts.map((acct) => (
+              <div key={acct.name} className="space-y-3">
+                <h4 className="font-serif text-lg text-[var(--gold)]">{acct.name}</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[var(--bg-surface)] rounded p-3">
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Owner Stock Profit</p>
+                    <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.totalEarned)} BDT</p>
+                  </div>
+                  <div className="bg-[var(--bg-surface)] rounded p-3">
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Store Share</p>
+                    <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.storeShareEarned)} BDT</p>
+                  </div>
+                  <div className="bg-[var(--bg-surface)] rounded p-3">
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdrawn</p>
+                    <p className="font-serif text-lg text-[var(--error)]">{fmt(acct.totalWithdrawn)} BDT</p>
+                  </div>
+                  <div className="bg-[var(--bg-surface)] rounded p-3">
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Available</p>
+                    <p className={`font-serif text-lg ${acct.availableBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(acct.availableBalance)} BDT</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal — only for the logged-in owner (matched by email, fallback to name) */}
+      {data.ownerAccounts && (() => {
+        const myAccount = data.ownerAccounts.find((acct) =>
+          (acct.email && user?.email && acct.email.toLowerCase() === user.email.toLowerCase()) ||
+          (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()))
+        );
+        return myAccount ? (
+          <WithdrawalsSection key={myAccount.name} ownerName={myAccount.name} availableBalance={myAccount.availableBalance} canWithdraw onWithdraw={loadDashboard} />
+        ) : null;
+      })()}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -299,7 +344,10 @@ export default function AdminDashboard() {
               <div key={o.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                 <div>
                   <p className="text-sm">{o.customerName}</p>
-                  <p className="text-[10px] font-mono text-[var(--text-muted)]">{o.id.slice(0, 8)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-mono text-[var(--text-muted)] break-all">{o.id}</p>
+                    <CopyOrderIdButton orderId={o.id} className="h-8 w-8 min-w-8" />
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="font-serif text-sm text-[var(--gold)]">{fmt(o.total)} BDT</span>
@@ -326,6 +374,176 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Withdrawals Section (Per Owner) ───────────────────────────────
+interface Withdrawal {
+  id: string;
+  amount: number;
+  ownerName: string;
+  note: string;
+  withdrawnBy: string;
+  createdAt: string;
+}
+
+function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdraw }: { ownerName: string; availableBalance: number; canWithdraw: boolean; onWithdraw?: () => void }) {
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = () =>
+    fetch(`/api/withdrawals?ownerName=${encodeURIComponent(ownerName)}`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setWithdrawals(data); })
+      .finally(() => setLoading(false));
+
+  useEffect(() => { load(); }, [ownerName]);
+
+  const totalWithdrawn = withdrawals.reduce((s, w) => s + w.amount, 0);
+  const fmt = (n: number) => n.toLocaleString("en-BD");
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(amount);
+    if (!amt || amt <= 0) { toast("Enter a valid amount", "error"); return; }
+    if (amt > availableBalance) { toast(`Amount exceeds ${ownerName}'s available balance`, "error"); return; }
+
+    setSubmitting(true);
+    const res = await fetch("/api/withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: amt, note, ownerName }),
+    });
+    if (res.ok) {
+      toast(`Withdrawal for ${ownerName} recorded`, "success");
+      setAmount("");
+      setNote("");
+      load();
+      onWithdraw?.();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "Failed to record withdrawal", "error");
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+      <div className="flex items-center gap-3 mb-5">
+        <Wallet size={18} className="text-[var(--gold)]" />
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">{ownerName}&apos;s Withdrawals</h3>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Withdrawn</p>
+          <p className="font-serif text-lg text-[var(--error)]">{fmt(totalWithdrawn)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Available Balance</p>
+          <p className={`font-serif text-lg ${availableBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(availableBalance)} BDT</p>
+        </div>
+      </div>
+
+      {/* Withdraw Form — only rendered for the logged-in owner's own account */}
+      {canWithdraw ? (
+        <form onSubmit={handleWithdraw} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 mb-6">
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Amount (BDT)</label>
+            <input
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="Enter amount"
+            />
+          </div>
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Note (optional)</label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="e.g. Cash withdrawal"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-5 py-2 bg-[var(--gold)] text-black text-[10px] uppercase tracking-wider rounded hover:bg-[var(--gold-hover)] transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {submitting ? "Processing..." : "Withdraw"}
+          </button>
+        </form>
+      ) : (
+        <p className="text-xs text-[var(--text-muted)] mb-6 italic">Only {ownerName} can withdraw from this account</p>
+      )}
+
+      {/* History */}
+      {loading ? (
+        <div className="skeleton h-20 rounded" />
+      ) : withdrawals.length === 0 ? (
+        <p className="text-sm text-[var(--text-secondary)] text-center py-4">No withdrawals yet</p>
+      ) : (
+        <>
+          <div className="space-y-3 md:hidden">
+            {withdrawals.map((w) => (
+              <div key={w.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-[var(--text-primary)]">{new Date(w.createdAt).toLocaleDateString()}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Date</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-serif text-[var(--error)]">{fmt(w.amount)} BDT</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mt-1">Amount</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm border-t border-[var(--border)] pt-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">By</p>
+                    <p>{w.withdrawnBy}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Note</p>
+                    <p className="text-[var(--text-secondary)]">{w.note || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
+                  <th className="text-right py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Amount</th>
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">By</th>
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {withdrawals.map((w) => (
+                  <tr key={w.id} className="border-b border-[var(--border)]">
+                    <td className="py-2 px-3 text-xs text-[var(--text-secondary)]">{new Date(w.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2 px-3 text-right font-serif text-[var(--error)]">{fmt(w.amount)} BDT</td>
+                    <td className="py-2 px-3 text-xs">{w.withdrawnBy}</td>
+                    <td className="py-2 px-3 text-xs text-[var(--text-secondary)]">{w.note || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

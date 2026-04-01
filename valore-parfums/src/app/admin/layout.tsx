@@ -12,8 +12,8 @@ import {
   Tag,
   FileText,
   BarChart3,
-  Inbox,
   Bell,
+  MapPin,
 } from "lucide-react";
 
 const navItems = [
@@ -23,7 +23,7 @@ const navItems = [
   { href: "/admin/bottles", label: "Bottles", icon: Wine },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/vouchers", label: "Vouchers", icon: Tag },
-  { href: "/admin/stock-requests", label: "Stock Requests", icon: Inbox },
+  { href: "/admin/pickup-locations", label: "Pickup Locations", icon: MapPin },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/export", label: "Export", icon: FileText },

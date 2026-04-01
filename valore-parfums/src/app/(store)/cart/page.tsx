@@ -26,7 +26,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="px-[5%] py-8">
+    <div className="px-4 sm:px-6 md:px-[5%] py-8">
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-8"
@@ -42,9 +42,10 @@ export default function CartPage() {
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
             <div
-              key={`${item.perfumeId}-${item.ml}`}
-              className="flex items-center gap-4 bg-[var(--bg-card)] border border-[var(--border)] rounded p-4"
+              key={`${item.perfumeId}-${item.ml}-${item.isFullBottle ? "full" : "decant"}-${item.fullBottleSize || ""}`}
+              className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-4"
             >
+              <div className="flex items-start gap-3">
               {/* Image */}
               <div className="w-20 h-20 bg-[var(--bg-surface)] rounded flex-shrink-0 overflow-hidden relative">
                 {item.image ? (
@@ -59,23 +60,38 @@ export default function CartPage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <h3 className="font-serif text-base truncate">{item.perfumeName}</h3>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{item.ml}ml</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  {item.isFullBottle ? "Full Bottle" : `${item.ml}ml`}
+                </p>
+                {item.isFullBottle && item.fullBottleSize && (
+                  <p className="text-xs text-[var(--text-muted)]">Requested size: {item.fullBottleSize}</p>
+                )}
                 <p className="font-serif text-sm text-[var(--gold)] mt-1">
-                  {item.unitPrice.toLocaleString("en-BD")} BDT each
+                  {item.isFullBottle ? "Price pending" : `${item.unitPrice.toLocaleString("en-BD")} BDT each`}
                 </p>
               </div>
 
-              {/* Quantity */}
-              <div className="flex items-center gap-2">
+              {/* Remove */}
+              <button
+                onClick={() => removeItem(item.perfumeId, item.ml, item.isFullBottle, item.fullBottleSize)}
+                className="text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                {/* Quantity */}
+                <div className="flex items-center gap-2">
                 <button
-                  onClick={() => updateQuantity(item.perfumeId, item.ml, Math.max(1, item.quantity - 1))}
+                  onClick={() => updateQuantity(item.perfumeId, item.ml, Math.max(1, item.quantity - 1), item.isFullBottle, item.fullBottleSize)}
                   className="w-8 h-8 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
                   <Minus size={14} />
                 </button>
                 <span className="font-serif text-base w-6 text-center">{item.quantity}</span>
                 <button
-                  onClick={() => updateQuantity(item.perfumeId, item.ml, item.quantity + 1)}
+                  onClick={() => updateQuantity(item.perfumeId, item.ml, item.quantity + 1, item.isFullBottle, item.fullBottleSize)}
                   className="w-8 h-8 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
                   <Plus size={14} />
@@ -83,19 +99,12 @@ export default function CartPage() {
               </div>
 
               {/* Total */}
-              <div className="text-right min-w-[100px]">
+              <div className="text-right">
                 <p className="font-serif text-lg text-[var(--gold)]">
-                  {(item.unitPrice * item.quantity).toLocaleString("en-BD")} BDT
+                  {item.isFullBottle ? "Pending" : `${(item.unitPrice * item.quantity).toLocaleString("en-BD")} BDT`}
                 </p>
               </div>
-
-              {/* Remove */}
-              <button
-                onClick={() => removeItem(item.perfumeId, item.ml)}
-                className="text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
+              </div>
             </div>
           ))}
         </div>
@@ -107,9 +116,11 @@ export default function CartPage() {
             
             <div className="space-y-2 mb-4">
               {items.map((item) => (
-                <div key={`${item.perfumeId}-${item.ml}`} className="flex justify-between text-sm text-[var(--text-secondary)]">
-                  <span className="truncate mr-2">{item.perfumeName} {item.ml}ml ×{item.quantity}</span>
-                  <span className="flex-shrink-0">{(item.unitPrice * item.quantity).toLocaleString("en-BD")}</span>
+                <div key={`${item.perfumeId}-${item.ml}-${item.isFullBottle ? "full" : "decant"}-${item.fullBottleSize || ""}`} className="flex justify-between text-sm text-[var(--text-secondary)]">
+                  <span className="truncate mr-2">
+                    {item.perfumeName} {item.isFullBottle ? `Full Bottle (${item.fullBottleSize || "size pending"})` : `${item.ml}ml`} ×{item.quantity}
+                  </span>
+                  <span className="flex-shrink-0">{item.isFullBottle ? "Pending" : (item.unitPrice * item.quantity).toLocaleString("en-BD")}</span>
                 </div>
               ))}
             </div>

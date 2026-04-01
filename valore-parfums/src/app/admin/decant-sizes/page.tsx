@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface DecantSize {
   id: string;
@@ -14,6 +15,7 @@ export default function DecantSizesPage() {
   const [sizes, setSizes] = useState<DecantSize[]>([]);
   const [newMl, setNewMl] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const load = () =>
     fetch("/api/decant-sizes")
@@ -49,10 +51,10 @@ export default function DecantSizesPage() {
   };
 
   const removeSize = async (id: string) => {
-    if (!confirm("Remove this size?")) return;
     await fetch(`/api/decant-sizes/${id}`, { method: "DELETE" });
     toast("Size removed", "success");
     load();
+    setDeleteId(null);
   };
 
   return (
@@ -105,7 +107,7 @@ export default function DecantSizesPage() {
                 <span className="font-serif text-lg">{size.ml} ml</span>
               </div>
               <button
-                onClick={() => removeSize(size.id)}
+                onClick={() => setDeleteId(size.id)}
                 className="text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
               >
                 <Trash2 size={16} />
@@ -117,6 +119,18 @@ export default function DecantSizesPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteId)}
+        title="Remove Decant Size"
+        message="This will remove the decant size from available options."
+        confirmLabel="Remove"
+        danger
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) void removeSize(deleteId);
+        }}
+      />
     </div>
   );
 }

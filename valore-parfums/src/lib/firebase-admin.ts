@@ -40,6 +40,7 @@ export function serializeDoc(obj: any): any {
 // Centralised so typos are caught at compile time
 export const Collections = {
   perfumes: "perfumes",
+  notesLibrary: "notesLibrary",
   decantSizes: "decantSizes",
   bottles: "bottles",
   settings: "settings",
@@ -51,4 +52,9 @@ export const Collections = {
   users: "users",
   wishlists: "wishlists",
   notifications: "notifications",
+  withdrawals: "withdrawals",
+  pickupLocations: "pickupLocations",
+  requests: "requests",
+  ownerAccounts: "ownerAccounts",
+  profitTransactions: "profitTransactions",
 } as const;

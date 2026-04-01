@@ -2,11 +2,50 @@ import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { calculateSellingPrice, calculateProfit, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
 import type { OwnerType, TierMargins } from "@/lib/utils";
+import { FieldPath } from "firebase-admin/firestore";
+
+const CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=120";
 
 // ── In-memory cache for rarely-changing config (sizes, bottles, settings, bulk rules) ──
 const CACHE_TTL = 60_000; // 60 seconds
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let configCache: { sizes: any[]; bottles: any[]; packagingCost: number; margins: TierMargins; bulkRules: any[]; ts: number } | null = null;
+let configCache: { sizes: any[]; bottles: any[]; packagingCost: number; ownerProfitPercent: number; margins: TierMargins; bulkRules: any[]; ts: number } | null = null;
+const PRICE_RESULT_CACHE_TTL = 30_000;
+const priceResultCache = new Map<string, { data: Record<string, { prices: { ml: number; sellingPrice: number; available: boolean }[] }>; ts: number }>();
+
+type PricingPerfume = {
+  id: string;
+  isPersonalCollection?: boolean;
+  purchasePricePerMl: number;
+  marketPricePerMl: number;
+  totalStockMl: number;
+};
+
+async function getPerfumesByIds(ids: string[]): Promise<PricingPerfume[]> {
+  const chunkSize = 10;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    chunks.push(ids.slice(i, i + chunkSize));
+  }
+
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      db
+        .collection(Collections.perfumes)
+        .where(FieldPath.documentId(), "in", chunk)
+        .get(),
+    ),
+  );
+
+  const map = new Map<string, unknown>();
+  for (const snap of snapshots) {
+    for (const doc of snap.docs) {
+      map.set(doc.id, { id: doc.id, ...doc.data() });
+    }
+  }
+
+  return ids.map((id) => map.get(id)).filter(Boolean) as PricingPerfume[];
+}
 
 async function getPricingConfig() {
   if (configCache && Date.now() - configCache.ts < CACHE_TTL) return configCache;
@@ -31,6 +70,7 @@ async function getPricingConfig() {
     sizes,
     bottles,
     packagingCost: settings?.packagingCost ?? 20,
+    ownerProfitPercent: settings?.ownerProfitPercent ?? 85,
     margins: parseTierMargins(settings?.tierMargins),
     bulkRules,
     ts: Date.now(),
@@ -81,7 +121,8 @@ export async function GET(req: Request) {
       profitMargin,
     );
     const profit = calculateProfit(sellingPrice, perfume.purchasePricePerMl, size.ml, bottleCost, packagingCost);
-    const { ownerProfit, platformProfit } = splitProfit(profit, owner);
+    const ownerProfitPercent = config.ownerProfitPercent;
+    const { ownerProfit, otherOwnerProfit } = splitProfit(profit, owner, ownerProfitPercent);
     const totalCost = perfume.purchasePricePerMl * size.ml + bottleCost + packagingCost;
     const inStock = perfume.totalStockMl >= size.ml;
     const bottleAvailable = bottle ? bottle.availableCount > 0 : false;
@@ -92,7 +133,7 @@ export async function GET(req: Request) {
       totalCost: Math.ceil(totalCost),
       profit,
       ownerProfit,
-      platformProfit,
+      otherOwnerProfit,
       ownerName: owner,
       bottleCost,
       packagingCost,
@@ -112,7 +153,7 @@ export async function GET(req: Request) {
     isPersonalCollection: perfume.isPersonalCollection,
     prices,
     bulkRules: bulkRules.map((r) => ({ minQuantity: r.minQuantity, discountPercent: r.discountPercent })),
-  });
+  }, { headers: { "Cache-Control": CACHE_CONTROL } });
 }
 
 // ── Batch pricing: POST { perfumeIds: string[] } → { [perfumeId]: { prices } } ──
@@ -124,22 +165,23 @@ export async function POST(req: Request) {
   }
   // Cap to 50 to avoid abuse
   const uniqueIds = [...new Set(ids)].slice(0, 50);
+  const cacheKey = [...uniqueIds].sort().join("|");
+  const cached = priceResultCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < PRICE_RESULT_CACHE_TTL) {
+    return NextResponse.json(cached.data, { headers: { "Cache-Control": CACHE_CONTROL } });
+  }
 
-  // Fetch config (cached) and all perfumes in parallel
-  const [config, ...perfumeDocs] = await Promise.all([
+  // Fetch config and all requested perfumes with batched IN queries
+  const [config, perfumes] = await Promise.all([
     getPricingConfig(),
-    ...uniqueIds.map((id) => db.collection(Collections.perfumes).doc(id).get()),
+    getPerfumesByIds(uniqueIds),
   ]);
 
   const { sizes, bottles, packagingCost, margins } = config;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: Record<string, any> = {};
-  for (let i = 0; i < uniqueIds.length; i++) {
-    const doc = perfumeDocs[i];
-    if (!doc.exists) continue;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const perfume = { id: doc.id, ...doc.data() } as any;
+  for (const perfume of perfumes) {
     const effectiveMarketPricePerMl = perfume.isPersonalCollection
       ? perfume.purchasePricePerMl
       : perfume.marketPricePerMl;
@@ -165,5 +207,11 @@ export async function POST(req: Request) {
     result[perfume.id] = { prices };
   }
 
-  return NextResponse.json(result);
+  priceResultCache.set(cacheKey, { data: result, ts: Date.now() });
+  if (priceResultCache.size > 100) {
+    const firstKey = priceResultCache.keys().next().value;
+    if (firstKey) priceResultCache.delete(firstKey);
+  }
+
+  return NextResponse.json(result, { headers: { "Cache-Control": CACHE_CONTROL } });
 }

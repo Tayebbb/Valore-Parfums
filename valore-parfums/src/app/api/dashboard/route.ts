@@ -18,13 +18,16 @@ export async function GET() {
 
   // Fetch all orders, perfumes, bottles, stock requests, settings, and ALL order items in parallel
   // Using collectionGroup("items") avoids N+1 subcollection reads
-  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap] = await Promise.all([
+  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap, ownerAccountsSnap, withdrawalsSnap, fulfilledRequestsSnap] = await Promise.all([
     db.collection(Collections.orders).get(),
     db.collection(Collections.perfumes).orderBy("totalStockMl", "asc").get(),
     db.collection(Collections.bottles).orderBy("availableCount", "asc").get(),
     db.collection(Collections.stockRequests).get(),
     db.collection(Collections.settings).doc("default").get(),
     db.collectionGroup("items").get(),
+    db.collection(Collections.ownerAccounts).get(),
+    db.collection(Collections.withdrawals).get(),
+    db.collection(Collections.requests).where("status", "==", "Fulfilled").get(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,23 +62,33 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
 
+  const normalizeOrderStatus = (status?: string) => {
+    if (!status) return "Pending";
+    if (status === "Completed") return "Dispatched";
+    if (status === "Approved") return "Confirmed";
+    if (status === "Fulfilled") return "Dispatched";
+    if (status === "Declined") return "Cancelled";
+    return status;
+  };
+
   // Aggregates (replaces prisma.order.count, prisma.order.aggregate)
-  const totalOrders = allOrders.length;
-  const completedOrders = allOrders.filter((o) => o.status === "Completed").length;
-  const pendingOrders = allOrders.filter((o) => o.status === "Pending").length;
-  const completedOrderList = allOrders.filter((o) => o.status === "Completed");
+  const normalizedOrders = allOrders.map((order) => ({ ...order, normalizedStatus: normalizeOrderStatus(order.status) }));
+  const totalOrders = normalizedOrders.length;
+  const completedOrders = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched").length;
+  const pendingOrders = normalizedOrders.filter((o) => ["Pending", "Confirmed", "Sourcing", "Ready"].includes(o.normalizedStatus)).length;
+  const completedOrderList = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched");
   const totalRevenue = completedOrderList.reduce((s, o) => s + (o.total ?? 0), 0);
   const totalProfitVal = completedOrderList.reduce((s, o) => s + (o.profit ?? 0), 0);
 
   // Today aggregates
-  const todayOrdersNonCancelled = allOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.status !== "Cancelled");
-  const todayCompleted = allOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.status === "Completed");
+  const todayOrdersNonCancelled = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.normalizedStatus !== "Cancelled");
+  const todayCompleted = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.normalizedStatus === "Dispatched");
   const todayOrders = todayOrdersNonCancelled.length;
   const todayRevenue = todayCompleted.reduce((s, o) => s + (o.total ?? 0), 0);
   const todayProfitVal = todayCompleted.reduce((s, o) => s + (o.profit ?? 0), 0);
 
   // Month aggregates
-  const monthCompleted = allOrders.filter((o) => toDate(o.createdAt) >= startOfMonth && o.status === "Completed");
+  const monthCompleted = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfMonth && o.normalizedStatus === "Dispatched");
   const monthRevenue = monthCompleted.reduce((s, o) => s + (o.total ?? 0), 0);
   const monthProfitVal = monthCompleted.reduce((s, o) => s + (o.profit ?? 0), 0);
 
@@ -87,7 +100,7 @@ export async function GET() {
   const lowStockBottles = bottles.filter((b) => b.availableCount <= (b.lowStockThreshold ?? 5));
 
   // Stock requests count (replaces prisma.stockRequest.count with status Pending)
-  const stockRequests = stockRequestsList.filter((r) => r.status === "Pending").length;
+  const stockRequests = normalizedOrders.filter((o) => o.orderSource === "stock_request" && o.normalizedStatus === "Sourcing").length || stockRequestsList.filter((r) => r.status === "Pending").length;
 
   // Recent orders (last 5) — items already in memory from collectionGroup
   const sortedOrders = [...allOrders].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
@@ -157,24 +170,39 @@ export async function GET() {
   }
 
   // Ownership profit breakdown from actual order items (replaces prisma.orderItem.findMany with order include)
-  const completedItems = allItems.filter((i) => i.orderStatus === "Completed");
+  const completedItems = allItems.filter((i) => normalizeOrderStatus(i.orderStatus) === "Dispatched");
   const ownershipBreakdown: Record<string, { total: number; today: number; month: number }> = {};
-  let platformProfitTotal = 0, platformProfitToday = 0, platformProfitMonth = 0;
+  let crossOwnerTotal = 0, crossOwnerToday = 0, crossOwnerMonth = 0;
 
   for (const item of completedItems) {
     const name = item.ownerName || "Store";
     if (!ownershipBreakdown[name]) ownershipBreakdown[name] = { total: 0, today: 0, month: 0 };
     ownershipBreakdown[name].total += item.ownerProfit ?? 0;
-    platformProfitTotal += item.platformProfit ?? 0;
+    crossOwnerTotal += item.otherOwnerProfit ?? 0;
     const createdAt = toDate(item.orderCreatedAt);
     if (createdAt >= startOfDay) {
       ownershipBreakdown[name].today += item.ownerProfit ?? 0;
-      platformProfitToday += item.platformProfit ?? 0;
+      crossOwnerToday += item.otherOwnerProfit ?? 0;
     }
     if (createdAt >= startOfMonth) {
       ownershipBreakdown[name].month += item.ownerProfit ?? 0;
-      platformProfitMonth += item.platformProfit ?? 0;
+      crossOwnerMonth += item.otherOwnerProfit ?? 0;
     }
+  }
+
+  // Aggregate profit from fulfilled perfume requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fulfilledRequests = fulfilledRequestsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  let requestProfitTotal = 0;
+  let requestProfitToday = 0;
+  let requestProfitMonth = 0;
+
+  for (const r of fulfilledRequests) {
+    const profit = r.profit ?? 0;
+    requestProfitTotal += profit;
+    const fulfilledAt = r.fulfilledAt ? toDate(r.fulfilledAt) : null;
+    if (fulfilledAt && fulfilledAt >= startOfDay) requestProfitToday += profit;
+    if (fulfilledAt && fulfilledAt >= startOfMonth) requestProfitMonth += profit;
   }
 
   return NextResponse.json({
@@ -182,12 +210,13 @@ export async function GET() {
     completedOrders,
     pendingOrders,
     totalRevenue,
-    totalProfit: totalProfitVal,
+    totalProfit: totalProfitVal + requestProfitTotal,
     todayOrders,
     todayRevenue,
-    todayProfit: todayProfitVal,
+    todayProfit: todayProfitVal + requestProfitToday,
     monthRevenue,
-    monthProfit: monthProfitVal,
+    monthProfit: monthProfitVal + requestProfitMonth,
+    requestProfit: { total: requestProfitTotal, today: requestProfitToday, month: requestProfitMonth },
     lowStockPerfumes,
     lowStockBottles,
     mostSold,
@@ -197,7 +226,7 @@ export async function GET() {
     dailySales,
     monthlySales,
     ownership: {
-      platform: { total: Math.round(platformProfitTotal), today: Math.round(platformProfitToday), month: Math.round(platformProfitMonth) },
+      crossOwner: { total: Math.round(crossOwnerTotal), today: Math.round(crossOwnerToday), month: Math.round(crossOwnerMonth) },
       Tayeb: ownershipBreakdown["Tayeb"] ?? { total: 0, today: 0, month: 0 },
       Enid: ownershipBreakdown["Enid"] ?? { total: 0, today: 0, month: 0 },
     },
@@ -220,5 +249,37 @@ export async function GET() {
         owner2: Math.round(ownershipBreakdown["Enid"]?.month ?? 0),
       },
     },
+    // Owner account balances (from ownerAccounts + withdrawals collections)
+    ownerAccounts: (() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const accountsMap: Record<string, any> = {};
+      for (const doc of ownerAccountsSnap.docs) {
+        accountsMap[doc.id] = doc.data();
+      }
+      const withdrawalsByOwner: Record<string, number> = {};
+      for (const doc of withdrawalsSnap.docs) {
+        const w = doc.data();
+        const owner = w.ownerName || "Unknown";
+        withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + (w.amount || 0);
+      }
+      const buildBalance = (name: string, email: string) => {
+        const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
+        const earned = (acct.totalEarned || 0) + (acct.storeShareEarned || 0);
+        const withdrawn = withdrawalsByOwner[name] || 0;
+        return {
+          name,
+          email,
+          totalEarned: Math.round(acct.totalEarned || 0),
+          storeShareEarned: Math.round(acct.storeShareEarned || 0),
+          totalWithdrawn: Math.round(withdrawn),
+          availableBalance: Math.round(earned - withdrawn),
+        };
+      };
+      const o1 = settings?.owner1Name ?? "Tayeb";
+      const o2 = settings?.owner2Name ?? "Enid";
+      const e1 = settings?.owner1Email ?? "";
+      const e2 = settings?.owner2Email ?? "";
+      return [buildBalance(o1, e1), buildBalance(o2, e2)];
+    })(),
   });
 }

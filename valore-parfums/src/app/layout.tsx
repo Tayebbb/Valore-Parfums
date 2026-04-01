@@ -7,20 +7,20 @@ import { ThemeInitializer } from "@/components/ThemeInitializer";
 const serif = Cormorant_Garamond({
   variable: "--font-serif",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
 });
 
 const sans = DM_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const mono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["500"],
 });
 
 export const metadata: Metadata = {

@@ -17,8 +17,8 @@
 
   --foreground: #f5f0e8;
   --text-primary: #f5f0e8;
-  --text-secondary: rgba(245, 240, 232, 0.45);
-  --text-muted: rgba(245, 240, 232, 0.25);
+  --text-secondary: rgba(245, 240, 232, 0.72);
+  --text-muted: rgba(245, 240, 232, 0.52);
 
   --border: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(201, 165, 92, 0.3);
@@ -50,8 +50,8 @@ html.light {
 
   --foreground: #1a1a1a;
   --text-primary: #1a1a1a;
-  --text-secondary: #1a1a1a;
-  --text-muted: #1a1a1a;
+  --text-secondary: #2f2f2f;
+  --text-muted: #4a4a4a;
 
   --border: rgba(0, 0, 0, 0.08);
   --border-hover: rgba(154, 123, 60, 0.3);
@@ -98,6 +98,102 @@ body {
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+* {
+  min-width: 0;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+button,
+[role="button"],
+label,
+th {
+  font-weight: 600;
+}
+
+p,
+li,
+input,
+textarea,
+select,
+button {
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+
+small,
+.text-xs,
+[class*="text-[10px]"],
+[class*="text-[11px]"],
+[class*="text-[12px]"],
+[class*="text-[13px]"],
+[class*="text-[14px]"] {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.text-sm,
+[class*="text-[15px]"] {
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+
+/* Prevent ultra-thin text from reducing readability */
+.font-thin,
+.font-extralight,
+.font-light {
+  font-weight: 500 !important;
+}
+
+button,
+a {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+
+a[href]:hover {
+  opacity: 0.96;
 }
 
 /* ── Custom Scrollbar ── */
@@ -139,6 +235,60 @@ body {
   animation: fadeUp 0.5s ease forwards;
 }
 
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes drawerIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@keyframes toastTimer {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.animate-overlay-in {
+  animation: overlayIn 0.25s ease-out forwards;
+}
+
+.animate-modal-in {
+  animation: modalIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-drawer-in {
+  animation: drawerIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-toast-in {
+  animation: toastIn 0.26s ease-out forwards;
+}
+
+.animate-toast-out {
+  animation: toastOut 0.22s ease-in forwards;
+}
+
+.animate-toast-timer {
+  animation: toastTimer 3s linear forwards;
+}
+
 /* ── Spinner ── */
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -175,7 +325,10 @@ body {
 .status-pending  { background: rgba(251,191,36,0.12); color: #fbbf24; }
 .status-confirmed { background: rgba(96,165,250,0.12); color: #60a5fa; }
 .status-ready    { background: rgba(201,165,92,0.12); color: #c9a55c; }
+.status-processing { background: rgba(56,189,248,0.12); color: #38bdf8; }
+.status-outfordelivery { background: rgba(125,211,252,0.12); color: #7dd3fc; }
 .status-completed { background: rgba(74,222,128,0.12); color: #4ade80; }
+.status-delivered { background: rgba(34,197,94,0.12); color: #22c55e; }
 .status-cancelled { background: rgba(248,113,113,0.12); color: #f87171; }
 
 /* ── Card hover ── */
@@ -215,5 +368,20 @@ input[type="range"]::-moz-range-thumb {
   background: transparent;
   border: none;
   cursor: pointer;
+}
+
+/* Keep browser autofill aligned with active theme colors */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  transition: background-color 9999s ease-out 0s;
 }
 

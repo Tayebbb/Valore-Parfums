@@ -89,15 +89,17 @@ export function calculateProfit(
 // ─── Ownership Profit Split ────────────────────────────
 export type OwnerType = "Store" | "Tayeb" | "Enid";
 
-export function splitProfit(profit: number, owner: OwnerType): { ownerProfit: number; platformProfit: number } {
-  if (profit <= 0) return { ownerProfit: 0, platformProfit: 0 };
+export function splitProfit(profit: number, owner: OwnerType, ownerPercent = 85): { ownerProfit: number; otherOwnerProfit: number } {
+  if (profit <= 0) return { ownerProfit: 0, otherOwnerProfit: 0 };
   if (owner === "Store") {
-    return { ownerProfit: 0, platformProfit: profit };
+    // Store-owned: entire profit goes to store pool (split later by owner shares)
+    return { ownerProfit: 0, otherOwnerProfit: 0 };
   }
-  // Owner (Tayeb or Enid): 85% owner, 15% platform
+  // Owner (Tayeb or Enid): configurable split — owner gets ownerPercent, the other owner gets the rest
+  const ownerShare = Math.round(profit * (ownerPercent / 100));
   return {
-    ownerProfit: Math.round(profit * 0.85),
-    platformProfit: Math.round(profit * 0.15),
+    ownerProfit: ownerShare,
+    otherOwnerProfit: profit - ownerShare,
   };
 }
 
@@ -114,4 +116,14 @@ export function statusColor(status: string): string {
 
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
+}
+
+export function normalizeOrderImagePath(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  return `/${trimmed}`;
 }
