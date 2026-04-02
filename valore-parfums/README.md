@@ -238,7 +238,9 @@ Valore Parfums is a full-stack fragrance commerce platform for decants and full-
 - Sorted in-memory fallback patterns where Firestore composite indexes are not assumed
 - Frontend render optimization with memoized components and debounced inputs
 - Conditional polling and snapshot checks in tracking UI
+
 ## API Surface (Implemented)
+
 ### Maintenance and Data-Fix Tooling
 
 - Settings audit script for margins/sizes/bottles
