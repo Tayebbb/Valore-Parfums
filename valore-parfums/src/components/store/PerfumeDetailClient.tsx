@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/Toaster";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Heart } from "lucide-react";
+import { parseImageList } from "@/lib/seo-catalog";
 
 interface Perfume {
   id: string;
@@ -130,11 +131,15 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   };
 
   const selectedPrice = prices.find((p) => p.ml === selectedMl);
-  const images: string[] = perfume ? JSON.parse(perfume.images || "[]") : [];
+  const images: string[] = perfume ? parseImageList(perfume.images) : [];
   const outOfStock = perfume && perfume.totalStockMl <= 0;
 
-  // Calculate bulk discount for current quantity
-  const activeBulkRule = bulkRules.find((r) => quantity >= r.minQuantity);
+  // Calculate bulk discount for current quantity — pick the highest-tier rule that applies
+  const activeBulkRule = bulkRules.reduce<BulkRule | null>((best, rule) => {
+    if (quantity < rule.minQuantity) return best;
+    if (!best || rule.minQuantity > best.minQuantity) return rule;
+    return best;
+  }, null);
   const bulkDiscountPercent = activeBulkRule?.discountPercent ?? 0;
   const decantUnitPrice = selectedPrice ? Math.ceil(selectedPrice.sellingPrice * (1 - bulkDiscountPercent / 100)) : 0;
   const effectiveUnitPrice = selectedOption === "full-bottle" ? 0 : decantUnitPrice;

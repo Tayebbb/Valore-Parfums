@@ -16,8 +16,17 @@ function hasPngSignature(buffer: Buffer): boolean {
   return buffer.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE);
 }
 
+const MAX_RAW_DIMENSION = 2000; // cap before BFS to bound memory usage (~2000×2000×4 ≈ 16 MB)
+
 async function removeNearWhiteBackground(buffer: Buffer): Promise<Buffer> {
-  const { data, info } = await sharp(buffer, { failOn: "warning" })
+  // Resize down to at most MAX_RAW_DIMENSION on each axis before decoding to raw RGBA,
+  // so that the uncompressed buffer and BFS arrays stay within a predictable memory bound.
+  const resized = await sharp(buffer, { failOn: "warning" })
+    .resize(MAX_RAW_DIMENSION, MAX_RAW_DIMENSION, { fit: "inside", withoutEnlargement: true })
+    .png()
+    .toBuffer();
+
+  const { data, info } = await sharp(resized, { failOn: "warning" })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });

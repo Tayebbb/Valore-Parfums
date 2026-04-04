@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildCanonicalProductUrl, getActivePerfumes, getPerfumeOffers, parseImageList } from "@/lib/seo-catalog";
+import { buildCanonicalProductUrl, getActivePerfumes, getPerfumeOffers, parseImageList, SITE_URL } from "@/lib/seo-catalog";
 
 function xmlEscape(value: string): string {
   return value
@@ -16,7 +16,8 @@ export async function GET() {
     perfumes.map(async (perfume) => {
       const offers = await getPerfumeOffers(perfume);
       const firstInStock = offers.decantOffers.find((offer) => offer.available) || offers.decantOffers[0];
-      const image = parseImageList(perfume.images)[0] || "";
+      const imageRaw = parseImageList(perfume.images)[0] || "";
+      const image = imageRaw.startsWith("http") ? imageRaw : imageRaw ? `${SITE_URL}${imageRaw}` : "";
 
       return {
         id: perfume.id,
@@ -35,7 +36,7 @@ export async function GET() {
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
     <title>Valore Parfums Merchant Feed</title>
-    <link>${xmlEscape("https://valoreparfums.com")}</link>
+    <link>${xmlEscape(SITE_URL)}</link>
     <description>Perfume decants and full bottle requests in Bangladesh</description>
     ${items
       .map(
