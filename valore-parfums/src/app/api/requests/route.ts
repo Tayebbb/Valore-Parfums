@@ -28,32 +28,36 @@ export async function GET(req: Request) {
 
   // Query by multiple identifiers to support legacy records and avoid
   // requiring a composite index for where+orderBy.
-  const [byUserIdSnap, byUserEmailSnap, byCustomerEmailSnap] = await Promise.all([
-    db.collection(Collections.requests).where("userId", "==", user.id).get(),
-    db.collection(Collections.requests).where("userEmail", "==", user.email).get(),
-    db.collection(Collections.requests).where("customerEmail", "==", user.email).get(),
-  ]);
-
-  const requestDocsMap = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
-  for (const doc of byUserIdSnap.docs) {
-    requestDocsMap.set(doc.id, doc);
-  }
-  for (const doc of byUserEmailSnap.docs) {
-    requestDocsMap.set(doc.id, doc);
-  }
-  for (const doc of byCustomerEmailSnap.docs) {
-    requestDocsMap.set(doc.id, doc);
+  const requestsRef = db.collection(Collections.requests);
+  const queries = [
+    requestsRef.where("userId", "==", user.id).get(),
+  ];
+  if (user.email) {
+    queries.push(requestsRef.where("userEmail", "==", user.email).get());
+    queries.push(requestsRef.where("customerEmail", "==", user.email).get());
   }
 
-  const requests = Array.from(requestDocsMap.values()).map((doc) => serializeDoc({ id: doc.id, ...doc.data() }));
+  const snapshots = await Promise.all(queries);
+  const merged = new Map<string, Record<string, unknown>>();
 
-  requests.sort((a, b) => {
-    const da = (a as { createdAt?: { toDate?: () => Date } | string }).createdAt;
-    const db2 = (b as { createdAt?: { toDate?: () => Date } | string }).createdAt;
-    const aDate = typeof da === "object" && da?.toDate ? da.toDate() : new Date(da || 0);
-    const bDate = typeof db2 === "object" && db2?.toDate ? db2.toDate() : new Date(db2 || 0);
-    return bDate.getTime() - aDate.getTime();
-  });
+  for (const snap of snapshots) {
+    for (const doc of snap.docs) {
+      merged.set(doc.id, { id: doc.id, ...doc.data() });
+    }
+  }
+
+  const getCreatedAtTime = (value: unknown) => {
+    if (value && typeof value === "object" && "toDate" in value) {
+      const date = (value as { toDate?: () => Date }).toDate?.();
+      return date ? date.getTime() : 0;
+    }
+    const parsed = new Date(String(value || "")).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const requests = Array.from(merged.values())
+    .sort((a, b) => getCreatedAtTime(b.createdAt) - getCreatedAtTime(a.createdAt))
+    .map((row) => serializeDoc(row));
 
   return NextResponse.json(requests);
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
-import { DecisionDrawer } from "@/components/ui/DecisionDrawer";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 
 interface OrderItem {
@@ -25,6 +24,8 @@ interface Order {
   customerPhone: string;
   customerEmail: string;
   pickupMethod: string;
+  pickupLocationId?: string;
+  pickupLocationName?: string;
   paymentMethod?: string;
   bkashPayment?: {
     customerName?: string;
@@ -88,16 +89,22 @@ const statuses = [
   "Pending",
   "Pending Bkash Verification",
   "Pending Bank Verification",
-  "Confirmed",
-  "Sourcing",
-  "Ready",
+  "Processing",
   "Out for Delivery",
-  "Dispatched",
   "Completed",
   "Cancelled",
 ];
 const requestStatuses = ["Pending", "Confirmed", "Dispatched", "Cancelled"];
 const procurementStatuses = ["Pending", "Sourcing", "Ready", "Dispatched", "Cancelled"];
+const cancellationReasonOptions = [
+  "Out of stock",
+  "Customer request",
+  "Payment verification failed",
+  "Unable to contact customer",
+  "Delivery area not serviceable",
+  "Duplicate order",
+  "Other",
+];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
 type SortType = "newest" | "oldest" | "highest-total" | "highest-profit";
 type SourceFilter = "all" | "standard_order" | "customer_request" | "stock_request";
@@ -110,16 +117,18 @@ interface PendingStatusChange {
   targetName: string;
   fromStatus: string;
   toStatus: string;
+  cancelReason?: string;
 }
 
 const normalizeStatus = (status?: string) => {
   if (!status) return "Pending";
-  if (status === "Completed") return "Dispatched";
-  if (status === "Approved") return "Confirmed";
-  if (status === "Fulfilled") return "Dispatched";
+  if (status === "Confirmed" || status === "Ready" || status === "Approved" || status === "Sourcing") return "Processing";
+  if (status === "Dispatched" || status === "Fulfilled") return "Completed";
   if (status === "Declined") return "Cancelled";
   return status;
 };
+
+const getOrderStatusLabel = (status: string) => (status === "Processing" ? "Confirmed" : status);
 
 const getOrderSizeType = (order: Order): Exclude<SizeTypeFilter, "all"> => {
   const hasFullBottle = order.items?.some((i) => Boolean(i.isFullBottle)) ?? false;
@@ -192,14 +201,17 @@ export default function OrdersPage() {
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [manualPrices, setManualPrices] = useState<Record<string, string>>({});
+  const [manualBuyingPrices, setManualBuyingPrices] = useState<Record<string, string>>({});
   const [savingPrices, setSavingPrices] = useState(false);
   const [requestEditingId, setRequestEditingId] = useState<string | null>(null);
   const [requestBuyingPrice, setRequestBuyingPrice] = useState("");
   const [requestSellingPrice, setRequestSellingPrice] = useState("");
   const [savingRequestPrices, setSavingRequestPrices] = useState(false);
-  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
-  const [applyingStatusChange, setApplyingStatusChange] = useState(false);
   const [verifyingBkash, setVerifyingBkash] = useState(false);
+  const [pendingCancellationChange, setPendingCancellationChange] = useState<PendingStatusChange | null>(null);
+  const [selectedCancellationReason, setSelectedCancellationReason] = useState(cancellationReasonOptions[0]);
+  const [customCancellationReason, setCustomCancellationReason] = useState("");
+  const [submittingCancellation, setSubmittingCancellation] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -242,11 +254,17 @@ export default function OrdersPage() {
     setSortBy("newest");
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: string, cancelReason?: string) => {
+    const payload: { status: string; cancelReason?: string } = { status };
+    if (status === "Cancelled") {
+      const selectedReason = String(cancelReason || "").trim();
+      payload.cancelReason = selectedReason.length >= 5 ? selectedReason.slice(0, 500) : "Cancelled by admin";
+    }
+
     const res = await fetch(`/api/orders/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -309,29 +327,37 @@ export default function OrdersPage() {
     const fullBottleItems = selectedOrder.items?.filter((item) => item.isFullBottle) || [];
     const updates = fullBottleItems
       .map((item) => {
-        const draft = manualPrices[item.id];
-        if (draft === undefined) return null;
+        const sellingDraft = manualPrices[item.id];
+        const buyingDraft = manualBuyingPrices[item.id];
+        if (sellingDraft === undefined && buyingDraft === undefined) return null;
 
-        const parsed = Number(draft);
-        if (!Number.isFinite(parsed) || parsed < 0) {
+        const quantity = Math.max(1, Number(item.quantity ?? 1));
+        const currentSelling = Math.round(Number(item.unitPrice ?? 0));
+        const currentBuying = Math.round(Number(item.costPrice ?? 0) / quantity);
+
+        const parsedSelling = sellingDraft === undefined ? currentSelling : Number(sellingDraft);
+        const parsedBuying = buyingDraft === undefined ? currentBuying : Number(buyingDraft);
+
+        if (!Number.isFinite(parsedSelling) || parsedSelling < 0 || !Number.isFinite(parsedBuying) || parsedBuying < 0) {
           return { invalid: true };
         }
 
-        const rounded = Math.round(parsed);
-        if (rounded === (item.unitPrice ?? 0)) return null;
+        const roundedSelling = Math.round(parsedSelling);
+        const roundedBuying = Math.round(parsedBuying);
+        if (roundedSelling === currentSelling && roundedBuying === currentBuying) return null;
 
-        return { itemId: item.id, unitPrice: rounded };
+        return { itemId: item.id, unitPrice: roundedSelling, buyingPrice: roundedBuying };
       })
       .filter(Boolean);
 
     if (updates.some((u) => "invalid" in (u as { invalid?: boolean }))) {
-      toast("Enter valid non-negative price values", "error");
+      toast("Enter valid non-negative buying and selling prices", "error");
       return;
     }
 
-    const payload = updates as { itemId: string; unitPrice: number }[];
+    const payload = updates as { itemId: string; unitPrice: number; buyingPrice: number }[];
     if (payload.length === 0) {
-      toast("No full bottle price changes to save", "error");
+      toast("No full bottle buying/selling changes to save", "error");
       return;
     }
 
@@ -352,7 +378,8 @@ export default function OrdersPage() {
     const updated = await res.json();
     updateOrderInState(updated);
     setManualPrices({});
-    toast("Full bottle pricing updated", "success");
+    setManualBuyingPrices({});
+    toast("Full bottle buying/selling updated", "success");
   };
 
   const cancelVoucherForOrder = async () => {
@@ -455,27 +482,51 @@ export default function OrdersPage() {
     return true;
   };
 
-  const queueStatusChange = (change: PendingStatusChange) => {
-    if (change.fromStatus === change.toStatus) return;
-    setPendingStatusChange(change);
+  const queueStatusChange = async (change: PendingStatusChange) => {
+    if (change.fromStatus === change.toStatus) return false;
+    if (change.kind === "order") {
+      if (change.toStatus === "Cancelled" && !change.cancelReason) {
+        setPendingCancellationChange(change);
+        setSelectedCancellationReason(cancellationReasonOptions[0]);
+        setCustomCancellationReason("");
+        return false;
+      }
+      return updateStatus(change.id, change.toStatus, change.cancelReason);
+    } else if (change.kind === "request") {
+      return updateRequestStatus(change.id, change.toStatus);
+    } else {
+      return updateProcurementStatus(change.id, change.toStatus);
+    }
   };
 
-  const applyPendingStatusChange = async () => {
-    if (!pendingStatusChange) return;
+  const closeCancellationPicker = () => {
+    if (submittingCancellation) return;
+    setPendingCancellationChange(null);
+    setSelectedCancellationReason(cancellationReasonOptions[0]);
+    setCustomCancellationReason("");
+  };
 
-    setApplyingStatusChange(true);
-    let ok = false;
+  const submitCancellationReason = async () => {
+    if (!pendingCancellationChange) return;
 
-    if (pendingStatusChange.kind === "order") {
-      ok = await updateStatus(pendingStatusChange.id, pendingStatusChange.toStatus);
-    } else if (pendingStatusChange.kind === "request") {
-      ok = await updateRequestStatus(pendingStatusChange.id, pendingStatusChange.toStatus);
-    } else {
-      ok = await updateProcurementStatus(pendingStatusChange.id, pendingStatusChange.toStatus);
+    const reason = selectedCancellationReason === "Other"
+      ? customCancellationReason.trim()
+      : selectedCancellationReason;
+
+    if (reason.length < 5) {
+      toast("Please select a valid cancellation reason", "error");
+      return;
     }
 
-    setApplyingStatusChange(false);
-    if (ok) setPendingStatusChange(null);
+    setSubmittingCancellation(true);
+    const success = await queueStatusChange({ ...pendingCancellationChange, cancelReason: reason });
+    setSubmittingCancellation(false);
+
+    if (success) {
+      setPendingCancellationChange(null);
+      setSelectedCancellationReason(cancellationReasonOptions[0]);
+      setCustomCancellationReason("");
+    }
   };
 
   const filtered = useMemo(() => {
@@ -516,13 +567,23 @@ export default function OrdersPage() {
 
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
-    const initialDrafts = (order.items || []).reduce<Record<string, string>>((acc, item) => {
+    const initialSellingDrafts = (order.items || []).reduce<Record<string, string>>((acc, item) => {
       if (item.isFullBottle) {
         acc[item.id] = String(item.unitPrice ?? 0);
       }
       return acc;
     }, {});
-    setManualPrices(initialDrafts);
+
+    const initialBuyingDrafts = (order.items || []).reduce<Record<string, string>>((acc, item) => {
+      if (item.isFullBottle) {
+        const quantity = Math.max(1, Number(item.quantity ?? 1));
+        acc[item.id] = String(Math.round(Number(item.costPrice ?? 0) / quantity));
+      }
+      return acc;
+    }, {});
+
+    setManualPrices(initialSellingDrafts);
+    setManualBuyingPrices(initialBuyingDrafts);
   };
 
   return (
@@ -597,7 +658,7 @@ export default function OrdersPage() {
                     : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
                 }`}
               >
-                {s} ({count})
+                {getOrderStatusLabel(s)} ({count})
               </button>
             );
           })}
@@ -781,7 +842,7 @@ export default function OrdersPage() {
                       <p className="text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
-                      {currentStatus}
+                      {getOrderStatusLabel(currentStatus)}
                     </span>
                   </div>
 
@@ -885,7 +946,7 @@ export default function OrdersPage() {
                       <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</td>
                       <td className="py-3 px-4 text-center">
                         <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
-                          {currentStatus}
+                          {getOrderStatusLabel(currentStatus)}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</td>
@@ -951,6 +1012,14 @@ export default function OrdersPage() {
                 <span className="text-[var(--text-muted)]">Pickup</span>
                 <span>{selectedOrder.pickupMethod}</span>
               </div>
+              {selectedOrder.pickupMethod === "Pickup" && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-[var(--text-muted)]">Pickup Location</span>
+                  <span className="max-w-[65%] text-right">
+                    {selectedOrder.pickupLocationName || selectedOrder.pickupLocationId || "-"}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Payment Method</span>
                 <span>{selectedOrder.paymentMethod || "Cash on Delivery"}</span>
@@ -1061,17 +1130,36 @@ export default function OrdersPage() {
                   )}
                   <div className="space-y-2">
                     {selectedOrder.items.filter((item) => item.isFullBottle).map((item) => (
-                      <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                      <div key={item.id} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
                         <div className="text-xs text-[var(--text-secondary)]">
                           {item.perfumeName} ({item.fullBottleSize || "Custom"}) x {item.quantity}
+                          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                            Profit: {fmt(Math.round((
+                              (Number(manualPrices[item.id] ?? String(item.unitPrice ?? 0)) || 0)
+                              - (Number(manualBuyingPrices[item.id] ?? String(Math.round(Number(item.costPrice ?? 0) / Math.max(1, Number(item.quantity ?? 1))))) || 0)
+                            ) * Math.max(1, Number(item.quantity ?? 1))))} BDT
+                          </p>
                         </div>
-                        <input
-                          type="number"
-                          min={0}
-                          value={manualPrices[item.id] ?? String(item.unitPrice ?? 0)}
-                          onChange={(e) => setManualPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                          className="w-28 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
-                        />
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">Buy</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={manualBuyingPrices[item.id] ?? String(Math.round(Number(item.costPrice ?? 0) / Math.max(1, Number(item.quantity ?? 1))))}
+                            onChange={(e) => setManualBuyingPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                            className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
+                          />
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">Sell</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={manualPrices[item.id] ?? String(item.unitPrice ?? 0)}
+                            onChange={(e) => setManualPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                            className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1455,37 +1543,63 @@ export default function OrdersPage() {
         )}
       </div>
 
-      <DecisionDrawer
-        open={Boolean(pendingStatusChange)}
-        title="Confirm Status Transition"
-        message="Review this update before it is applied. This keeps order operations deliberate and traceable without disruptive browser popups."
-        confirmLabel="Apply Change"
-        cancelLabel="Keep Current"
-        busy={applyingStatusChange}
-        onCancel={() => {
-          if (!applyingStatusChange) setPendingStatusChange(null);
-        }}
-        onConfirm={() => {
-          void applyPendingStatusChange();
-        }}
-      >
-        {pendingStatusChange && (
-          <div className="space-y-2 text-sm">
-            <p className="text-[var(--text-secondary)]">
-              Target: <span className="text-[var(--text-primary)]">{pendingStatusChange.targetName}</span>
-            </p>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wider">
-              <span className={`rounded-full px-2 py-1 ${statusClass(pendingStatusChange.fromStatus)}`}>
-                {pendingStatusChange.fromStatus}
-              </span>
-              <span className="text-[var(--text-muted)]">to</span>
-              <span className={`rounded-full px-2 py-1 ${statusClass(pendingStatusChange.toStatus)}`}>
-                {pendingStatusChange.toStatus}
-              </span>
+      {pendingCancellationChange && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeCancellationPicker} />
+          <div className="relative w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-5 space-y-4 animate-fade-up">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Cancellation Reason</p>
+              <h3 className="font-serif text-xl font-light mt-1">Select a reason to cancel this order</h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-2">
+                Order {pendingCancellationChange.id.slice(0, 8)} • {pendingCancellationChange.targetName}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Reason</label>
+              <select
+                value={selectedCancellationReason}
+                onChange={(e) => setSelectedCancellationReason(e.target.value)}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              >
+                {cancellationReasonOptions.map((reason) => (
+                  <option key={reason} value={reason}>{reason}</option>
+                ))}
+              </select>
+              {selectedCancellationReason === "Other" && (
+                <input
+                  type="text"
+                  maxLength={500}
+                  value={customCancellationReason}
+                  onChange={(e) => setCustomCancellationReason(e.target.value)}
+                  placeholder="Write cancellation reason"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeCancellationPicker}
+                disabled={submittingCancellation}
+                className="px-3 py-2 text-[10px] uppercase tracking-wider border border-[var(--border)] text-[var(--text-secondary)] rounded hover:border-[var(--gold)] transition-colors disabled:opacity-50"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={submitCancellationReason}
+                disabled={submittingCancellation}
+                className="px-3 py-2 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] transition-colors disabled:opacity-50"
+              >
+                {submittingCancellation ? "Cancelling..." : "Cancel Order"}
+              </button>
             </div>
           </div>
-        )}
-      </DecisionDrawer>
+        </div>
+      )}
+
     </div>
   );
 }

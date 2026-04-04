@@ -2,8 +2,35 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
+import { generateOrderCancelledEmail, sendEmail } from "@/lib/email";
 import { validateString } from "@/lib/validation";
+
+function hasPaidLikeStatus(status?: string): boolean {
+  const normalized = String(status || "").trim().toLowerCase();
+  return [
+    "confirmed",
+    "paid",
+    "processing",
+    "out for delivery",
+    "ready",
+    "dispatched",
+    "completed",
+    "delivered",
+    "shipped",
+  ].includes(normalized);
+}
+
+function isOrderPaymentReceived(orderData: Record<string, unknown>): boolean {
+  const paymentMethod = String(orderData.paymentMethod || "").trim();
+  if (paymentMethod !== "Bkash Manual" && paymentMethod !== "Bank Manual") return false;
+
+  const bkashPayment = (orderData.bkashPayment as Record<string, unknown> | null) || null;
+  const bankPayment = (orderData.bankPayment as Record<string, unknown> | null) || null;
+  const hasBkashTxn = Boolean(String(bkashPayment?.transactionNumber || "").trim());
+  const hasBankTxn = Boolean(String(bankPayment?.transactionNumber || "").trim());
+
+  return hasBkashTxn || hasBankTxn || hasPaidLikeStatus(String(orderData.status || ""));
+}
 
 // POST cancel order
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -54,13 +81,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .get();
 
     let refundAmount = 0;
-    const cancelledItemsList: string[] = [];
+    const cancelledItems: Array<{ perfumeName: string; quantity: number; ml: number; totalPrice: number }> = [];
 
     // Restore inventory for all items
     for (const itemDoc of itemsSnap.docs) {
       const item = itemDoc.data();
       refundAmount += item.totalPrice || 0;
-      cancelledItemsList.push(`${item.perfumeName || "Perfume"} - ${item.ml || 0}ml x ${item.quantity || 0}`);
+      cancelledItems.push({
+        perfumeName: String(item.perfumeName || "Perfume"),
+        quantity: Number(item.quantity || 0),
+        ml: Number(item.ml || 0),
+        totalPrice: Number(item.totalPrice || 0),
+      });
 
       // Only restore decant items (full bottles are not stock-managed the same way)
       if (!item.isFullBottle) {
@@ -151,40 +183,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Send cancellation email
     let emailSent = false;
-    const orderedItems = cancelledItemsList.length > 0 ? cancelledItemsList.join("<br/>") : "{{ORDER_ITEMS}}";
     try {
-      await sendEmail({
-        to: order?.customerEmail || "",
-        subject: `Order Cancelled - ${id.slice(0, 8)}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-            <h1 style="color: #d32f2f; margin-bottom: 20px;">Order Cancelled</h1>
-            
-            <p>Dear ${order?.customerName || "Customer"},</p>
-            
-            <p>Your order has been cancelled per your request or admin action.</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <strong>Order ID:</strong> ${id}<br/>
-              <strong>Cancellation Reason:</strong> ${String(cancelReason || "").trim()}<br/>
-              ${refundAmount > 0 ? `<strong>Refund Amount:</strong> ৳${refundAmount}<br/>` : ""}
-              <strong>Status:</strong> <span style="color: #d32f2f;">Cancelled</span>
-            </div>
-
-            <div style="background:#fff; border:1px solid #e8e4dc; padding: 20px 24px; margin: 20px 0;">
-              <p style="font-size:10px; letter-spacing:3px; color:#999; text-transform:uppercase; margin-bottom:14px;">Your Selection</p>
-              <p style="font-size:13px; color:#333; line-height:1.8;">${orderedItems}</p>
-            </div>
-            
-            <p>If you paid via bKash or bank transfer, your refund will be processed within 3-5 business days.</p>
-            
-            <p style="margin-top: 25px; font-size: 12px; color: #666;">
-              If you have any questions, please contact us at support@valoreparfums.com
-            </p>
-          </div>
-        `,
-      });
-      emailSent = true;
+      const customerEmail = String(order?.customerEmail || "").trim();
+      if (customerEmail) {
+        const wasPaid = isOrderPaymentReceived((order || {}) as Record<string, unknown>);
+        await sendEmail(
+          generateOrderCancelledEmail({
+            orderId: id,
+            customerName: String(order?.customerName || "Customer"),
+            customerEmail,
+            cancelReason: String(cancelReason || "").trim(),
+            refundAmount: wasPaid ? refundAmount : 0,
+            isPaid: wasPaid,
+            items: cancelledItems,
+          }),
+        );
+        emailSent = true;
+      }
     } catch (error) {
       console.error("Failed to send cancellation email:", error);
     }

@@ -7,6 +7,7 @@ import { splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, toMinorUnits } from "@/lib/finance";
 import {
+  generateOrderCancelledEmail,
   generateOrderConfirmedEmail,
   generateOrderDeliveredEmail,
   generateOrderDispatchedEmail,
@@ -18,6 +19,33 @@ function normalizeOrderStatus(status?: string): string {
   if (!status) return "Pending";
   if (status === "Completed") return "Dispatched";
   return status;
+}
+
+function hasPaidLikeStatus(status?: string): boolean {
+  const normalized = String(status || "").trim().toLowerCase();
+  return [
+    "confirmed",
+    "paid",
+    "processing",
+    "out for delivery",
+    "ready",
+    "dispatched",
+    "completed",
+    "delivered",
+    "shipped",
+  ].includes(normalized);
+}
+
+function isOrderPaymentReceived(orderData: Record<string, unknown>, statusHint?: string): boolean {
+  const paymentMethod = String(orderData.paymentMethod || "").trim();
+  if (paymentMethod !== "Bkash Manual" && paymentMethod !== "Bank Manual") return false;
+
+  const bkashPayment = (orderData.bkashPayment as Record<string, unknown> | null) || null;
+  const bankPayment = (orderData.bankPayment as Record<string, unknown> | null) || null;
+  const hasBkashTxn = Boolean(String(bkashPayment?.transactionNumber || "").trim());
+  const hasBankTxn = Boolean(String(bankPayment?.transactionNumber || "").trim());
+
+  return hasBkashTxn || hasBankTxn || hasPaidLikeStatus(String(orderData.status || "")) || hasPaidLikeStatus(statusHint);
 }
 
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
@@ -52,7 +80,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const body = await req.json();
   const { itemPriceUpdates, removeVoucher, ...orderPatch } = body as {
-    itemPriceUpdates?: { itemId: string; unitPrice: number }[];
+    itemPriceUpdates?: { itemId: string; unitPrice: number; buyingPrice?: number }[];
     removeVoucher?: boolean;
     status?: string;
     [key: string]: unknown;
@@ -103,15 +131,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   // Apply admin manual unit price updates for Full Bottle items, then recompute order totals/profit.
   if (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0) {
-    const updatesMap = new Map<string, number>();
+    const updatesMap = new Map<string, { unitPrice: number; buyingPrice?: number }>();
     for (const update of itemPriceUpdates) {
       const itemId = String(update.itemId || "").trim();
       const unitPrice = Number(update.unitPrice);
+      const hasBuyingPrice = update.buyingPrice !== undefined && update.buyingPrice !== null;
+      const buyingPrice = hasBuyingPrice ? Number(update.buyingPrice) : undefined;
       if (!itemId) continue;
       if (!Number.isFinite(unitPrice) || unitPrice < 0) {
         return NextResponse.json({ error: "Invalid full bottle price input" }, { status: 400 });
       }
-      updatesMap.set(itemId, Math.round(unitPrice));
+      if (hasBuyingPrice && (!Number.isFinite(buyingPrice) || (buyingPrice as number) < 0)) {
+        return NextResponse.json({ error: "Invalid full bottle buying price input" }, { status: 400 });
+      }
+      updatesMap.set(itemId, {
+        unitPrice: Math.round(unitPrice),
+        ...(hasBuyingPrice ? { buyingPrice: Math.round(buyingPrice as number) } : {}),
+      });
     }
 
     if (updatesMap.size > 0) {
@@ -119,7 +155,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const itemsSnap = await itemsRef.get();
 
       for (const itemDoc of itemsSnap.docs) {
-        if (!updatesMap.has(itemDoc.id)) continue;
+        const itemUpdate = updatesMap.get(itemDoc.id);
+        if (!itemUpdate) continue;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
@@ -128,8 +165,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const quantity = Number(item.quantity ?? 0);
-        const nextUnitPrice = updatesMap.get(itemDoc.id) ?? 0;
-        const unitCost = Number(item?.pricingSnapshot?.unitCost ?? item?.financialBreakdown?.unitCostMinor ? fromMinorUnits(Number(item?.financialBreakdown?.unitCostMinor || 0)) : (quantity > 0 ? Number(item.costPrice ?? 0) / quantity : 0));
+        const nextUnitPrice = itemUpdate.unitPrice;
+        const unitCost = itemUpdate.buyingPrice !== undefined
+          ? itemUpdate.buyingPrice
+          : Number(
+              item?.pricingSnapshot?.unitCost
+                ?? (
+                  item?.financialBreakdown?.unitCostMinor !== undefined
+                    ? fromMinorUnits(Number(item.financialBreakdown.unitCostMinor || 0))
+                    : (quantity > 0 ? Number(item.costPrice ?? 0) / quantity : 0)
+                ),
+            );
         const breakdown = computeItemBreakdown({
           unitCostMinor: toMinorUnits(unitCost),
           unitSellingPriceMinor: toMinorUnits(nextUnitPrice),
@@ -641,6 +687,35 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }),
     ).catch((error) => {
       console.error("Failed to send delivered email:", error);
+    });
+  }
+
+  if (customerEmail && newStatus === "Cancelled" && previousStatus !== newStatus) {
+    const wasPaid = isOrderPaymentReceived(updatedData as Record<string, unknown>, previousStatus);
+    const cancelledItems = items.map((item) => {
+      const row = item as Record<string, unknown>;
+      const quantity = Number(row.quantity || 0);
+      const unitPrice = Number(row.unitPrice || 0);
+      return {
+        perfumeName: String(row.perfumeName || "Perfume"),
+        quantity,
+        ml: Number(row.ml || 0),
+        totalPrice: Number(row.totalPrice || quantity * unitPrice),
+      };
+    });
+
+    void sendEmail(
+      generateOrderCancelledEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        cancelReason: String(updatedData.cancelReason || "Order cancelled by admin").trim(),
+        refundAmount: wasPaid ? Number(updatedData.refundAmount || updatedData.total || 0) : 0,
+        isPaid: wasPaid,
+        items: cancelledItems,
+      }),
+    ).catch((error) => {
+      console.error("Failed to send cancellation email:", error);
     });
   }
 

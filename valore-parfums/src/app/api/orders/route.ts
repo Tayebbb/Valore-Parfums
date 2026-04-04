@@ -599,6 +599,31 @@ export async function POST(req: Request) {
       createdItems.push({ id: itemId, ...oi });
     }
 
+    // Save latest checkout details for signed-in users for faster future checkout.
+    if (sessionUser?.id) {
+      const savedDeliveryInfo = {
+        pickupMethod,
+        deliveryZone: isDelivery ? deliveryZone : "",
+        pickupLocationId: isDelivery ? "" : String(orderData.pickupLocationId || ""),
+        area: isDelivery ? String(orderData.area || "").trim().slice(0, 120) : "",
+        city: isDelivery ? String(orderData.city || "").trim().slice(0, 120) : "",
+        fullAddress: isDelivery ? String(orderData.fullAddress || "").trim().slice(0, 400) : "",
+        addressNotes: isDelivery ? String(orderData.addressNotes || "").trim().slice(0, 400) : "",
+      };
+
+      await db.collection(Collections.users).doc(sessionUser.id).set(
+        {
+          name: String(orderData.customerName || "").trim().slice(0, 100),
+          email: String(orderData.customerEmail || sessionUser.email || "").trim().toLowerCase().slice(0, 254),
+          phone: String(orderData.customerPhone || "").trim().slice(0, 20),
+          savedDeliveryInfo,
+          updatedAt: now,
+          lastCheckoutAt: now,
+        },
+        { merge: true },
+      );
+    }
+
     // Send confirmation email asynchronously (non-blocking)
     const customerEmail = String(orderDoc.customerEmail || "").trim();
     if (customerEmail) {

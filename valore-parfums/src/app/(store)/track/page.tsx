@@ -40,10 +40,28 @@ interface OrderResult {
 }
 
 const standardStatusSteps = ["Pending", "Processing", "Out for Delivery", "Completed"];
-const bkashStatusSteps = ["Pending Bkash Verification", "Confirmed", "Out for Delivery", "Completed"];
+const bkashStatusSteps = ["Pending Bkash Verification", "Processing", "Out for Delivery", "Completed"];
 const bankStatusSteps = ["Pending Bank Verification", "Paid", "Out for Delivery", "Completed"];
-const activeStatuses = new Set(["pending", "processing", "out for delivery", "confirmed", "ready", "pending bkash verification", "bkash paid", "pending bank verification", "paid"]);
-const pastStatuses = new Set(["completed", "delivered", "cancelled", "dispatched"]);
+const activeStatuses = new Set(["pending", "processing", "out for delivery", "pending bkash verification", "pending bank verification", "paid"]);
+const pastStatuses = new Set(["completed", "delivered", "cancelled"]);
+
+const normalizeTrackStatus = (status?: string) => {
+  if (!status) return "Pending";
+
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "approved") return "Processing";
+  if (normalized === "confirmed" || normalized === "ready" || normalized === "dispatched" || normalized === "bkash paid") {
+    return "Processing";
+  }
+  if (normalized === "fulfilled" || normalized === "completed" || normalized === "delivered") return "Completed";
+  if (normalized === "declined") return "Cancelled";
+  if (normalized === "cancelled") return "Cancelled";
+  if (normalized === "pending bkash verification") return "Pending Bkash Verification";
+  if (normalized === "pending bank verification") return "Pending Bank Verification";
+  if (normalized === "out for delivery") return "Out for Delivery";
+  if (normalized === "paid") return "Paid";
+  return status;
+};
 
 const statusClass = (status: string) => {
   const normalized = (status ?? "").toLowerCase().replace(/\s+/g, "");
@@ -156,24 +174,24 @@ export default function TrackOrderPage() {
   }, [user?.id]);
 
   const activeOrders = useMemo(
-    () => orders.filter((o) => activeStatuses.has((o.status ?? "").toLowerCase())),
+    () => orders.filter((o) => activeStatuses.has(normalizeTrackStatus(o.status).toLowerCase())),
     [orders],
   );
 
   const pastOrders = useMemo(
-    () => orders.filter((o) => pastStatuses.has((o.status ?? "").toLowerCase())),
+    () => orders.filter((o) => pastStatuses.has(normalizeTrackStatus(o.status).toLowerCase())),
     [orders],
   );
 
   const renderOrderCard = (order: OrderResult, emphasize = false) => {
-    const normalized = (order.status ?? "").toLowerCase();
+    const displayStatus = normalizeTrackStatus(order.status);
+    const normalized = displayStatus.toLowerCase();
     const statusSteps = order.paymentMethod === "Bkash Manual"
       ? bkashStatusSteps
       : order.paymentMethod === "Bank Manual"
         ? bankStatusSteps
         : standardStatusSteps;
-    const effectiveNormalized = normalized === "bkash paid" ? "confirmed" : normalized;
-    const currentStep = statusSteps.findIndex((step) => step.toLowerCase() === effectiveNormalized);
+    const currentStep = statusSteps.findIndex((step) => step.toLowerCase() === normalized);
 
     return (
       <div
@@ -190,8 +208,8 @@ export default function TrackOrderPage() {
               <CopyOrderIdButton orderId={order.id} />
             </div>
           </div>
-          <span className={`w-fit px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 ${statusClass(order.status)}`}>
-            {statusIcon(order.status)} {order.status}
+          <span className={`w-fit px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 ${statusClass(displayStatus)}`}>
+            {statusIcon(displayStatus)} {displayStatus}
           </span>
         </div>
 

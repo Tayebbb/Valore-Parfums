@@ -60,18 +60,52 @@ export async function sendEmail(email: EmailNotification): Promise<{ success: bo
   return emailProvider.send(email);
 }
 
+function makeHtmlDarkModeSafe(html: string): string {
+  const withLockedTextColor = html.replace(
+    /(^|[;\s])color\s*:\s*([^;\"]+);/gi,
+    (_match, prefix: string, colorValue: string) => {
+      const normalizedColor = colorValue.trim();
+      return `${prefix}color:${normalizedColor} !important; -webkit-text-fill-color:${normalizedColor} !important;`;
+    },
+  );
+
+  return withLockedTextColor.replace(
+    /(^|[;\s])background\s*:\s*(?!linear-gradient)([^;\"]+);/gi,
+    (_match, prefix: string, backgroundValue: string) => {
+      const normalizedBackground = backgroundValue.trim();
+      return `${prefix}background:${normalizedBackground} !important; background-color:${normalizedBackground} !important; background-image:linear-gradient(${normalizedBackground}, ${normalizedBackground}) !important;`;
+    },
+  );
+}
+
 function createEmailShell(content: string): string {
-  return `
-    <div style="background:#0e0e0e; padding: 36px 48px 24px; text-align:center;">
-      <p style="font-family:'Cormorant Garamond',serif; font-size:22px; letter-spacing:8px; color:#c9a96e; text-transform:uppercase; font-weight:300;">VALORE PARFUMS</p>
-      <div style="height:1px; background: linear-gradient(to right, transparent, #c9a96e, transparent); margin: 14px 0 0;"></div>
-    </div>
-    <div style="background:#fafaf8; padding: 48px 48px 52px;">${content}</div>
-    <div style="background:#0e0e0e; padding:20px 48px; text-align:center;">
-      <p style="font-family:'Montserrat',sans-serif; font-size:10px; color:#8a8a8a; margin-bottom:8px;">Website: https://www.valore.live</p>
-      <p style="font-family:'Montserrat',sans-serif; font-size:9px; color:#444; letter-spacing:2px; text-transform:uppercase;">The Art of Fragrance</p>
-    </div>
+  const rawHtml = `
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <title>Valore Parfums</title>
+      </head>
+      <body style="margin:0; padding:24px 12px; background:#ede8df;">
+        <div style="max-width:680px; margin:0 auto; border:1px solid #e2dccf;">
+          <div style="background:#0e0e0e; padding: 36px 48px 24px; text-align:center;">
+            <p style="font-family:'Cormorant Garamond',serif; font-size:22px; letter-spacing:8px; color:#c9a96e; text-transform:uppercase; font-weight:300;">VALORE PARFUMS</p>
+            <div style="height:1px; background: linear-gradient(to right, transparent, #c9a96e, transparent); margin: 14px 0 0;"></div>
+          </div>
+          <div style="background:#fafaf8; padding: 48px 48px 52px;">${content}</div>
+          <div style="background:#0e0e0e; padding:20px 48px; text-align:center;">
+            <p style="font-family:'Montserrat',sans-serif; font-size:10px; color:#a8a8a8; margin-bottom:8px;">Website: <a href="https://www.valore.live" target="_blank" rel="noopener noreferrer" style="color:#c9a96e; text-decoration:underline;">www.valore.live</a></p>
+            <p style="font-family:'Montserrat',sans-serif; font-size:9px; color:#787878; letter-spacing:2px; text-transform:uppercase;">The Art of Fragrance</p>
+          </div>
+        </div>
+      </body>
+    </html>
   `;
+
+  return makeHtmlDarkModeSafe(rawHtml);
 }
 
 function renderOrderedItemsBlock(
@@ -125,6 +159,55 @@ function renderOrderedItemsBlock(
   `;
 }
 
+function renderCancelledItemsBlock(
+  items?: Array<{ perfumeName: string; quantity: number; ml: number; totalPrice: number }>,
+  refundAmount?: number,
+  refundApplicable: boolean = true,
+): string {
+  const rows = items && items.length > 0
+    ? items
+      .map((item) => `
+        <tr style="border-bottom:1px solid #f0ece4;">
+          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; padding:14px 0; text-decoration:line-through;">
+            ${item.perfumeName}<br>
+            <span style="font-size:10px; color:#8f887f;">${item.ml}ml Decant</span>
+          </td>
+          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; text-align:center; padding:14px 0; text-decoration:line-through;">${item.quantity}</td>
+          <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#6f6b66; text-align:right; padding:14px 0; text-decoration:line-through;">৳ ${item.totalPrice}</td>
+        </tr>
+      `)
+      .join("")
+    : `
+      <tr style="border-bottom:1px solid #f0ece4;">
+        <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; padding:14px 0; text-decoration:line-through;">{{ORDER_ITEMS}}</td>
+        <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; text-align:center; padding:14px 0; text-decoration:line-through;">-</td>
+        <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#6f6b66; text-align:right; padding:14px 0; text-decoration:line-through;">-</td>
+      </tr>
+    `;
+
+  const amount = typeof refundAmount === "number" ? refundAmount : 0;
+  const refundValueText = refundApplicable ? `৳ ${amount}` : "Not Applicable";
+
+  return `
+    <table style="width:100%; border-collapse:collapse; margin-bottom:28px;">
+      <thead>
+        <tr style="border-bottom:1px solid #e8e4dc;">
+          <th style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#999; text-transform:uppercase; text-align:left; padding:0 0 10px;">Item</th>
+          <th style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#999; text-transform:uppercase; text-align:center; padding:0 0 10px;">Qty</th>
+          <th style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#999; text-transform:uppercase; text-align:right; padding:0 0 10px;">Price</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:2px; color:#999; text-transform:uppercase; padding:14px 0 0;">Refund Amount</td>
+          <td style="font-family:'Cormorant Garamond',serif; font-size:20px; color:#9e6e6e; text-align:right; padding:14px 0 0; font-weight:500;">${refundValueText}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+}
+
 export function generateOrderConfirmationEmail(orderData: {
   orderId: string;
   customerName: string;
@@ -143,9 +226,9 @@ export function generateOrderConfirmationEmail(orderData: {
       <h2 style="font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400; color:#111; margin-bottom:24px; line-height:1.3;">Your Order<br><em>Has Been Received</em></h2>
       <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${orderData.customerName}</strong>,</p>
       <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">We are honoured to receive your order. Every fragrance at Valore Parfums is treated as an art form and yours is now in the hands of our atelier team, who will ensure it reaches you in perfect condition.</p>
-      <div style="border-left: 2px solid #c9a96e; padding: 16px 20px; background:#fff; margin-bottom:28px;">
-        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#c9a96e; text-transform:uppercase; margin-bottom:10px;">Order Reference</p>
-        <p style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#111; font-weight:500;">#${orderData.orderId}</p>
+      <div style="border-left: 2px solid #c9a96e; padding: 16px 20px; background:#fff; margin-bottom:28px; color:#8B7500;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#8B7500; text-transform:uppercase; margin-bottom:10px;">Order Reference</p>
+        <p style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#8B7500; font-weight:500;">#${orderData.orderId}</p>
       </div>
       ${orderedItemsBlock}
       <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">You will receive a notification at each stage of your order's journey. Should you have any questions, our client services team is at your disposal.</p>
@@ -177,9 +260,9 @@ export function generateOrderConfirmedEmail(orderData: {
       <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${orderData.customerName}</strong>,</p>
       <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">Wonderful news, Order <strong>#${orderData.orderId}</strong> has been confirmed and is now entering our preparation stage. Below is a summary of what you have selected.</p>
       ${orderedItemsBlock}
-      <div style="background: linear-gradient(135deg, #0e0e0e 0%, #1a1a1a 100%); padding: 24px 28px; margin-bottom:32px;">
-        <p style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#c9a96e; text-transform:uppercase; margin-bottom:8px;">Status</p>
-        <p style="font-family:'Cormorant Garamond',serif; font-size:20px; color:#fff;">Your order is being prepared for dispatch</p>
+      <div style="background:#f5efe6; border:1px solid #e6d6c1; padding: 24px 28px; margin-bottom:32px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#8b6a3e; text-transform:uppercase; margin-bottom:8px;">Status</p>
+        <p style="font-family:'Cormorant Garamond',serif; font-size:20px; color:#2a1c14; margin:0;">Your order is being prepared for dispatch</p>
       </div>
       <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">We are deeply grateful for your confidence in Valore Parfums. Craftsmanship and discretion are at the heart of everything we do and that begins the moment your order is placed.</p>
       <div style="height:1px; background:#e8e4dc; margin: 36px 0 28px;"></div>
@@ -251,8 +334,8 @@ export function generateOrderDeliveredEmail(orderData: {
       <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${orderData.customerName}</strong>,</p>
       <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">Order <strong>#${orderData.orderId}</strong> has been delivered. This moment, the unveiling of a new fragrance, is one we take great pride in. We hope your first impression is everything you imagined.</p>
       ${orderedItemsBlock}
-      <div style="background:#0e0e0e; padding: 28px; text-align:center; margin-bottom:32px;">
-        <p style="font-family:'Cormorant Garamond',serif; font-size:18px; color:#c9a96e; font-style:italic; line-height:1.7;">"A great fragrance is not worn.<br>It is revealed."</p>
+      <div style="background:#f7efe6; border:1px solid #e6d6c1; padding: 28px; text-align:center; margin-bottom:32px;">
+        <p style="font-family:'Cormorant Garamond',serif; font-size:18px; color:#5d4630; font-style:italic; line-height:1.7; margin:0;">"A great fragrance is not worn.<br>It is revealed."</p>
       </div>
       <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9; margin-bottom:20px;">We would be honoured to welcome you back whenever the occasion calls for a new signature scent. At Valore Parfums, every visit is the beginning of a new olfactory story.</p>
       <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">Should you wish to share your experience, we are always listening.</p>
@@ -266,6 +349,62 @@ export function generateOrderDeliveredEmail(orderData: {
     subject: `Order Delivered - #${orderData.orderId}`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} has been delivered.`,
+  };
+}
+
+export function generateOrderCancelledEmail(orderData: {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  cancelReason: string;
+  refundAmount: number;
+  isPaid: boolean;
+  items?: Array<{ perfumeName: string; quantity: number; ml: number; totalPrice: number }>;
+}): EmailNotification {
+  const refundApplicable = Boolean(orderData.isPaid) && Number(orderData.refundAmount || 0) > 0;
+  const effectiveRefundAmount = refundApplicable ? Number(orderData.refundAmount || 0) : 0;
+  const refundStatusMessage = refundApplicable
+    ? `Payment has already been received. A refund of ৳ ${effectiveRefundAmount.toLocaleString("en-BD")} will be processed within 3 - 5 business days.`
+    : "No payment has been received for this order yet, so no refund is applicable.";
+  const cancelledItemsBlock = renderCancelledItemsBlock(orderData.items, effectiveRefundAmount, refundApplicable);
+
+  const html = createEmailShell(`
+      <p style="font-family:'Cormorant Garamond',serif; font-size:11px; letter-spacing:4px; color:#9e6e6e; text-transform:uppercase; margin-bottom:28px;">Cancellation Notice</p>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400; color:#111; margin-bottom:24px; line-height:1.3;">Your Order<br><em>Has Been Cancelled</em></h2>
+
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${orderData.customerName}</strong>,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">We regret to inform you that Order <strong>#${orderData.orderId}</strong> has been cancelled. We understand this may be disappointing, and we sincerely apologise for any inconvenience this may have caused.</p>
+
+      <div style="border-left: 2px solid #9e6e6e; padding: 16px 20px; background:#fff; margin-bottom:28px; color:#8B7500;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#8B7500; text-transform:uppercase; margin-bottom:10px;">Order Reference</p>
+        <p style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#8B7500; font-weight:500;">#${orderData.orderId}</p>
+      </div>
+
+      ${cancelledItemsBlock}
+
+      <div style="background:#f8f0e5; border:1px solid #ead6b7; padding: 22px 24px; margin-bottom:18px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#8b6a3e; text-transform:uppercase; margin-bottom:8px;">Refund Status</p>
+        <p style="font-family:'Cormorant Garamond',serif; font-size:20px; color:#2a1c14; line-height:1.45; margin:0;">${refundStatusMessage}</p>
+      </div>
+
+      <div style="background:#fff; border:1px solid #efe8de; padding: 14px 16px; margin-bottom:28px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:2px; color:#9e6e6e; text-transform:uppercase; margin-bottom:8px;">Cancellation Reason</p>
+        <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#555; line-height:1.8;">${orderData.cancelReason}</p>
+      </div>
+
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9; margin-bottom:16px;">If payment was completed, any applicable refund will be returned to your original payment method. Should you wish to place a new order or have any questions regarding this cancellation, our client services team remains at your disposal.</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">We hope to have the honour of serving you again at Valore Parfums.</p>
+
+      <div style="height:1px; background:#e8e4dc; margin: 36px 0 28px;"></div>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:16px; color:#111; font-style:italic;">With our sincerest apologies,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#c9a96e; text-transform:uppercase; margin-top:6px;">Valore Parfums</p>
+  `);
+
+  return {
+    to: orderData.customerEmail,
+    subject: `Order Cancelled - #${orderData.orderId}`,
+    html,
+    text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} has been cancelled. ${refundApplicable ? `Payment was received and refund amount is ${effectiveRefundAmount}.` : "Payment was not received, so no refund is applicable."}`,
   };
 }
 

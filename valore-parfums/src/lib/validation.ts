@@ -153,7 +153,7 @@ export function validatePhone(value: unknown, fieldName: string = "phone"): Vali
   if (!/^01\d{9}$/.test(str)) {
     return {
       valid: false,
-      errors: [{ field: fieldName, message: `${fieldName} must be 11 digits starting with 01` }],
+      errors: [{ field: fieldName, message: "Phone Number must be 11 digits starting with 01" }],
     };
   }
 

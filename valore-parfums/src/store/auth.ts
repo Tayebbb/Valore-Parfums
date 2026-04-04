@@ -15,6 +15,7 @@ interface AuthStore {
   fetchUser: () => Promise<void>;
   login: (email: string, password: string) => Promise<string | null>;
   signup: (name: string, email: string, phone: string, password: string) => Promise<string | null>;
+  googleSignIn: (idToken: string) => Promise<string | null>;
   logout: () => Promise<void>;
 }
 
@@ -86,6 +87,23 @@ export const useAuth = create<AuthStore>((set) => ({
     if (!res.ok) {
       const err = await res.json();
       return err.error || "Signup failed";
+    }
+    const user = await res.json();
+    lastFetchAt = Date.now();
+    authVersion++;
+    set({ user });
+    return null;
+  },
+
+  googleSignIn: async (idToken) => {
+    const res = await fetch("/api/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return err.error || "Google sign-in failed";
     }
     const user = await res.json();
     lastFetchAt = Date.now();
