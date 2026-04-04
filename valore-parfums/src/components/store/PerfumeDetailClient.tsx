@@ -78,21 +78,37 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   const addItem = useCart((s) => s.addItem);
   const { user } = useAuth();
 
+  const fetchJsonSafe = async <T,>(url: string, fallback: T): Promise<T> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return fallback;
+      const text = await response.text();
+      if (!text) return fallback;
+      return JSON.parse(text) as T;
+    } catch {
+      return fallback;
+    }
+  };
+
   useEffect(() => {
     Promise.all([
-      fetch(`/api/perfumes/${id}`).then((r) => r.json()),
-      fetch(`/api/pricing?perfumeId=${id}`).then((r) => r.json()),
-      fetch(`/api/reviews?perfumeId=${id}`).then((r) => r.json()),
-      fetch("/api/perfumes?active=true").then((r) => r.json()),
-    ]).then(([p, pricing, reviewsRes, activePerfumes]) => {
-      setPerfume(p);
-      setPrices(pricing.prices || []);
-      setBulkRules(pricing.bulkRules || []);
-      setReviews(reviewsRes?.reviews || []);
-      setRelatedPerfumes((activePerfumes || []).filter((item: Perfume) => item.id !== p.id && item.brand === p.brand).slice(0, 6));
-      const firstAvail = (pricing.prices || []).find((pr: PriceOption) => pr.available);
-      if (firstAvail) setSelectedMl(firstAvail.ml);
-    }).finally(() => setLoading(false));
+      fetchJsonSafe<Perfume | null>(`/api/perfumes/${id}`, null),
+      fetchJsonSafe<{ prices?: PriceOption[]; bulkRules?: BulkRule[] }>(`/api/pricing?perfumeId=${id}`, {}),
+      fetchJsonSafe<{ reviews?: PerfumeReview[] }>(`/api/reviews?perfumeId=${id}`, { reviews: [] }),
+      fetchJsonSafe<Perfume[]>("/api/perfumes?active=true", []),
+    ])
+      .then(([p, pricing, reviewsRes, activePerfumes]) => {
+        if (!p) return;
+
+        setPerfume(p);
+        setPrices(pricing.prices || []);
+        setBulkRules(pricing.bulkRules || []);
+        setReviews(reviewsRes?.reviews || []);
+        setRelatedPerfumes((activePerfumes || []).filter((item: Perfume) => item.id !== p.id && item.brand === p.brand).slice(0, 6));
+        const firstAvail = (pricing.prices || []).find((pr: PriceOption) => pr.available);
+        if (firstAvail) setSelectedMl(firstAvail.ml);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const openFullBottleModal = () => {
