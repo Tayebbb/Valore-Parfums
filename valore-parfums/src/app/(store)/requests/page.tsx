@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/ui/Toaster";
 import { Send, Package, FlaskConical } from "lucide-react";
