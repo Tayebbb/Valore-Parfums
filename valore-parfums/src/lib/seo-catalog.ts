@@ -4,7 +4,27 @@ import { DEFAULT_TIER_MARGINS, calculateSellingPrice, getBrandTier, getTierProfi
 export { parseImageList } from "@/lib/image-utils";
 
 export const SITE_NAME = "Valore Parfums";
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://valoreparfums.com";
+
+function normalizeSiteUrl(input?: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return withProtocol.replace(/\/+$/, "");
+}
+
+function resolveSiteUrl(): string {
+  const fromPublicEnv = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  if (fromPublicEnv) return fromPublicEnv;
+
+  // Netlify provides URL/DEPLOY_PRIME_URL during build/runtime.
+  const fromNetlify = normalizeSiteUrl(process.env.URL) || normalizeSiteUrl(process.env.DEPLOY_PRIME_URL);
+  if (fromNetlify) return fromNetlify;
+
+  return "https://valoreparfums.com";
+}
+
+export const SITE_URL = resolveSiteUrl();
 
 export const DECANT_VARIANTS = [3, 10, 15, 30] as const;
 
