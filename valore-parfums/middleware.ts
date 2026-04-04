@@ -11,9 +11,16 @@ function getCanonicalHost(): string {
   }
 }
 
+function getRequestHost(request: NextRequest): string {
+  // Prefer forwarded host when behind CDN/proxy (Netlify).
+  const forwarded = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwarded || request.headers.get("host") || "";
+  return host.toLowerCase().replace(/:\d+$/, "");
+}
+
 export function middleware(request: NextRequest) {
   const canonicalHost = getCanonicalHost();
-  const currentHost = request.headers.get("host")?.toLowerCase() || "";
+  const currentHost = getRequestHost(request);
 
   if (!currentHost || currentHost === canonicalHost) {
     return NextResponse.next();
@@ -28,9 +35,9 @@ export function middleware(request: NextRequest) {
   redirectUrl.protocol = "https:";
   redirectUrl.host = canonicalHost;
 
-  return NextResponse.redirect(redirectUrl, 301);
+  return NextResponse.redirect(redirectUrl, 308);
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
