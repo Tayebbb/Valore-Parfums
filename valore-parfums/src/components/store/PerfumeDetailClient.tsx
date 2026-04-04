@@ -7,7 +7,7 @@ import { toast } from "@/components/ui/Toaster";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Heart } from "lucide-react";
-import { parseImageList } from "@/lib/seo-catalog";
+import { parseImageList } from "@/lib/image-utils";
 
 interface Perfume {
   id: string;
@@ -49,19 +49,9 @@ interface BulkRule {
   discountPercent: number;
 }
 
-interface PerfumeReview {
-  id: string;
-  name: string;
-  rating: number;
-  comment: string;
-  createdAt?: string;
-}
-
 export default function PerfumePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [perfume, setPerfume] = useState<Perfume | null>(null);
-  const [relatedPerfumes, setRelatedPerfumes] = useState<Perfume[]>([]);
-  const [reviews, setReviews] = useState<PerfumeReview[]>([]);
   const [prices, setPrices] = useState<PriceOption[]>([]);
   const [bulkRules, setBulkRules] = useState<BulkRule[]>([]);
   const [selectedMl, setSelectedMl] = useState<number | null>(null);
@@ -69,40 +59,40 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showRequest, setShowRequest] = useState(false);
-  const [showFullBottleModal, setShowFullBottleModal] = useState(false);
-  const [fullBottleForm, setFullBottleForm] = useState({ name: "", phone: "", product: "", message: "" });
   const [reqForm, setReqForm] = useState({ customerName: "", customerPhone: "", desiredMl: 0, quantity: 1 });
-  const [reviewForm, setReviewForm] = useState({ name: "", rating: 5, comment: "" });
   const [wishlisted, setWishlisted] = useState(false);
 
   const addItem = useCart((s) => s.addItem);
   const { user } = useAuth();
 
+  const fetchJsonSafe = async <T,>(url: string, fallback: T): Promise<T> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return fallback;
+      const text = await response.text();
+      if (!text) return fallback;
+      return JSON.parse(text) as T;
+    } catch {
+      return fallback;
+    }
+  };
+
   useEffect(() => {
     Promise.all([
-      fetch(`/api/perfumes/${id}`).then((r) => r.json()),
-      fetch(`/api/pricing?perfumeId=${id}`).then((r) => r.json()),
-      fetch(`/api/reviews?perfumeId=${id}`).then((r) => r.json()),
-      fetch("/api/perfumes?active=true").then((r) => r.json()),
-    ]).then(([p, pricing, reviewsRes, activePerfumes]) => {
-      setPerfume(p);
-      setPrices(pricing.prices || []);
-      setBulkRules(pricing.bulkRules || []);
-      setReviews(reviewsRes?.reviews || []);
-      setRelatedPerfumes((activePerfumes || []).filter((item: Perfume) => item.id !== p.id && item.brand === p.brand).slice(0, 6));
-      const firstAvail = (pricing.prices || []).find((pr: PriceOption) => pr.available);
-      if (firstAvail) setSelectedMl(firstAvail.ml);
-    }).finally(() => setLoading(false));
-  }, [id]);
+      fetchJsonSafe<Perfume | null>(`/api/perfumes/${id}`, null),
+      fetchJsonSafe<{ prices?: PriceOption[]; bulkRules?: BulkRule[] }>(`/api/pricing?perfumeId=${id}`, {}),
+    ])
+      .then(([p, pricing]) => {
+        if (!p) return;
 
-  const openFullBottleModal = () => {
-    setFullBottleForm((current) => ({
-      ...current,
-      product: perfume?.name || current.product,
-      message: current.message || `I want full bottle of ${perfume?.name || "this perfume"}`,
-    }));
-    setShowFullBottleModal(true);
-  };
+        setPerfume(p);
+        setPrices(pricing.prices || []);
+        setBulkRules(pricing.bulkRules || []);
+        const firstAvail = (pricing.prices || []).find((pr: PriceOption) => pr.available);
+        if (firstAvail) setSelectedMl(firstAvail.ml);
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
 
   // Check wishlist status
   useEffect(() => {
@@ -189,57 +179,6 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
     setReqForm({ customerName: "", customerPhone: "", desiredMl: 0, quantity: 1 });
   };
 
-  const submitFullBottleRequest = async () => {
-    if (!fullBottleForm.name || !fullBottleForm.phone || !fullBottleForm.product) {
-      return toast("Name, phone and product are required", "error");
-    }
-
-    const response = await fetch("/api/full-bottle-requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: fullBottleForm.name,
-        phone: fullBottleForm.phone,
-        product: fullBottleForm.product,
-        perfumeId: perfume?.id,
-        message: fullBottleForm.message || `I want full bottle of ${fullBottleForm.product}`,
-      }),
-    });
-
-    if (!response.ok) {
-      return toast("Failed to send full bottle request", "error");
-    }
-
-    toast("Full bottle request submitted", "success");
-    setShowFullBottleModal(false);
-    setFullBottleForm({ name: "", phone: "", product: perfume?.name || "", message: `I want full bottle of ${perfume?.name || "this perfume"}` });
-  };
-
-  const submitReview = async () => {
-    if (!reviewForm.name || !reviewForm.comment) {
-      return toast("Name and review comment are required", "error");
-    }
-
-    const response = await fetch("/api/reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        perfumeId: id,
-        name: reviewForm.name,
-        rating: reviewForm.rating,
-        comment: reviewForm.comment,
-      }),
-    });
-
-    if (!response.ok) {
-      return toast("Failed to submit review", "error");
-    }
-
-    const createdReview = await response.json();
-    setReviews((current) => [createdReview, ...current]);
-    setReviewForm({ name: "", rating: 5, comment: "" });
-    toast("Thanks for your review", "success");
-  };
 
   if (loading) {
     return (
@@ -314,7 +253,7 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
             </button>
           </div>
 
-          <h1 className="font-serif text-4xl font-light">{perfume.name} by {perfume.brand} - Authentic Decant</h1>
+          <h1 className="font-serif text-4xl font-light">{perfume.brand} {perfume.name} - Authentic Decant</h1>
 
           {perfume.inspiredBy && (
             <p className="text-xs uppercase tracking-[0.15em] text-[var(--text-muted)]">
@@ -517,104 +456,15 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
             </span>
           </p>
 
-          <div className="rounded border border-[var(--border)] p-4 bg-[var(--bg-surface)] space-y-3">
-            <h2 className="font-serif text-2xl font-light">Performance</h2>
-            <p className="text-sm text-[var(--text-secondary)]">Longevity: {perfume.marketPricePerMl > 120 ? "8-10 hours" : "6-8 hours"}</p>
-            <p className="text-sm text-[var(--text-secondary)]">Projection: {perfume.marketPricePerMl > 120 ? "Moderate to strong" : "Moderate"}</p>
-            <p className="text-sm text-[var(--text-secondary)]">Best Season: {perfume.category === "Oud" ? "Winter and evening" : "All season versatile"}</p>
-          </div>
-
-          <div className="rounded border border-[var(--border)] p-4 bg-[var(--bg-surface)] space-y-3" id="request-full-bottle">
-            <h2 className="font-serif text-2xl font-light">Love This Fragrance?</h2>
-            <p className="text-sm text-[var(--text-secondary)]">Request an authentic full bottle in Bangladesh after testing this decant.</p>
-            <button
-              onClick={openFullBottleModal}
-              className="w-full py-3 border border-[var(--gold)] text-[var(--gold)] text-xs uppercase tracking-wider hover:bg-[var(--gold-tint)] transition-colors"
-            >
-              Request Full Bottle
-            </button>
-          </div>
         </div>
       </div>
 
-      <section className="mt-12 space-y-4">
-        <h2 className="font-serif text-3xl font-light">Customer Reviews</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            {reviews.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)]">No reviews yet. Be the first to review this decant.</p>
-            ) : (
-              reviews.slice(0, 8).map((review) => (
-                <div key={review.id} className="border border-[var(--border)] rounded p-4 bg-[var(--bg-surface)]">
-                  <p className="text-sm font-medium">{review.name}</p>
-                  <p className="text-xs text-[var(--gold)]">{"★".repeat(Math.max(1, Math.min(5, Number(review.rating || 5))))}</p>
-                  <p className="text-sm text-[var(--text-secondary)] mt-2">{review.comment}</p>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="border border-[var(--border)] rounded p-4 bg-[var(--bg-surface)] space-y-3">
-            <p className="text-sm font-medium">Share your experience</p>
-            <input
-              type="text"
-              value={reviewForm.name}
-              onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
-              placeholder="Your name"
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            />
-            <select
-              value={reviewForm.rating}
-              onChange={(e) => setReviewForm({ ...reviewForm, rating: Number(e.target.value) })}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            >
-              <option value={5}>5 stars</option>
-              <option value={4}>4 stars</option>
-              <option value={3}>3 stars</option>
-              <option value={2}>2 stars</option>
-              <option value={1}>1 star</option>
-            </select>
-            <textarea
-              value={reviewForm.comment}
-              onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-              placeholder="How did this perfume perform for you?"
-              rows={4}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            />
-            <button
-              onClick={submitReview}
-              className="w-full bg-[var(--gold)] text-black py-2.5 text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors"
-            >
-              Submit Review
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-12 space-y-4">
-        <h2 className="font-serif text-3xl font-light">Related Fragrances</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {relatedPerfumes.map((item) => (
-            <Link key={item.id} href={`/brand/${item.brandSlug || item.brand.toLowerCase().replace(/[^a-z0-9]+/g, "-")}/${item.slug || item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} className="border border-[var(--border)] rounded p-3 hover:border-[var(--gold)] transition-colors">
-              <p className="text-sm font-medium">{item.name}</p>
-              <p className="text-xs text-[var(--text-muted)]">{item.name} decant Bangladesh by {item.brand}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-elevated)] border-t border-[var(--border)] p-3 md:hidden grid grid-cols-2 gap-2">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-elevated)] border-t border-[var(--border)] p-3 md:hidden">
         <button
           onClick={handleAddToCart}
           className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
         >
-          Sticky Add to Cart
-        </button>
-        <button
-          onClick={openFullBottleModal}
-          className="w-full border border-[var(--gold)] text-[var(--gold)] py-3 text-xs uppercase tracking-wider font-medium"
-        >
-          Request Full Bottle
+          Add to Cart
         </button>
       </div>
 
@@ -668,57 +518,6 @@ export default function PerfumePage({ params }: { params: Promise<{ id: string }
               </button>
               <button
                 onClick={() => setShowRequest(false)}
-                className="px-4 py-2.5 border border-[var(--border)] text-[var(--text-secondary)] text-xs uppercase tracking-wider hover:border-[var(--gold)] transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showFullBottleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFullBottleModal(false)} />
-          <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-md p-6 animate-fade-up space-y-3">
-            <h2 className="font-serif text-xl font-light">Request Full Bottle</h2>
-            <input
-              type="text"
-              placeholder="Name"
-              value={fullBottleForm.name}
-              onChange={(e) => setFullBottleForm({ ...fullBottleForm, name: e.target.value })}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            />
-            <input
-              type="text"
-              placeholder="Phone"
-              value={fullBottleForm.phone}
-              onChange={(e) => setFullBottleForm({ ...fullBottleForm, phone: e.target.value })}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            />
-            <input
-              type="text"
-              placeholder="Product"
-              value={fullBottleForm.product}
-              onChange={(e) => setFullBottleForm({ ...fullBottleForm, product: e.target.value })}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            />
-            <textarea
-              rows={3}
-              placeholder="Message"
-              value={fullBottleForm.message}
-              onChange={(e) => setFullBottleForm({ ...fullBottleForm, message: e.target.value })}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-            />
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={submitFullBottleRequest}
-                className="flex-1 bg-[var(--gold)] text-black py-2.5 text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors"
-              >
-                Submit
-              </button>
-              <button
-                onClick={() => setShowFullBottleModal(false)}
                 className="px-4 py-2.5 border border-[var(--border)] text-[var(--text-secondary)] text-xs uppercase tracking-wider hover:border-[var(--gold)] transition-colors"
               >
                 Cancel
