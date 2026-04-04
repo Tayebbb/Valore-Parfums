@@ -196,19 +196,19 @@ export default function TrackOrderPage() {
     return (
       <div
         key={order.id}
-        className={`bg-[var(--bg-card)] border rounded p-4 sm:p-6 space-y-4 ${
+        className={`bg-[var(--bg-card)] border rounded-xl p-3.5 sm:p-6 space-y-4 shadow-[0_8px_24px_rgba(0,0,0,0.2)] ${
           emphasize ? "border-[var(--gold)]" : "border-[var(--border)]"
         }`}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-0.5">Order ID</p>
-            <div className="flex items-center gap-2">
-              <p className="font-mono text-[var(--gold)] break-all">{order.id}</p>
+            <div className="flex items-start gap-2">
+              <p className="font-mono text-sm leading-relaxed text-[var(--gold)] break-all">{order.id}</p>
               <CopyOrderIdButton orderId={order.id} />
             </div>
           </div>
-          <span className={`w-fit px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 ${statusClass(displayStatus)}`}>
+          <span className={`w-fit px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 sm:self-auto self-start ${statusClass(displayStatus)}`}>
             {statusIcon(displayStatus)} {displayStatus}
           </span>
         </div>
@@ -243,11 +243,12 @@ export default function TrackOrderPage() {
               ))}
             </div>
 
-            <div className="sm:hidden space-y-2 mt-2 mb-1">
+            <div className="sm:hidden relative mt-2 mb-1 pl-1">
+              <div className="absolute left-[13px] top-3 bottom-3 w-px bg-[var(--border)]" />
               {statusSteps.map((step, i) => (
-                <div key={`${order.id}-${step}`} className="flex items-center gap-3">
+                <div key={`${order.id}-${step}`} className="relative flex items-center gap-3 py-1.5">
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors flex-shrink-0 ${
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-colors flex-shrink-0 z-[1] ${
                       i <= currentStep
                         ? "bg-[var(--gold)] text-black"
                         : "border border-[var(--border)] text-[var(--text-muted)]"
@@ -256,7 +257,7 @@ export default function TrackOrderPage() {
                     {i + 1}
                   </div>
                   <span
-                    className={`text-[10px] uppercase tracking-wider ${
+                    className={`text-[10px] uppercase tracking-wider leading-snug ${
                       i <= currentStep ? "text-[var(--gold)]" : "text-[var(--text-muted)]"
                     }`}
                   >
@@ -268,26 +269,26 @@ export default function TrackOrderPage() {
           </>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5 text-sm">
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Placed</span>
             <p>{new Date(order.createdAt).toLocaleDateString()}</p>
           </div>
-          <div>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Collection</span>
             <p>{order.pickupMethod}</p>
           </div>
           {order.pickupMethod === "Delivery" && (
-            <div>
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
               <span className="text-[var(--text-muted)]">Delivery Zone</span>
               <p>{order.deliveryZone || "N/A"}</p>
             </div>
           )}
-          <div>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Items</span>
             <p>{order.items?.length ?? 0}</p>
           </div>
-          <div>
+          <div className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Total</span>
             <p className="font-serif text-[var(--gold)]">{(order.finalAmount ?? 0).toLocaleString("en-BD")} BDT</p>
             {Boolean(order.voucherCode) && (order.discount ?? 0) > 0 && (
@@ -313,11 +314,11 @@ export default function TrackOrderPage() {
                 return (
                   <div
                     key={`${order.id}-${item.perfumeName}-${idx}`}
-                    className="flex items-center gap-3 p-2.5 rounded border border-[var(--border)] bg-[var(--bg-surface)]"
+                    className="flex items-center gap-3 p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]"
                   >
                     {productHref ? (
                       <Link href={productHref} className="flex items-center gap-3 min-w-0 flex-1 group">
-                        <div className="w-12 h-12 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
+                        <div className="w-14 h-14 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
                           <img
                             src={imageSrc}
                             alt={item.perfumeName}
@@ -331,13 +332,13 @@ export default function TrackOrderPage() {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm truncate group-hover:text-[var(--gold)] transition-colors">{item.perfumeName}</p>
+                          <p className="text-sm leading-snug truncate group-hover:text-[var(--gold)] transition-colors">{item.perfumeName}</p>
                           <p className="text-xs text-[var(--text-muted)]">{sizeLabel} × {item.quantity}</p>
                         </div>
                       </Link>
                     ) : (
                       <>
-                        <div className="w-12 h-12 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
+                        <div className="w-14 h-14 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
                           <img
                             src={imageSrc}
                             alt={item.perfumeName}
@@ -351,7 +352,7 @@ export default function TrackOrderPage() {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm truncate">{item.perfumeName}</p>
+                          <p className="text-sm leading-snug truncate">{item.perfumeName}</p>
                           <p className="text-xs text-[var(--text-muted)]">{sizeLabel} × {item.quantity}</p>
                         </div>
                       </>
@@ -422,13 +423,13 @@ export default function TrackOrderPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-12 max-w-3xl mx-auto">
+    <div className="px-3 sm:px-6 md:px-[5%] py-6 sm:py-12 max-w-3xl mx-auto">
       <h1 className="font-serif text-2xl sm:text-3xl font-light mb-2 text-center">Track Order</h1>
-      <p className="text-sm text-[var(--text-muted)] text-center mb-8">
+      <p className="text-sm text-[var(--text-muted)] text-center mb-6 sm:mb-8 leading-relaxed">
         Enter your Order ID to check real-time order status. Sign in users can also see account-linked history below.
       </p>
 
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5 mb-8">
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 sm:p-5 mb-6 sm:mb-8">
         <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Order ID</label>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -436,12 +437,12 @@ export default function TrackOrderPage() {
             placeholder="Paste full Order ID"
             value={orderIdInput}
             onChange={(e) => setOrderIdInput(e.target.value)}
-            className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm outline-none focus:border-[var(--gold)]"
+            className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-3 text-sm outline-none focus:border-[var(--gold)]"
           />
           <button
             onClick={trackByOrderId}
             disabled={trackLoading}
-            className="bg-[var(--gold)] text-black px-4 py-2.5 rounded text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50 sm:w-auto w-full"
+            className="bg-[var(--gold)] text-black px-4 py-3 rounded text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50 sm:w-auto w-full"
           >
             {trackLoading ? "Checking..." : "Track"}
           </button>
