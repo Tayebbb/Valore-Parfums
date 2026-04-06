@@ -355,8 +355,8 @@ const getPerfumeReviewsCached = unstable_cache(
       // Sort by createdAt in descending order and limit to 50
       return reviews
         .sort((a, b) => {
-          const aTime = (a.createdAt as any) instanceof Date ? ((a.createdAt as any) as Date).getTime() : 0;
-          const bTime = (b.createdAt as any) instanceof Date ? ((b.createdAt as any) as Date).getTime() : 0;
+          const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
+          const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
           return bTime - aTime;
         })
         .slice(0, 50);
