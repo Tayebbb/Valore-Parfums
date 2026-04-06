@@ -15,14 +15,18 @@ function normalizeSiteUrl(input?: string): string | null {
 }
 
 function resolveSiteUrl(): string {
-  const fromPublicEnv = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
-  if (fromPublicEnv) return fromPublicEnv;
+  const isNetlify = process.env.NEXT_PUBLIC_ENV === "netlify" || process.env.NETLIFY === "true";
 
   // Netlify provides URL/DEPLOY_PRIME_URL during build/runtime.
   const fromNetlify = normalizeSiteUrl(process.env.URL) || normalizeSiteUrl(process.env.DEPLOY_PRIME_URL);
+  if (isNetlify && fromNetlify) return fromNetlify;
+
+  const fromPublicEnv = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+  if (fromPublicEnv) return fromPublicEnv;
+
   if (fromNetlify) return fromNetlify;
 
-  return "https://valoreparfums.app";
+  return isNetlify ? "https://valoreparfums.netlify.app" : "https://valoreparfums.app";
 }
 
 export const SITE_URL = resolveSiteUrl();
