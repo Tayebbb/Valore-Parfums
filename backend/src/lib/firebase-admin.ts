@@ -3,16 +3,36 @@
 import { initializeApp, getApps, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
-const serviceAccount: ServiceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID!,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-  // The private key comes from .env with escaped newlines
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-};
+const projectId =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  "";
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || "";
+const privateKey = (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+
+const hasFullServiceAccount = Boolean(projectId && clientEmail && privateKey);
 
 // Prevent re-initializing in dev (hot-reload)
 if (!getApps().length) {
-  initializeApp({ credential: cert(serviceAccount) });
+  if (hasFullServiceAccount) {
+    const serviceAccount: ServiceAccount = {
+      projectId,
+      clientEmail,
+      privateKey,
+    };
+    initializeApp({ credential: cert(serviceAccount) });
+  } else if (projectId) {
+    // Fallback to ADC/project-only init to avoid hard-crashing when cert vars are incomplete.
+    initializeApp({ projectId });
+    console.warn(
+      "Firebase Admin initialized without full service account credentials. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY for full access.",
+    );
+  } else {
+    throw new Error(
+      "Firebase Admin is not configured. Set FIREBASE_PROJECT_ID (or NEXT_PUBLIC_FIREBASE_PROJECT_ID) and service account credentials.",
+    );
+  }
 }
 
 export const db = getFirestore();

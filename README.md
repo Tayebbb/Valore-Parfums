@@ -13,7 +13,15 @@ Install dependencies per app:
 - `npm --prefix backend install`
 - `npm --prefix frontend install`
 
-Run apps independently:
+Install root tooling once:
+
+- `npm install`
+
+Run both apps together (recommended):
+
+- `npm run dev`
+
+Run apps independently (optional):
 
 - Backend: `npm run dev:backend` (http://localhost:3001)
 - Frontend: `npm run dev:frontend` (http://localhost:3000)

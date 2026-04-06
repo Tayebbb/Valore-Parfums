@@ -6,7 +6,8 @@ import { useAuth } from "@/store/auth";
 import { toast } from "@/components/ui/Toaster";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Minus, Plus, ShoppingBag, Heart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Minus, Plus, ShoppingBag, Heart, Zap } from "lucide-react";
 import { parseImageList } from "@/lib/image-utils";
 
 interface Perfume {
@@ -74,6 +75,7 @@ export default function PerfumePage({
 
   const addItem = useCart((s) => s.addItem);
   const { user } = useAuth();
+  const router = useRouter();
 
   const fetchJsonSafe = async <T,>(url: string, fallback: T): Promise<T> => {
     try {
@@ -181,6 +183,22 @@ export default function PerfumePage({
       "success",
     );
     setQuantity(1);
+  };
+
+  const handleBuyNow = () => {
+    if (!perfume) return;
+    if (selectedOption !== "decant" || !selectedPrice?.available) return;
+
+    addItem({
+      perfumeId: perfume.id,
+      perfumeName: perfume.name,
+      ml: selectedPrice.ml,
+      isFullBottle: false,
+      quantity,
+      unitPrice: effectiveUnitPrice,
+      image: images[0],
+    });
+    router.push("/cart");
   };
 
   const submitRequest = async () => {
@@ -449,12 +467,20 @@ export default function PerfumePage({
               <ShoppingBag size={18} /> Request Perfume
             </Link>
           ) : selectedPrice?.available ? (
-            <button
-              onClick={handleAddToCart}
-              className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
-            >
-              <ShoppingBag size={18} /> Add to Cart
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={handleAddToCart}
+                className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
+              >
+                <ShoppingBag size={18} /> Add to Cart
+              </button>
+              <button
+                onClick={handleBuyNow}
+                className="w-full flex items-center justify-center gap-3 border border-[var(--gold)] text-[var(--gold)] py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-tint)] transition-colors"
+              >
+                <Zap size={18} /> Buy Now
+              </button>
+            </div>
           ) : (
             <div className="space-y-3">
               <div className="w-full py-4 text-center bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-muted)] text-xs uppercase tracking-wider">
@@ -482,12 +508,36 @@ export default function PerfumePage({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-elevated)] border-t border-[var(--border)] p-3 md:hidden">
-        <button
-          onClick={handleAddToCart}
-          className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
-        >
-          Add to Cart
-        </button>
+        {selectedOption === "decant" && selectedPrice?.available ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleAddToCart}
+              className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
+            >
+              Add to Cart
+            </button>
+            <button
+              onClick={handleBuyNow}
+              className="w-full flex items-center justify-center gap-2 border border-[var(--gold)] text-[var(--gold)] py-3 text-xs uppercase tracking-wider font-medium"
+            >
+              <Zap size={16} /> Buy Now
+            </button>
+          </div>
+        ) : selectedOption === "full-bottle" ? (
+          <Link
+            href={requestHref}
+            className="block w-full text-center bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
+          >
+            Request Perfume
+          </Link>
+        ) : (
+          <button
+            onClick={handleAddToCart}
+            className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
+          >
+            Add to Cart
+          </button>
+        )}
       </div>
 
       {/* Stock Request Modal */}

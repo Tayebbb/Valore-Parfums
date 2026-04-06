@@ -133,7 +133,7 @@ function getInputClass(hasError: boolean) {
   return `${inputBaseClass} ${
     hasError
       ? "border-[var(--error)] focus:border-[var(--error)] focus:ring-[rgba(248,113,113,0.18)]"
-      : "border-gray-700/70"
+      : "border-[var(--border)]"
   }`;
 }
 
@@ -141,7 +141,7 @@ function getTextareaClass(hasError: boolean) {
   return `${textareaBaseClass} ${
     hasError
       ? "border-[var(--error)] focus:border-[var(--error)] focus:ring-[rgba(248,113,113,0.18)]"
-      : "border-gray-700/70"
+      : "border-[var(--border)]"
   }`;
 }
 
@@ -455,14 +455,72 @@ function CheckoutContent() {
     });
   }, [form.pickupMethod]);
 
+  useEffect(() => {
+    if (form.pickupMethod !== "Delivery") return;
+
+    setForm((prev) => {
+      if (prev.deliveryZone === "Inside Dhaka" && prev.city.trim().toLowerCase() !== "dhaka") {
+        return { ...prev, city: "Dhaka" };
+      }
+      if (prev.deliveryZone === "Outside Dhaka" && prev.city.trim().toLowerCase() === "dhaka") {
+        return { ...prev, city: "" };
+      }
+      return prev;
+    });
+  }, [form.deliveryZone, form.pickupMethod]);
+
   const setField = useCallback(
     <K extends keyof CheckoutForm>(key: K, value: CheckoutForm[K]) => {
-      setForm((prev) => ({ ...prev, [key]: value }));
-      if (errors[key]) {
-        setErrors((prev) => ({ ...prev, [key]: "" }));
-      }
+      setForm((prev) => {
+        const next = { ...prev, [key]: value };
+
+        if (key === "deliveryZone") {
+          const zone = value as CheckoutForm["deliveryZone"];
+          if (zone === "Inside Dhaka") {
+            next.city = "Dhaka";
+          } else if (zone === "Outside Dhaka" && prev.city.trim().toLowerCase() === "dhaka") {
+            next.city = "";
+          }
+        }
+
+        if (key === "city") {
+          const cityValue = String(value).trim();
+          const cityLower = cityValue.toLowerCase();
+
+          if (cityLower === "dhaka") {
+            next.deliveryZone = "Inside Dhaka";
+            next.city = "Dhaka";
+          } else if (cityValue) {
+            next.deliveryZone = "Outside Dhaka";
+          }
+        }
+
+        return next;
+      });
+
+      setErrors((prev) => {
+        let changed = false;
+        const next = { ...prev };
+
+        if (next[key]) {
+          next[key] = "";
+          changed = true;
+        }
+
+        if (key === "deliveryZone" && next.city) {
+          next.city = "";
+          changed = true;
+        }
+
+        if (key === "city" && next.deliveryZone) {
+          next.deliveryZone = "";
+          changed = true;
+        }
+
+        return changed ? next : prev;
+      });
     },
-    [errors],
+    [],
   );
 
   const applyVoucher = useCallback(async () => {
@@ -731,7 +789,7 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-screen pb-28 lg:pb-8">
+    <div className="checkout-shell min-h-screen pb-28 lg:pb-8">
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-5 sm:px-6 sm:pt-8">
         <Link
           href={isBuyNow ? (directProductPath || (productSlug ? `/products/${productSlug}` : `/perfume/${productId}`)) : "/cart"}
@@ -760,7 +818,7 @@ function CheckoutContent() {
               key={tab.key}
               type="button"
               onClick={() => scrollToSection(tab.key)}
-              className="w-full min-w-0 rounded-lg border border-gray-700/80 bg-[var(--bg-surface)] px-2 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:border-[#C9A96E]/60 hover:text-[#C9A96E]"
+              className="checkout-tab w-full min-w-0 rounded-lg border border-gray-700/80 bg-[var(--bg-surface)] px-2 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:border-[#C9A96E]/60 hover:text-[#C9A96E]"
             >
               {tab.label}
             </button>
@@ -773,7 +831,7 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.customer = el as HTMLDivElement | null;
               }}
-              className="scroll-mt-24 rounded-2xl border border-[#eadfc8] bg-[#fdf9f1] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#eadfc8] bg-[#fdf9f1] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#b1894c] dark:text-[#C9A96E]">Section 1</p>
               <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Customer Info</h2>
@@ -848,7 +906,7 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.address = el as HTMLDivElement | null;
               }}
-              className="scroll-mt-24 rounded-2xl border border-[#d7e4f2] bg-[#f2f8fd] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#d7e4f2] bg-[#f2f8fd] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#4d7fa6] dark:text-[#C9A96E]">Section 2</p>
               <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Delivery Address</h2>
@@ -970,9 +1028,13 @@ function CheckoutContent() {
                         type="text"
                         value={form.city}
                         onChange={(e) => setField("city", e.target.value)}
+                        disabled={form.deliveryZone === "Inside Dhaka"}
                         className={getInputClass(Boolean(errors.city))}
-                        placeholder="e.g. Dhaka"
+                        placeholder={form.deliveryZone === "Inside Dhaka" ? "Dhaka" : "e.g. Chattogram"}
                       />
+                      {form.deliveryZone === "Inside Dhaka" ? (
+                        <p className="mt-1 text-[11px] text-[var(--text-muted)]">City is auto-set to Dhaka for inside-zone delivery.</p>
+                      ) : null}
                       {errors.city ? <p className="mt-1 text-[11px] text-[var(--error)]">{errors.city}</p> : null}
                     </div>
 
@@ -1028,7 +1090,7 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.payment = el as HTMLDivElement | null;
               }}
-              className="scroll-mt-24 rounded-2xl border border-[#e4d9f1] bg-[#f8f3fc] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#e4d9f1] bg-[#f8f3fc] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#8663b2] dark:text-[#C9A96E]">Section 3</p>
               <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Payment Method</h2>
@@ -1293,7 +1355,7 @@ function CheckoutContent() {
               ) : null}
             </section>
 
-            <section className="rounded-2xl border border-[#dce5c8] bg-[#f7fbee] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]">
+            <section className="checkout-panel rounded-2xl border border-[#dce5c8] bg-[#f7fbee] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#6e8a3c] dark:text-[#C9A96E]">Voucher</p>
               <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                 <input
@@ -1336,7 +1398,7 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.summary = el as HTMLDivElement | null;
               }}
-              className="scroll-mt-24 rounded-2xl border border-[#d7dde8] bg-[#f4f6fa] p-4 dark:border-gray-700/80 dark:bg-[var(--bg-card)] lg:hidden"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#d7dde8] bg-[#f4f6fa] p-4 dark:border-gray-700/80 dark:bg-[var(--bg-card)] lg:hidden"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#5f7897] dark:text-[#C9A96E]">Section 4</p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Order Summary</h2>
@@ -1362,7 +1424,7 @@ function CheckoutContent() {
             }}
             className="hidden lg:col-span-2 lg:block lg:self-start"
           >
-            <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-[#d7dde8] bg-[#f4f6fa] p-4 shadow-xl dark:border-gray-700/80 dark:bg-[var(--bg-card)]">
+            <div className="checkout-panel sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-[#d7dde8] bg-[#f4f6fa] p-4 shadow-xl dark:border-gray-700/80 dark:bg-[var(--bg-card)]">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#5f7897] dark:text-[#C9A96E]">Section 4</p>
               <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Order Summary</h2>
 

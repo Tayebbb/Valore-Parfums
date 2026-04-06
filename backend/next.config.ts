@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 // Detect Netlify environment
 const isNetlify = process.env.NEXT_PUBLIC_ENV === "netlify";
 
@@ -10,6 +11,10 @@ const nextConfig: NextConfig = {
   // fetched during the build (required when the build host uses a custom CA).
   experimental: {
     turbopackUseSystemTlsCerts: true,
+  },
+
+  turbopack: {
+    root: path.resolve(__dirname),
   },
 
   // Optimize images

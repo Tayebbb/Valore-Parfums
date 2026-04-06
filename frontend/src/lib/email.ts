@@ -97,7 +97,7 @@ function createEmailShell(content: string): string {
           </div>
           <div style="background:#fafaf8; padding: 48px 48px 52px;">${content}</div>
           <div style="background:#0e0e0e; padding:20px 48px; text-align:center;">
-            <p style="font-family:'Montserrat',sans-serif; font-size:10px; color:#a8a8a8; margin-bottom:8px;">Website: <a href="https://www.valore.live" target="_blank" rel="noopener noreferrer" style="color:#c9a96e; text-decoration:underline;">www.valore.live</a></p>
+            <p style="font-family:'Montserrat',sans-serif; font-size:10px; color:#a8a8a8; margin-bottom:8px;">Website: <a href="https://www.valoreparfums.app" target="_blank" rel="noopener noreferrer" style="color:#c9a96e; text-decoration:underline;">www.valoreparfums.app</a></p>
             <p style="font-family:'Montserrat',sans-serif; font-size:9px; color:#787878; letter-spacing:2px; text-transform:uppercase;">The Art of Fragrance</p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 // Detect Netlify environment
 const isNetlify = process.env.NEXT_PUBLIC_ENV === "netlify";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
@@ -10,6 +11,10 @@ const nextConfig: NextConfig = {
 
   experimental: {
     turbopackUseSystemTlsCerts: true,
+  },
+
+  turbopack: {
+    root: path.resolve(__dirname),
   },
 
   // Allow Turbopack to use system TLS certificates so Google Fonts can be

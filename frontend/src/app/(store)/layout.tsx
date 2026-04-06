@@ -40,7 +40,6 @@ function DesktopDropdown({
   href,
   open,
   onOpen,
-  onRequestClose,
   onCloseImmediate,
 }: {
   label: string;
@@ -48,21 +47,22 @@ function DesktopDropdown({
   href?: string;
   open: boolean;
   onOpen: () => void;
-  onRequestClose: () => void;
   onCloseImmediate: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!open) return;
+
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onCloseImmediate();
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onCloseImmediate]);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [open, onCloseImmediate]);
 
   return (
-    <div className="relative" ref={ref} onMouseEnter={onOpen} onMouseLeave={onRequestClose}>
+    <div className="relative" ref={ref} onMouseEnter={onOpen}>
       <div className="flex items-center gap-1">
         {href ? (
           <Link
@@ -91,23 +91,24 @@ function DesktopDropdown({
       </div>
 
       <div
-        className={`absolute top-full left-0 mt-3 min-w-[220px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-[0_18px_40px_var(--shadow-color)] z-50 overflow-hidden transition-all duration-200 ${
+        className={`absolute top-full left-1/2 -translate-x-1/2 pt-3 z-50 transition-all duration-200 ${
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-1 pointer-events-none"
         }`}
       >
+        <div className="min-w-[220px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-[0_18px_40px_var(--shadow-color)] overflow-hidden">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => {
-                // Defer closing so Link navigation for query-string routes can complete first.
-                window.setTimeout(onCloseImmediate, 0);
+                onCloseImmediate();
               }}
-              className="block px-5 py-3.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] last:border-b-0 transition-colors"
+              className="block w-full text-left px-5 py-3.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--gold-tint)] border-b border-[var(--border)] last:border-b-0 transition-colors"
             >
               {item.label}
             </Link>
           ))}
+        </div>
       </div>
     </div>
   );
@@ -260,16 +261,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     setOpenDropdown(name);
   };
 
-  const closeDropdownWithDelay = () => {
-    if (dropdownCloseTimer.current) {
-      clearTimeout(dropdownCloseTimer.current);
-    }
-    dropdownCloseTimer.current = setTimeout(() => {
-      setOpenDropdown(null);
-      dropdownCloseTimer.current = null;
-    }, 130);
-  };
-
   const closeDropdownImmediately = () => {
     if (dropdownCloseTimer.current) {
       clearTimeout(dropdownCloseTimer.current);
@@ -343,7 +334,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               items={shopDropdown}
               open={openDropdown === "shop"}
               onOpen={() => openDropdownWithIntent("shop")}
-              onRequestClose={closeDropdownWithDelay}
               onCloseImmediate={closeDropdownImmediately}
             />
             <DesktopDropdown
@@ -351,7 +341,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               items={seasonsDropdown}
               open={openDropdown === "seasons"}
               onOpen={() => openDropdownWithIntent("seasons")}
-              onRequestClose={closeDropdownWithDelay}
               onCloseImmediate={closeDropdownImmediately}
             />
             <DesktopDropdown
@@ -359,7 +348,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               items={brandsDropdown}
               open={openDropdown === "brands"}
               onOpen={() => openDropdownWithIntent("brands")}
-              onRequestClose={closeDropdownWithDelay}
               onCloseImmediate={closeDropdownImmediately}
             />
             {user ? (
@@ -408,7 +396,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Search */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+              className="flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
             >
               <Search size={18} />
             </button>
@@ -416,7 +404,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Theme Toggle */}
             <button
               onClick={toggle}
-              className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+              className="flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
               title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}
             >
               {(!mounted || theme === "dark") ? <Sun size={18} /> : <Moon size={18} />}
@@ -424,26 +412,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
             {/* Wishlist */}
             {user && (
-              <Link href="/wishlist" className="hidden sm:block text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
+              <Link href="/wishlist" className="hidden sm:flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
                 <Heart size={18} />
               </Link>
             )}
 
             {/* User */}
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative flex items-center justify-center" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+                className="flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
               >
                 <User size={18} />
               </button>
               {userMenuOpen && (
-                <div className="absolute right-0 top-full mt-3 min-w-[200px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded shadow-lg z-50 animate-fade-up overflow-hidden">
+                <div className="absolute right-0 top-full mt-3 w-[280px] max-w-[calc(100vw-1rem)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded shadow-lg z-50 animate-fade-up overflow-hidden">
                   {user ? (
                     <>
                       <div className="px-5 py-3 border-b border-[var(--border)]">
                         <p className="text-sm font-medium">{user.name}</p>
-                        <p className="text-[10px] text-[var(--text-muted)]">{user.email}</p>
+                        <p className="text-[11px] text-[var(--text-muted)] truncate" title={user.email}>{user.email}</p>
                       </div>
                       <Link href="/track" onClick={() => setUserMenuOpen(false)} className="block px-5 py-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--gold-tint)] transition-colors">
                         My Orders
@@ -479,7 +467,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
 
             {/* Cart */}
-            <Link href="/cart" className="relative">
+            <Link href="/cart" className="relative flex items-center justify-center">
               <ShoppingBag size={18} className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 w-4 h-4 bg-[var(--gold)] text-black text-[9px] font-bold rounded-full flex items-center justify-center">
