@@ -16,12 +16,24 @@ const hasFullServiceAccount = Boolean(projectId && clientEmail && privateKey);
 // Prevent re-initializing in dev (hot-reload)
 if (!getApps().length) {
   if (hasFullServiceAccount) {
-    const serviceAccount: ServiceAccount = {
-      projectId,
-      clientEmail,
-      privateKey,
-    };
-    initializeApp({ credential: cert(serviceAccount) });
+    try {
+      const serviceAccount: ServiceAccount = {
+        projectId,
+        clientEmail,
+        privateKey,
+      };
+      initializeApp({ credential: cert(serviceAccount) });
+    } catch (error) {
+      console.warn(
+        "Firebase Admin service account initialization failed. Falling back to project-only initialization.",
+        error,
+      );
+      if (projectId) {
+        initializeApp({ projectId });
+      } else {
+        throw error;
+      }
+    }
   } else if (projectId) {
     // Fallback to ADC/project-only init to avoid hard-crashing when cert vars are incomplete.
     initializeApp({ projectId });
