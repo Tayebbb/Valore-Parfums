@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Firestore security rules for Valore Parfums
+// Note: This app uses firebase-admin SDK on the server side,
+// which bypasses these rules entirely. These rules protect
+// against direct client-side access to Firestore.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default: deny all reads/writes from client-side
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
