@@ -149,7 +149,7 @@ function CustomBrandCombobox({
   options: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState(value || "");
+  const input = value || "";
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -157,10 +157,6 @@ function CustomBrandCombobox({
     const query = input.trim().toLowerCase();
     return options.filter((brand) => brand.toLowerCase().includes(query));
   }, [input, options]);
-
-  useEffect(() => {
-    setInput(value || "");
-  }, [value]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -175,13 +171,11 @@ function CustomBrandCombobox({
 
   const handleSelect = (brand: string) => {
     onChange(brand);
-    setInput(brand);
     setOpen(false);
   };
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value;
-    setInput(nextValue);
     onChange(nextValue);
     setOpen(true);
   };
@@ -972,7 +966,7 @@ export default function InventoryPage() {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
                   />
                   <p className="text-xs text-[var(--text-muted)] mt-1">
-                    This is the exact final selling price for the full partial deal. Cost for partials is calculated as ml% of purchase value (example: 30ml => 30% of purchase).
+                    This is the exact final selling price for the full partial deal. Cost for partials is calculated as ml% of purchase value (example: 30ml to 30% of purchase).
                   </p>
                 </div>
               )}

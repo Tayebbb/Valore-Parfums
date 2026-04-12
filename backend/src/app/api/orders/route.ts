@@ -237,6 +237,8 @@ export async function POST(req: Request) {
       bottleCost: number;
       packagingCost: number;
       appliedMarginPercent: number;
+      partialDealType?: string | null;
+      partialSellingPrice?: number | null;
       discountPercent: number;
       pricingTier: string;
     };

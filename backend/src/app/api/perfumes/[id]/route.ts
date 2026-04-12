@@ -4,6 +4,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 import { buildStructuredNotes } from "@/lib/fragrance-notes";
 import { getBrandTier } from "@/lib/utils";
+import { sanitizeCloudinaryImagesField, sanitizeCloudinaryUrl } from "@/lib/image-utils";
 import {
   buildCanonicalProductPath,
   buildCanonicalProductUrl,
@@ -84,6 +85,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       updatePayload.seoKeywords = getProductKeywordBundle(name || "perfume");
       updatePayload.canonicalPath = buildCanonicalProductPath({ name, brand, slug, brandSlug });
       updatePayload.canonicalUrl = buildCanonicalProductUrl({ name, brand, slug, brandSlug });
+    }
+
+    if (body.images !== undefined) {
+      const sanitizedImages = sanitizeCloudinaryImagesField(body.images);
+      updatePayload.images = sanitizedImages.images;
+      if (body.mainImage === undefined) {
+        updatePayload.mainImage = sanitizedImages.mainImage;
+      }
+    }
+
+    if (body.mainImage !== undefined) {
+      updatePayload.mainImage = sanitizeCloudinaryUrl(body.mainImage);
+    }
+
+    if (body.imageUrl !== undefined) {
+      updatePayload.imageUrl = sanitizeCloudinaryUrl(body.imageUrl);
+    }
+
+    if (body.perfumeImage !== undefined) {
+      updatePayload.perfumeImage = sanitizeCloudinaryUrl(body.perfumeImage);
     }
 
     await db.collection(Collections.perfumes).doc(id).update(updatePayload);

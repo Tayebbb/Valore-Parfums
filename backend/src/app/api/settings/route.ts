@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { sanitizeCloudinaryUrl } from "@/lib/image-utils";
 
 // Default settings values (used if doc doesn't exist yet)
 const DEFAULTS = {
@@ -56,14 +57,14 @@ export async function GET() {
     bkashAccountName: String(data.bkashAccountName ?? DEFAULTS.bkashAccountName),
     bkashAccountNumber: String(data.bkashAccountNumber ?? DEFAULTS.bkashAccountNumber),
     bkashAccountType: String(data.bkashAccountType ?? DEFAULTS.bkashAccountType),
-    bkashQrImageUrl: String(data.bkashQrImageUrl ?? DEFAULTS.bkashQrImageUrl),
+    bkashQrImageUrl: sanitizeCloudinaryUrl(data.bkashQrImageUrl),
     bankName: String(data.bankName ?? DEFAULTS.bankName),
     bankAccountName: String(data.bankAccountName ?? DEFAULTS.bankAccountName),
     bankAccountNumber: String(data.bankAccountNumber ?? DEFAULTS.bankAccountNumber),
     bankAccountType: String(data.bankAccountType ?? DEFAULTS.bankAccountType),
     bankDistrict: String(data.bankDistrict ?? DEFAULTS.bankDistrict),
     bankBranch: String(data.bankBranch ?? DEFAULTS.bankBranch),
-    bankQrImageUrl: String(data.bankQrImageUrl ?? DEFAULTS.bankQrImageUrl),
+    bankQrImageUrl: sanitizeCloudinaryUrl(data.bankQrImageUrl),
   });
 }
 
@@ -79,14 +80,14 @@ export async function PUT(req: Request) {
     const bkashAccountName = String(data.bkashAccountName ?? DEFAULTS.bkashAccountName).trim();
     const bkashAccountNumber = String(data.bkashAccountNumber ?? DEFAULTS.bkashAccountNumber).trim();
     const bkashAccountType = String(data.bkashAccountType ?? DEFAULTS.bkashAccountType).trim();
-    const bkashQrImageUrl = String(data.bkashQrImageUrl ?? DEFAULTS.bkashQrImageUrl).trim();
+    const bkashQrImageUrl = sanitizeCloudinaryUrl(data.bkashQrImageUrl);
     const bankName = String(data.bankName ?? DEFAULTS.bankName).trim();
     const bankAccountName = String(data.bankAccountName ?? DEFAULTS.bankAccountName).trim();
     const bankAccountNumber = String(data.bankAccountNumber ?? DEFAULTS.bankAccountNumber).trim();
     const bankAccountType = String(data.bankAccountType ?? DEFAULTS.bankAccountType).trim();
     const bankDistrict = String(data.bankDistrict ?? DEFAULTS.bankDistrict).trim();
     const bankBranch = String(data.bankBranch ?? DEFAULTS.bankBranch).trim();
-    const bankQrImageUrl = String(data.bankQrImageUrl ?? DEFAULTS.bankQrImageUrl).trim();
+    const bankQrImageUrl = sanitizeCloudinaryUrl(data.bankQrImageUrl);
 
     await db.collection(Collections.settings).doc("default").set(
       {
@@ -120,14 +121,14 @@ export async function PUT(req: Request) {
       bkashAccountName: String(saved.bkashAccountName ?? DEFAULTS.bkashAccountName),
       bkashAccountNumber: String(saved.bkashAccountNumber ?? DEFAULTS.bkashAccountNumber),
       bkashAccountType: String(saved.bkashAccountType ?? DEFAULTS.bkashAccountType),
-      bkashQrImageUrl: String(saved.bkashQrImageUrl ?? DEFAULTS.bkashQrImageUrl),
+      bkashQrImageUrl: sanitizeCloudinaryUrl(saved.bkashQrImageUrl),
       bankName: String(saved.bankName ?? DEFAULTS.bankName),
       bankAccountName: String(saved.bankAccountName ?? DEFAULTS.bankAccountName),
       bankAccountNumber: String(saved.bankAccountNumber ?? DEFAULTS.bankAccountNumber),
       bankAccountType: String(saved.bankAccountType ?? DEFAULTS.bankAccountType),
       bankDistrict: String(saved.bankDistrict ?? DEFAULTS.bankDistrict),
       bankBranch: String(saved.bankBranch ?? DEFAULTS.bankBranch),
-      bankQrImageUrl: String(saved.bankQrImageUrl ?? DEFAULTS.bankQrImageUrl),
+      bankQrImageUrl: sanitizeCloudinaryUrl(saved.bankQrImageUrl),
     });
   } catch (e) {
     console.error("Settings PUT error:", e);

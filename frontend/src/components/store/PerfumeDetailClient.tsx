@@ -67,7 +67,7 @@ export default function PerfumePage({
   const [prices, setPrices] = useState<PriceOption[]>(initialPrices ?? []);
   const [bulkRules, setBulkRules] = useState<BulkRule[]>(initialBulkRules ?? []);
   const [selectedMl, setSelectedMl] = useState<number | null>(() => initialPrices?.find((price) => price.available)?.ml ?? null);
-  const [selectedOption, setSelectedOption] = useState<"decant" | "full-bottle">("decant");
+  const [selectedOptionState, setSelectedOptionState] = useState<"decant" | "full-bottle">("decant");
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(!(initialPerfume && (initialPrices?.length ?? 0) > 0));
   const [showRequest, setShowRequest] = useState(false);
@@ -79,6 +79,7 @@ export default function PerfumePage({
     : perfume?.partialDealType === "decant"
       ? "decant"
       : null;
+  const selectedOption = lockedVariant ?? selectedOptionState;
 
   const addItem = useCart((s) => s.addItem);
   const { user } = useAuth();
@@ -97,12 +98,7 @@ export default function PerfumePage({
   };
 
   useEffect(() => {
-    if (initialPerfume && (initialPrices?.length ?? 0) > 0) {
-      setLoading(false);
-      const firstAvail = initialPrices?.find((pr) => pr.available);
-      if (firstAvail) setSelectedMl(firstAvail.ml);
-      return;
-    }
+    if (initialPerfume && (initialPrices?.length ?? 0) > 0) return;
 
     Promise.all([
       fetchJsonSafe<Perfume | null>(`/api/perfumes/${id}`, null),
@@ -168,11 +164,6 @@ export default function PerfumePage({
   const requestHref = perfume
     ? `/requests?perfumeName=${encodeURIComponent(perfume.name)}&brand=${encodeURIComponent(perfume.brand || "")}&type=full_bottle`
     : "/requests?type=full_bottle";
-
-  useEffect(() => {
-    if (!lockedVariant) return;
-    setSelectedOption(lockedVariant);
-  }, [lockedVariant]);
 
   const handleAddToCart = () => {
     if (!perfume) return;
@@ -365,7 +356,7 @@ export default function PerfumePage({
             <div className="flex gap-2 mb-3">
               {(lockedVariant === null || lockedVariant === "full-bottle") && (
                 <button
-                  onClick={() => setSelectedOption("full-bottle")}
+                  onClick={() => setSelectedOptionState("full-bottle")}
                   disabled={lockedVariant !== null}
                   className={`px-5 py-3 rounded text-sm transition-all ${
                     selectedOption === "full-bottle"
@@ -378,7 +369,7 @@ export default function PerfumePage({
               )}
               {(lockedVariant === null || lockedVariant === "decant") && (
                 <button
-                  onClick={() => setSelectedOption("decant")}
+                  onClick={() => setSelectedOptionState("decant")}
                   disabled={lockedVariant !== null}
                   className={`px-5 py-3 rounded text-sm transition-all ${
                     selectedOption === "decant"
@@ -398,7 +389,7 @@ export default function PerfumePage({
                   key={p.ml}
                   onClick={() => {
                     if (!p.available) return;
-                    setSelectedOption("decant");
+                    setSelectedOptionState("decant");
                     setSelectedMl(p.ml);
                   }}
                   disabled={!p.available}
