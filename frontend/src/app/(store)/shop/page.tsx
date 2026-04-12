@@ -265,6 +265,7 @@ function ShopContent() {
   const seasonParam = searchParams.get("season") || "";
   const bestSellerParam = searchParams.get("bestSeller") || "";
   const brandParam = searchParams.get("brand") || "";
+  const dealParam = searchParams.get("deal") || "";
   const notesParam = searchParams.get("notes") || "";
   const sortParam = searchParams.get("sort") || "newest";
   const selectedNotes = notesParam.split(",").map((n) => n.trim()).filter(Boolean);
@@ -304,6 +305,7 @@ function ShopContent() {
     if (seasonParam) params.set("season", seasonParam);
     if (bestSellerParam) params.set("bestSeller", bestSellerParam);
     if (brandParam) params.set("brand", brandParam);
+    if (dealParam) params.set("deal", dealParam);
     if (notesParam) params.set("notes", notesParam);
     if (sortParam) params.set("sort", sortParam);
 
@@ -348,7 +350,7 @@ function ShopContent() {
         setLoading(false);
       }
     }
-  }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, notesParam, sortParam]);
+  }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, dealParam, notesParam, sortParam]);
 
   useEffect(() => {
     fetch("/api/notes-library")
@@ -415,7 +417,7 @@ function ShopContent() {
     setPriceRange([0, MAX_PRICE]);
   };
 
-  const hasFilters = qParam || categoryParam || seasonParam || bestSellerParam || brandParam || notesParam;
+  const hasFilters = qParam || categoryParam || seasonParam || bestSellerParam || brandParam || dealParam || notesParam;
 
   // Price-filter client side (API handles the rest)
   const filteredPerfumes = perfumes.filter((p) => {
@@ -426,12 +428,13 @@ function ShopContent() {
   // Build title
   let title = "All Fragrances";
   if (bestSellerParam) title = "Best Sellers";
+  else if (dealParam === "partials" || dealParam === "partial") title = "Partial Deals";
   else if (categoryParam) title = `${categoryParam} Fragrances`;
   else if (seasonParam) title = `${seasonParam} Collection`;
   else if (brandParam) title = brandParam;
   else if (qParam) title = `Results for "${qParam}"`;
 
-  const activeFilterCount = [categoryParam, seasonParam, bestSellerParam, brandParam].filter(Boolean).length + selectedNotes.length;
+  const activeFilterCount = [categoryParam, seasonParam, bestSellerParam, brandParam, dealParam].filter(Boolean).length + selectedNotes.length;
 
   /* ── Sidebar Content (shared between desktop & mobile) ── */
   const filtersContent = (
@@ -705,6 +708,12 @@ function ShopContent() {
             <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
               {brandParam}
               <button onClick={() => updateFilter("brand", "")}><X size={12} /></button>
+            </span>
+          )}
+          {dealParam && (
+            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+              Partial Deals
+              <button onClick={() => updateFilter("deal", "")}><X size={12} /></button>
             </span>
           )}
           {bestSellerParam && (

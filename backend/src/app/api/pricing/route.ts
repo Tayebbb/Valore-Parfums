@@ -16,10 +16,21 @@ const priceResultCache = new Map<string, { data: Record<string, { prices: { ml: 
 type PricingPerfume = {
   id: string;
   isPersonalCollection?: boolean;
+  partialDealType?: "decant" | "full_bottle" | "";
+  partialSellingPrice?: number;
+  partialSellingPricePerMl?: number;
   purchasePricePerMl: number;
   marketPricePerMl: number;
   totalStockMl: number;
 };
+
+function calcPartialDealCost(
+  purchasePricePerMl: number,
+  ml: number,
+): number {
+  const baseBuying = purchasePricePerMl * ml;
+  return Math.ceil(baseBuying * (ml / 100));
+}
 
 async function getPerfumesByIds(ids: string[]): Promise<PricingPerfume[]> {
   const chunkSize = 10;
@@ -113,24 +124,31 @@ export async function GET(req: Request) {
     const bottle = bottles.find((b) => b.ml === size.ml);
     const bottleCost = bottle?.costPerBottle ?? 0;
     const profitMargin = getTierProfitMargin(tier, size.ml, margins);
-    const sellingPrice = calculateSellingPrice(
-      effectiveMarketPricePerMl,
-      size.ml,
-      bottleCost,
-      packagingCost,
-      profitMargin,
-    );
-    const profit = calculateProfit(sellingPrice, perfume.purchasePricePerMl, size.ml, bottleCost, packagingCost);
+    const partialType = String(perfume.partialDealType || "").toLowerCase();
+    const isPartialDeal = partialType === "decant" || partialType === "full_bottle";
+    const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
+    const sellingPrice = isPartialDeal
+      ? Math.ceil(Math.max(0, partialSellingPrice))
+      : calculateSellingPrice(
+        effectiveMarketPricePerMl,
+        size.ml,
+        bottleCost,
+        packagingCost,
+        profitMargin,
+      );
+    const totalCost = isPartialDeal
+      ? calcPartialDealCost(perfume.purchasePricePerMl, size.ml)
+      : Math.ceil(perfume.purchasePricePerMl * size.ml + packagingCost);
+    const profit = sellingPrice - totalCost;
     const ownerProfitPercent = config.ownerProfitPercent;
     const { ownerProfit, otherOwnerProfit } = splitProfit(profit, owner, ownerProfitPercent);
-    const totalCost = perfume.purchasePricePerMl * size.ml + bottleCost + packagingCost;
     const inStock = perfume.totalStockMl >= size.ml;
     const bottleAvailable = bottle ? bottle.availableCount > 0 : false;
 
     return {
       ml: size.ml,
       sellingPrice,
-      totalCost: Math.ceil(totalCost),
+      totalCost,
       profit,
       ownerProfit,
       otherOwnerProfit,
@@ -139,6 +157,8 @@ export async function GET(req: Request) {
       packagingCost,
       profitMargin,
       tier,
+      isPartialDeal,
+      partialDealType: isPartialDeal ? partialType : null,
       inStock,
       bottleAvailable,
       available: inStock && bottleAvailable,
@@ -187,18 +207,23 @@ export async function POST(req: Request) {
       : perfume.marketPricePerMl;
     const fullBottlePrice = effectiveMarketPricePerMl * 100;
     const tier = getBrandTier(fullBottlePrice);
+    const partialType = String(perfume.partialDealType || "").toLowerCase();
+    const isPartialDeal = partialType === "decant" || partialType === "full_bottle";
+    const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
 
     const prices = sizes.map((size) => {
       const bottle = bottles.find((b) => b.ml === size.ml);
       const bottleCost = bottle?.costPerBottle ?? 0;
       const profitMargin = getTierProfitMargin(tier, size.ml, margins);
-      const sellingPrice = calculateSellingPrice(
-        effectiveMarketPricePerMl,
-        size.ml,
-        bottleCost,
-        packagingCost,
-        profitMargin,
-      );
+      const sellingPrice = isPartialDeal
+        ? Math.ceil(Math.max(0, partialSellingPrice))
+        : calculateSellingPrice(
+          effectiveMarketPricePerMl,
+          size.ml,
+          bottleCost,
+          packagingCost,
+          profitMargin,
+        );
       const inStock = perfume.totalStockMl >= size.ml;
       const bottleAvailable = bottle ? bottle.availableCount > 0 : false;
       return { ml: size.ml, sellingPrice, available: inStock && bottleAvailable };

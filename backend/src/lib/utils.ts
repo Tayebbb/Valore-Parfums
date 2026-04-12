@@ -79,10 +79,10 @@ export function calculateProfit(
   sellingPrice: number,
   purchasePricePerMl: number,
   ml: number,
-  bottleCost: number,
+  _bottleCost: number,
   packagingCost: number,
 ): number {
-  const cost = purchasePricePerMl * ml + bottleCost + packagingCost;
+  const cost = purchasePricePerMl * ml + packagingCost;
   return sellingPrice - cost;
 }
 

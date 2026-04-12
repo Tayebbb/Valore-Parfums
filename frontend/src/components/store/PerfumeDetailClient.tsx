@@ -24,6 +24,7 @@ interface Perfume {
   marketPricePerMl?: number;
   isPersonalCollection?: boolean;
   purchasePricePerMl?: number;
+  partialDealType?: "decant" | "full_bottle" | "";
   fragranceNotes?: {
     top?: string[];
     middle?: string[];
@@ -72,6 +73,12 @@ export default function PerfumePage({
   const [showRequest, setShowRequest] = useState(false);
   const [reqForm, setReqForm] = useState({ customerName: "", customerPhone: "", desiredMl: 0, quantity: 1 });
   const [wishlisted, setWishlisted] = useState(false);
+
+  const lockedVariant = perfume?.partialDealType === "full_bottle"
+    ? "full-bottle"
+    : perfume?.partialDealType === "decant"
+      ? "decant"
+      : null;
 
   const addItem = useCart((s) => s.addItem);
   const { user } = useAuth();
@@ -161,6 +168,11 @@ export default function PerfumePage({
   const requestHref = perfume
     ? `/requests?perfumeName=${encodeURIComponent(perfume.name)}&brand=${encodeURIComponent(perfume.brand || "")}&type=full_bottle`
     : "/requests?type=full_bottle";
+
+  useEffect(() => {
+    if (!lockedVariant) return;
+    setSelectedOption(lockedVariant);
+  }, [lockedVariant]);
 
   const handleAddToCart = () => {
     if (!perfume) return;
@@ -351,26 +363,32 @@ export default function PerfumePage({
           <div>
             <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-3">Variant Selector</h3>
             <div className="flex gap-2 mb-3">
-              <button
-                onClick={() => setSelectedOption("full-bottle")}
-                className={`px-5 py-3 rounded text-sm transition-all ${
-                  selectedOption === "full-bottle"
-                    ? "bg-[var(--gold)] text-black"
-                    : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
-                }`}
-              >
-                <span className="font-serif text-base">Full Bottle</span>
-              </button>
-              <button
-                onClick={() => setSelectedOption("decant")}
-                className={`px-5 py-3 rounded text-sm transition-all ${
-                  selectedOption === "decant"
-                    ? "bg-[var(--gold)] text-black"
-                    : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
-                }`}
-              >
-                <span className="font-serif text-base">Decant</span>
-              </button>
+              {(lockedVariant === null || lockedVariant === "full-bottle") && (
+                <button
+                  onClick={() => setSelectedOption("full-bottle")}
+                  disabled={lockedVariant !== null}
+                  className={`px-5 py-3 rounded text-sm transition-all ${
+                    selectedOption === "full-bottle"
+                      ? "bg-[var(--gold)] text-black"
+                      : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+                  } ${lockedVariant !== null ? "cursor-default" : ""}`}
+                >
+                  <span className="font-serif text-base">Full Bottle</span>
+                </button>
+              )}
+              {(lockedVariant === null || lockedVariant === "decant") && (
+                <button
+                  onClick={() => setSelectedOption("decant")}
+                  disabled={lockedVariant !== null}
+                  className={`px-5 py-3 rounded text-sm transition-all ${
+                    selectedOption === "decant"
+                      ? "bg-[var(--gold)] text-black"
+                      : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+                  } ${lockedVariant !== null ? "cursor-default" : ""}`}
+                >
+                  <span className="font-serif text-base">Decant</span>
+                </button>
+              )}
             </div>
 
             {selectedOption === "decant" && (

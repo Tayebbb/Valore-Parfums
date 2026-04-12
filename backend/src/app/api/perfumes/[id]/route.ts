@@ -45,6 +45,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       updatePayload.pricingTier = getBrandTier(marketPricePerMl * bottleSizeForTier);
     }
 
+    if (body.partialDealType !== undefined || body.partialSellingPrice !== undefined || body.partialSellingPricePerMl !== undefined) {
+      const partialDealType = ["decant", "full_bottle"].includes(String(body.partialDealType || ""))
+        ? String(body.partialDealType)
+        : "";
+      const partialSellingPrice = Number(body.partialSellingPrice ?? body.partialSellingPricePerMl ?? 0);
+      updatePayload.partialDealType = partialDealType;
+      updatePayload.partialSellingPrice = partialDealType
+        ? (Number.isFinite(partialSellingPrice) ? partialSellingPrice : 0)
+        : 0;
+    }
+
     if (body.fragranceNotes || body.fragranceNoteIds || body.topNoteIds || body.middleNoteIds || body.baseNoteIds || body.topNotes || body.middleNotes || body.baseNotes) {
       const notes = buildStructuredNotes(body);
       updatePayload.fragranceNoteIds = notes.fragranceNoteIds;

@@ -18,6 +18,7 @@ const shopDropdown = [
   { label: "For Her", href: "/shop?category=Women" },
   { label: "Unisex", href: "/shop?category=Unisex" },
   { label: "Formal Fragrances", href: "/shop?category=Oud" },
+  { label: "Partials", href: "/partials" },
   { label: "Best Sellers", href: "/shop?bestSeller=true" },
 ];
 

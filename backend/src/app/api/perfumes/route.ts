@@ -113,6 +113,10 @@ export async function POST(req: Request) {
     const slug = resolvePerfumeSlug({ name: String(body.name || "") });
     const brandSlug = resolveBrandSlug({ brand: String(body.brand || "") });
     const seoKeywords = getProductKeywordBundle(String(body.name || "perfume"));
+    const partialDealType = ["decant", "full_bottle"].includes(String(body.partialDealType || ""))
+      ? String(body.partialDealType)
+      : "";
+    const partialSellingPrice = Number(body.partialSellingPrice ?? body.partialSellingPricePerMl ?? 0);
 
     const data = {
       ...body,
@@ -141,6 +145,8 @@ export async function POST(req: Request) {
       canonicalUrl: buildCanonicalProductUrl({ name: String(body.name || ""), brand: String(body.brand || ""), slug, brandSlug }),
       fullBottleAvailable: body.fullBottleAvailable ?? true,
       fullBottlePrice: body.fullBottlePrice ?? null,
+      partialDealType,
+      partialSellingPrice: partialDealType ? (Number.isFinite(partialSellingPrice) ? partialSellingPrice : 0) : 0,
       rating: Number(body.rating ?? 4.9),
       reviewCount: Number(body.reviewCount ?? 0),
       totalOrders: Number(body.totalOrders ?? 0),
