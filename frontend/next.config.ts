@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 import path from "path";
 // Detect Netlify environment
 const isNetlify = process.env.NEXT_PUBLIC_ENV === "netlify";
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 const nextConfig: NextConfig = {
   // Compress responses with gzip (Brotli handled by CDN/reverse proxy)
@@ -20,9 +19,9 @@ const nextConfig: NextConfig = {
   // Allow Turbopack to use system TLS certificates so Google Fonts can be
   // fetched during the build (required when the build host uses a custom CA).
 
-  // Frontend-only app: proxy all API calls to the backend service.
+  // API requests are handled by frontend route handlers under /api.
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${apiBaseUrl}/api/:path*` }];
+    return [];
   },
 
   // Optimize images

@@ -9,26 +9,31 @@ const notificationsCache = new Map<string, { data: unknown[]; ts: number }>();
 
 // GET — return notifications (replaces prisma.notification.findMany)
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const activeOnly = searchParams.get("active") === "true";
-  const cacheKey = activeOnly ? "active" : "all";
-  const cached = notificationsCache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < NOTIFICATIONS_CACHE_TTL) {
-    return NextResponse.json(cached.data);
+  try {
+    const { searchParams } = new URL(req.url);
+    const activeOnly = searchParams.get("active") === "true";
+    const cacheKey = activeOnly ? "active" : "all";
+    const cached = notificationsCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < NOTIFICATIONS_CACHE_TTL) {
+      return NextResponse.json(cached.data);
+    }
+
+    const baseQuery = activeOnly
+      ? db.collection(Collections.notifications).where("isActive", "==", true)
+      : db.collection(Collections.notifications);
+
+    const snap = await baseQuery.get();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const notifications: any[] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    notifications.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    const payload = notifications.map(serializeDoc);
+    notificationsCache.set(cacheKey, { data: payload, ts: Date.now() });
+    return NextResponse.json(payload);
+  } catch (error) {
+    console.error("notifications GET failed", error);
+    return NextResponse.json([]);
   }
-
-  const baseQuery = activeOnly
-    ? db.collection(Collections.notifications).where("isActive", "==", true)
-    : db.collection(Collections.notifications);
-
-  const snap = await baseQuery.get();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const notifications: any[] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  notifications.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
-  const payload = notifications.map(serializeDoc);
-  notificationsCache.set(cacheKey, { data: payload, ts: Date.now() });
-  return NextResponse.json(payload);
 }
 
 // POST — create notification — admin only
