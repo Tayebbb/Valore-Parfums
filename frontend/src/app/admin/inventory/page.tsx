@@ -49,6 +49,8 @@ interface Perfume {
   isActive: boolean;
   owner: string;
   isPersonalCollection: boolean;
+  partialDealType?: "" | "decant" | "full_bottle";
+  partialSellingPrice?: number;
   fragranceNotes?: FragranceNotes;
   fragranceNoteIds?: FragranceNoteIds;
 }
@@ -68,6 +70,8 @@ interface PerfumeForm {
   isActive: boolean;
   owner: string;
   isPersonalCollection: boolean;
+  partialDealType: "" | "decant" | "full_bottle";
+  partialSellingPrice: number;
   fragranceNotes: FragranceNotes;
   fragranceNoteIds: FragranceNoteIds;
   bottleSizeMl: number;
@@ -100,6 +104,8 @@ function createEmptyPerfumeForm(): PerfumeForm {
     isActive: true,
     owner: "Store",
     isPersonalCollection: false,
+    partialDealType: "",
+    partialSellingPrice: 0,
     fragranceNotes: { ...emptyNotes, top: [], middle: [], base: [], all: [] },
     fragranceNoteIds: { ...emptyNoteIds, top: [], middle: [], base: [], all: [] },
     // UI-only fields
@@ -143,7 +149,7 @@ function CustomBrandCombobox({
   options: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState(value || "");
+  const input = value || "";
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -151,10 +157,6 @@ function CustomBrandCombobox({
     const query = input.trim().toLowerCase();
     return options.filter((brand) => brand.toLowerCase().includes(query));
   }, [input, options]);
-
-  useEffect(() => {
-    setInput(value || "");
-  }, [value]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -169,13 +171,11 @@ function CustomBrandCombobox({
 
   const handleSelect = (brand: string) => {
     onChange(brand);
-    setInput(brand);
     setOpen(false);
   };
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value;
-    setInput(nextValue);
     onChange(nextValue);
     setOpen(true);
   };
@@ -437,6 +437,8 @@ export default function InventoryPage() {
       isActive: p.isActive !== false,
       owner: p.owner || "Store",
       isPersonalCollection: p.isPersonalCollection || false,
+      partialDealType: (p.partialDealType || "") as "" | "decant" | "full_bottle",
+      partialSellingPrice: Number((p as Perfume & { partialSellingPricePerMl?: number }).partialSellingPrice ?? (p as Perfume & { partialSellingPricePerMl?: number }).partialSellingPricePerMl ?? 0),
       fragranceNoteIds: {
         top: normalizedTop,
         middle: middleIds,
@@ -498,6 +500,7 @@ export default function InventoryPage() {
     try {
       // Build the payload — strip UI-only fields
       const { bottleSizeMl, marketPriceWhole, purchasePriceWhole, ...payload } = form;
+      if (!payload.partialDealType) payload.partialSellingPrice = 0;
       // Auto-compute per-ML if whole bottle fields filled
       if (bottleSizeMl > 0 && marketPriceWhole > 0) {
         payload.marketPricePerMl = parseFloat((marketPriceWhole / bottleSizeMl).toFixed(2));
@@ -933,6 +936,40 @@ export default function InventoryPage() {
                   {owners.map((o) => <option key={o} value={o}>{o === "Store" ? "Store (Platform)" : o}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Partial Deal Type</label>
+                <select
+                  value={form.partialDealType}
+                  onChange={(e) => {
+                    const partialDealType = e.target.value as "" | "decant" | "full_bottle";
+                    setForm({
+                      ...form,
+                      partialDealType,
+                      partialSellingPrice: partialDealType ? form.partialSellingPrice : 0,
+                    });
+                  }}
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
+                >
+                  <option value="">No (Regular Listing)</option>
+                  <option value="decant">Partial Deal - Decant</option>
+                  <option value="full_bottle">Partial Deal - Full Bottle</option>
+                </select>
+              </div>
+              {form.partialDealType && (
+                <div>
+                  <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Partial Selling Price (Total BDT)</label>
+                  <input
+                    type="number"
+                    value={form.partialSellingPrice || ""}
+                    onChange={(e) => setForm({ ...form, partialSellingPrice: e.target.value === "" ? 0 : parseFloat(e.target.value) })}
+                    placeholder="e.g. 2500"
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors"
+                  />
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                    This is the exact final selling price for the full partial deal. Cost for partials is calculated as ml% of purchase value (example: 30ml to 30% of purchase).
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Low Stock Threshold (ml)</label>
                 <input

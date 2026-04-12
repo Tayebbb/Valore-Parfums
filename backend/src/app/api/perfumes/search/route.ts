@@ -102,6 +102,7 @@ function getSearchCacheKey(params: URLSearchParams): string {
     season: params.get("season") || "",
     bestSeller: params.get("bestSeller") || "",
     brand: params.get("brand") || "",
+    deal: params.get("deal") || "",
     notes: params.get("notes") || "",
     sort: params.get("sort") || "newest",
   };
@@ -230,6 +231,7 @@ export async function GET(req: Request) {
   const season = searchParams.get("season") || "";
   const bestSeller = searchParams.get("bestSeller");
   const brand = searchParams.get("brand") || "";
+  const deal = (searchParams.get("deal") || "").toLowerCase();
   const selectedNotes = (searchParams.get("notes") || "")
     .split(",")
     .map((note) => note.trim().toLowerCase())
@@ -267,6 +269,12 @@ export async function GET(req: Request) {
     perfumes = perfumes.filter((p) => {
       if (typeof p.brand !== "string") return false;
       return matchesBrandGroup(p.brand, brand, brandSections);
+    });
+  }
+  if (deal === "partials" || deal === "partial") {
+    perfumes = perfumes.filter((p) => {
+      const partialType = String((p as { partialDealType?: unknown }).partialDealType || "").toLowerCase();
+      return partialType === "decant" || partialType === "full_bottle";
     });
   }
   if (selectedNotes.length > 0) {

@@ -5,6 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 import { buildStructuredNotes, getCanonicalNotesLibrary } from "@/lib/fragrance-notes";
 import { getBrandTier } from "@/lib/utils";
+import { sanitizeCloudinaryImagesField } from "@/lib/image-utils";
 import {
   buildCanonicalProductPath,
   buildCanonicalProductUrl,
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
+    const sanitizedImages = sanitizeCloudinaryImagesField(body.images);
     const purchasePricePerMl = Number(body.purchasePricePerMl ?? 0);
     const marketPricePerMl = Number(body.marketPricePerMl ?? 0);
     const bottleSizeMl = Number(body.totalStockMl ?? 0);
@@ -118,9 +120,15 @@ export async function POST(req: Request) {
     const slug = resolvePerfumeSlug({ name: String(body.name || "") });
     const brandSlug = resolveBrandSlug({ brand: String(body.brand || "") });
     const seoKeywords = getProductKeywordBundle(String(body.name || "perfume"));
+    const partialDealType = ["decant", "full_bottle"].includes(String(body.partialDealType || ""))
+      ? String(body.partialDealType)
+      : "";
+    const partialSellingPrice = Number(body.partialSellingPrice ?? body.partialSellingPricePerMl ?? 0);
 
     const data = {
       ...body,
+      images: sanitizedImages.images,
+      mainImage: sanitizedImages.mainImage,
       slug,
       brandSlug,
       purchasePricePerMl,
@@ -146,6 +154,8 @@ export async function POST(req: Request) {
       canonicalUrl: buildCanonicalProductUrl({ name: String(body.name || ""), brand: String(body.brand || ""), slug, brandSlug }),
       fullBottleAvailable: body.fullBottleAvailable ?? true,
       fullBottlePrice: body.fullBottlePrice ?? null,
+      partialDealType,
+      partialSellingPrice: partialDealType ? (Number.isFinite(partialSellingPrice) ? partialSellingPrice : 0) : 0,
       rating: Number(body.rating ?? 4.9),
       reviewCount: Number(body.reviewCount ?? 0),
       totalOrders: Number(body.totalOrders ?? 0),

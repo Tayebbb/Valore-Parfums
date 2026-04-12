@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import sharp from "sharp";
 import { requireAdmin } from "@/lib/auth";
+import { getCloudinaryFolder, uploadImageBufferToCloudinary } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 
@@ -157,12 +156,7 @@ export async function POST(req: Request) {
     }
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const relativeDir = path.join("images", "perfumes");
-    const uploadDir = path.join(process.cwd(), "public", relativeDir);
-    await mkdir(uploadDir, { recursive: true });
-
-    const webpPath = path.join(uploadDir, `${id}.webp`);
-    const pngPath = path.join(uploadDir, `${id}.png`);
+    const folder = getCloudinaryFolder("images", "perfumes");
     let imageUrl = "";
     let fallbackUrl = "";
 
@@ -182,17 +176,22 @@ export async function POST(req: Request) {
         })
         .toBuffer();
 
-      await Promise.all([
-        sharp(composed).webp({ quality: 86 }).toFile(webpPath),
-        sharp(composed).png({ compressionLevel: 9, adaptiveFiltering: true }).toFile(pngPath),
+      const [webpBuffer, pngBuffer] = await Promise.all([
+        sharp(composed).webp({ quality: 86 }).toBuffer(),
+        sharp(composed).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer(),
       ]);
 
-      imageUrl = `/${relativeDir.replace(/\\/g, "/")}/${id}.webp`;
-      fallbackUrl = `/${relativeDir.replace(/\\/g, "/")}/${id}.png`;
+      const [webpUpload, pngUpload] = await Promise.all([
+        uploadImageBufferToCloudinary(webpBuffer, { folder, publicId: `${id}-webp`, format: "webp" }),
+        uploadImageBufferToCloudinary(pngBuffer, { folder, publicId: `${id}-png`, format: "png" }),
+      ]);
+
+      imageUrl = webpUpload.secure_url;
+      fallbackUrl = pngUpload.secure_url;
     } catch (decodeError) {
       console.warn("Sharp could not decode PNG; using raw PNG fallback", decodeError);
-      await writeFile(pngPath, buffer);
-      imageUrl = `/${relativeDir.replace(/\\/g, "/")}/${id}.png`;
+      const fallbackUpload = await uploadImageBufferToCloudinary(buffer, { folder, publicId: `${id}-png`, format: "png" });
+      imageUrl = fallbackUpload.secure_url;
       fallbackUrl = imageUrl;
     }
 

@@ -237,6 +237,8 @@ export async function POST(req: Request) {
       bottleCost: number;
       packagingCost: number;
       appliedMarginPercent: number;
+      partialDealType?: string | null;
+      partialSellingPrice?: number | null;
       discountPercent: number;
       pricingTier: string;
     };
@@ -362,16 +364,21 @@ export async function POST(req: Request) {
     const fullBottlePrice = effectiveMarketPricePerMl * 100;
     const tier = getBrandTier(fullBottlePrice);
     const profitMargin = getTierProfitMargin(tier, requestedFullBottleMl || item.ml, margins);
+    const partialDealType = String(perfume.partialDealType || "").toLowerCase();
+    const isPartialDeal = partialDealType === "decant" || partialDealType === "full_bottle";
+    const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
 
     let unitPrice = isFullBottleItem
       ? 0
-      : calculateSellingPrice(
-        effectiveMarketPricePerMl,
-        requestedFullBottleMl,
-        bottleCost,
-        packagingCost,
-        profitMargin,
-      );
+      : isPartialDeal
+        ? Math.ceil(Math.max(0, partialSellingPrice))
+        : calculateSellingPrice(
+          effectiveMarketPricePerMl,
+          requestedFullBottleMl,
+          bottleCost,
+          packagingCost,
+          profitMargin,
+        );
 
     // Apply bulk discount if applicable
     const bulkRule = bulkRules.find((r: { minQuantity: number }) => quantity >= r.minQuantity);
@@ -382,7 +389,9 @@ export async function POST(req: Request) {
 
     const unitCost = isFullBottleItem
       ? 0
-      : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + bottleCost + packagingCost);
+      : isPartialDeal
+        ? Math.ceil(((perfume.purchasePricePerMl || 0) * requestedFullBottleMl) * (requestedFullBottleMl / 100))
+        : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + packagingCost);
     const itemBreakdown = computeItemBreakdown({
       unitCostMinor: toMinorUnits(unitCost),
       unitSellingPriceMinor: toMinorUnits(unitPrice),
@@ -432,6 +441,8 @@ export async function POST(req: Request) {
           bottleCost: Number(bottleCost || 0),
           packagingCost: Number(packagingCost || 0),
           appliedMarginPercent: Number(profitMargin || 0),
+          partialDealType: isPartialDeal ? partialDealType : null,
+          partialSellingPrice: isPartialDeal ? partialSellingPrice : null,
           discountPercent,
           pricingTier: tier,
         },

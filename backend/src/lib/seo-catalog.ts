@@ -84,6 +84,15 @@ export interface PerfumeReview {
   createdAt?: string;
 }
 
+function toTimestamp(value: unknown): number {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
 export interface ProductKeywordBundle {
   titleKeywords: string[];
   descriptionKeywords: string[];
@@ -329,8 +338,8 @@ export async function getPerfumeReviews(perfumeId: string): Promise<PerfumeRevie
     // Sort by createdAt in descending order and limit to 50
     return reviews
       .sort((a, b) => {
-        const aTime = (a.createdAt as any) instanceof Date ? ((a.createdAt as any) as Date).getTime() : 0;
-        const bTime = (b.createdAt as any) instanceof Date ? ((b.createdAt as any) as Date).getTime() : 0;
+        const aTime = toTimestamp(a.createdAt);
+        const bTime = toTimestamp(b.createdAt);
         return bTime - aTime;
       })
       .slice(0, 50);
