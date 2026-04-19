@@ -18,7 +18,13 @@ function copyUpstreamHeaders(upstream: Response): Headers {
   const headers = new Headers();
   upstream.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (lower === "content-length" || lower === "transfer-encoding") return;
+    if (
+      lower === "content-length" ||
+      lower === "transfer-encoding" ||
+      lower === "content-encoding"
+    ) {
+      return;
+    }
     headers.set(key, value);
   });
   return headers;
