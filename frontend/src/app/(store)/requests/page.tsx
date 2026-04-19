@@ -21,7 +21,25 @@ interface UserRequest {
   createdAt: string;
 }
 
-const mlOptions = [3, 6, 10, 15];
+interface DecantSizeOption {
+  id: string;
+  ml: number;
+  enabled?: boolean;
+}
+
+const defaultMlOptions = [3, 5, 10, 15];
+const noteOptions = [
+  "Need recommendation",
+  "For gifting",
+  "Sensitive skin",
+  "Urgent delivery",
+  "Other",
+];
+
+function getSprayEstimateLabel(ml: number): string {
+  const spraysPerMl = 15;
+  return `${ml * spraysPerMl}+ sprays`;
+}
 
 function RequestsPageContent() {
   const { user, loading: authLoading } = useAuth();
@@ -46,10 +64,12 @@ function RequestsPageContent() {
   const [perfumeName, setPerfumeName] = useState(requestDefaults.perfumeName);
   const [brand, setBrand] = useState(requestDefaults.brand);
   const [type, setType] = useState<"decant" | "full_bottle">(requestDefaults.type);
-  const [ml, setMl] = useState(6);
+  const [mlOptions, setMlOptions] = useState<number[]>(defaultMlOptions);
+  const [ml, setMl] = useState(defaultMlOptions[1]);
   const [fullBottleSize, setFullBottleSize] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [notes, setNotes] = useState("");
+  const [notesOption, setNotesOption] = useState("");
+  const [customNote, setCustomNote] = useState("");
 
   const load = useCallback(() => {
     if (!user) return;
@@ -72,14 +92,33 @@ function RequestsPageContent() {
     return () => window.clearTimeout(timer);
   }, [user, load]);
 
+  useEffect(() => {
+    fetch("/api/decant-sizes")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: DecantSizeOption[]) => {
+        const sizes = Array.isArray(rows)
+          ? rows
+            .filter((row) => Number(row?.ml) > 0 && (row.enabled ?? true))
+            .map((row) => Number(row.ml))
+            .sort((a, b) => a - b)
+          : [];
+        if (sizes.length > 0) {
+          setMlOptions(sizes);
+          setMl((current) => (sizes.includes(current) ? current : sizes[0]));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const resetForm = () => {
     setPerfumeName("");
     setBrand("");
     setType("decant");
-    setMl(6);
+    setMl((current) => (mlOptions.includes(current) ? current : (mlOptions[0] ?? defaultMlOptions[0])));
     setFullBottleSize("");
     setQuantity(1);
-    setNotes("");
+    setNotesOption("");
+    setCustomNote("");
     setShowForm(false);
   };
 
@@ -99,6 +138,8 @@ function RequestsPageContent() {
       return;
     }
 
+    const selectedNotes = notesOption === "Other" ? customNote.trim() : notesOption.trim();
+
     setSubmitting(true);
     const res = await fetch("/api/requests", {
       method: "POST",
@@ -110,7 +151,7 @@ function RequestsPageContent() {
         ml: type === "decant" ? ml : null,
         fullBottleSize: type === "full_bottle" ? fullBottleSize.trim() : null,
         quantity,
-        notes: notes.trim(),
+        notes: selectedNotes,
       }),
     });
 
@@ -252,7 +293,7 @@ function RequestsPageContent() {
                               : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
                           }`}
                         >
-                          {size}ml
+                          {size}ml ({getSprayEstimateLabel(size)})
                         </button>
                       ))}
                     </div>
@@ -290,14 +331,26 @@ function RequestsPageContent() {
 
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Notes (optional)</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  maxLength={500}
-                  rows={2}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none resize-none"
-                  placeholder="Any special requirements..."
-                />
+                <select
+                  value={notesOption}
+                  onChange={(e) => setNotesOption(e.target.value)}
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                >
+                  <option value="">Select a note</option>
+                  {noteOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                {notesOption === "Other" && (
+                  <textarea
+                    value={customNote}
+                    onChange={(e) => setCustomNote(e.target.value)}
+                    maxLength={500}
+                    rows={2}
+                    className="mt-2 w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none resize-none"
+                    placeholder="Write your note..."
+                  />
+                )}
               </div>
 
               <div className="flex gap-3">

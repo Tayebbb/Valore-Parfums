@@ -44,13 +44,24 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
   const pathname = path.join("/");
   const query = req.nextUrl.search || "";
   const targetUrl = `${backendBaseUrl}/api/${pathname}${query}`;
+  const method = req.method.toUpperCase();
+  const isGetLike = method === "GET" || method === "HEAD";
+  const isPublicCatalogPath =
+    pathname === "perfumes" ||
+    pathname === "notifications" ||
+    pathname === "notes-library" ||
+    pathname.startsWith("perfumes/search");
+  const useCatalogCache = isGetLike && isPublicCatalogPath;
 
   const headers = new Headers(req.headers);
   headers.delete("host");
   headers.delete("content-length");
   headers.delete("connection");
+  if (useCatalogCache) {
+    headers.delete("cookie");
+    headers.delete("authorization");
+  }
 
-  const method = req.method.toUpperCase();
   const body = method === "GET" || method === "HEAD" ? undefined : await req.arrayBuffer();
 
   let upstream: Response;
@@ -60,7 +71,8 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
       headers,
       body,
       redirect: "manual",
-      cache: "no-store",
+      cache: useCatalogCache ? "force-cache" : "no-store",
+      next: useCatalogCache ? { revalidate: 20 } : undefined,
     });
   } catch (error) {
     console.error("API proxy request failed", { targetUrl, error });
@@ -71,9 +83,8 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
   }
 
   const contentType = upstream.headers.get("content-type") || "";
-  const text = await upstream.text();
-
   if (!upstream.ok && !contentType.toLowerCase().includes("application/json")) {
+    const text = await upstream.text();
     return NextResponse.json(
       {
         error: "Backend API returned a non-JSON error response.",
@@ -84,7 +95,9 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
     );
   }
 
-  return new NextResponse(text, {
+  const bodyBuffer = await upstream.arrayBuffer();
+
+  return new NextResponse(bodyBuffer, {
     status: upstream.status,
     headers: copyUpstreamHeaders(upstream),
   });

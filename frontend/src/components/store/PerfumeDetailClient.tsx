@@ -51,6 +51,11 @@ interface BulkRule {
   discountPercent: number;
 }
 
+function getSprayEstimateLabel(ml: number): string {
+  const spraysPerMl = 15;
+  return `${ml * spraysPerMl}+ sprays`;
+}
+
 export default function PerfumePage({
   params,
   initialPerfume,
@@ -321,8 +326,6 @@ export default function PerfumePage({
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{perfume.description}</p>
           )}
 
-          <h2 className="font-serif text-2xl font-light">Select Your Size</h2>
-
           {(perfume.fragranceNotes?.top?.length || perfume.fragranceNotes?.middle?.length || perfume.fragranceNotes?.base?.length) ? (
             <div className="space-y-3">
               <h2 className="font-serif text-2xl font-light">Fragrance Notes</h2>
@@ -360,6 +363,8 @@ export default function PerfumePage({
               </div>
             </div>
           ) : null}
+
+          <h2 className="font-serif text-2xl font-light">Select Your Size</h2>
 
           {/* Size Selector */}
           <div>
@@ -412,7 +417,7 @@ export default function PerfumePage({
                       : "border border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed line-through"
                   }`}
                 >
-                  <span className="font-serif text-base">{p.ml}ml</span>
+                  <span className="font-serif text-base uppercase">{p.ml}ml Decant ({getSprayEstimateLabel(p.ml)})</span>
                   <span className="block text-[10px] uppercase tracking-wider mt-0.5">
                     {p.sellingPrice.toLocaleString("en-BD")} BDT
                   </span>

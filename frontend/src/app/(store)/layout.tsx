@@ -9,6 +9,7 @@ import { useTheme } from "@/store/theme";
 import { useAuth } from "@/store/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
+import { toPublicApiUrl } from "@/lib/public-api";
 
 const ANNOUNCEMENTS_CACHE_KEY = "vp-announcements";
 const ANNOUNCEMENTS_CACHE_TTL = 60_000;
@@ -167,7 +168,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       // ignore parse errors
     }
 
-    fetch("/api/notifications?active=true")
+    fetch(toPublicApiUrl("/api/notifications?active=true"))
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -246,7 +247,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
     setSearchLoading(true);
     searchDebounce.current = setTimeout(() => {
-      fetch(`/api/perfumes/search?q=${encodeURIComponent(val.trim())}`)
+      fetch(toPublicApiUrl(`/api/perfumes/search?q=${encodeURIComponent(val.trim())}`))
         .then((r) => {
           if (!r.ok) return { perfumes: [] };
           return r.json();

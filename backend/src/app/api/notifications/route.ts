@@ -5,6 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 
 const NOTIFICATIONS_CACHE_TTL = 30_000;
+const NOTIFICATIONS_CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=120";
 const notificationsCache = new Map<string, { data: unknown[]; ts: number }>();
 
 // GET — return notifications (replaces prisma.notification.findMany)
@@ -15,7 +16,7 @@ export async function GET(req: Request) {
     const cacheKey = activeOnly ? "active" : "all";
     const cached = notificationsCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < NOTIFICATIONS_CACHE_TTL) {
-      return NextResponse.json(cached.data);
+      return NextResponse.json(cached.data, { headers: { "Cache-Control": NOTIFICATIONS_CACHE_CONTROL } });
     }
 
     const baseQuery = activeOnly
@@ -29,10 +30,10 @@ export async function GET(req: Request) {
 
     const payload = notifications.map(serializeDoc);
     notificationsCache.set(cacheKey, { data: payload, ts: Date.now() });
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, { headers: { "Cache-Control": NOTIFICATIONS_CACHE_CONTROL } });
   } catch (error) {
     console.error("notifications GET failed", error);
-    return NextResponse.json([]);
+    return NextResponse.json([], { headers: { "Cache-Control": "no-store" } });
   }
 }
 

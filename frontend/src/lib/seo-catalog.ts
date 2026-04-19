@@ -31,7 +31,7 @@ function resolveSiteUrl(): string {
 
 export const SITE_URL = resolveSiteUrl();
 
-export const DECANT_VARIANTS = [3, 10, 15, 30] as const;
+export const DECANT_VARIANTS = [3, 5, 10, 15, 30] as const;
 
 export type DecantVariant = (typeof DECANT_VARIANTS)[number];
 
@@ -153,11 +153,15 @@ export function resolveBrandSlug(perfume: Pick<PerfumeDocument, "brand" | "brand
 export function buildProductSlug(perfume: Pick<PerfumeDocument, "name" | "slug" | "brand" | "brandSlug">): string {
   const brandSlug = resolveBrandSlug(perfume);
   const perfumeSlug = resolvePerfumeSlug(perfume);
-  return perfumeSlug.startsWith(`${brandSlug}-`) ? perfumeSlug : `${brandSlug}-${perfumeSlug}`;
+  if (perfumeSlug.startsWith(`${brandSlug}-`)) {
+    const withoutBrandPrefix = perfumeSlug.slice(brandSlug.length + 1);
+    return withoutBrandPrefix || perfumeSlug;
+  }
+  return perfumeSlug;
 }
 
 export function buildCanonicalProductPath(perfume: Pick<PerfumeDocument, "name" | "slug" | "brand" | "brandSlug">): string {
-  return `/brand/${resolveBrandSlug(perfume)}/${resolvePerfumeSlug(perfume)}`;
+  return `/products/${buildProductSlug(perfume)}`;
 }
 
 export function buildCanonicalProductUrl(perfume: Pick<PerfumeDocument, "name" | "slug" | "brand" | "brandSlug">): string {

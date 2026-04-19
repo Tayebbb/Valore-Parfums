@@ -335,7 +335,7 @@ function CheckoutContent() {
           }
 
           setDirectProductPath(
-            p.canonicalPath || (p.brandSlug && p.slug ? `/brand/${p.brandSlug}/${p.slug}` : ""),
+            p.canonicalPath || (p.slug ? `/products/${p.slug}` : ""),
           );
           setDirectItem({
             perfumeId: p.id,

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
+import { toPublicApiUrl } from "@/lib/public-api";
 
 interface Perfume {
   id: string;
@@ -96,7 +97,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/perfumes?active=true")
+    fetch(toPublicApiUrl("/api/perfumes?active=true"))
       .then((r) => {
         if (!r.ok) return [] as Perfume[];
         return r.json();
@@ -112,7 +113,7 @@ export default function HomePage() {
         // Batch-fetch pricing for all displayed perfumes in ONE call
         const ids = perfumeList.slice(0, 12).map((p) => p.id);
         if (ids.length > 0) {
-          fetch("/api/pricing", {
+          fetch(toPublicApiUrl("/api/pricing"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ perfumeIds: ids }),

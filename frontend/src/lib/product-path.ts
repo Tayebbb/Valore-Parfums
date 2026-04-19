@@ -24,5 +24,10 @@ export function resolveBrandSlug(perfume: Pick<CanonicalProduct, "brand" | "bran
 }
 
 export function buildCanonicalProductPath(perfume: CanonicalProduct): string {
-  return `/brand/${resolveBrandSlug(perfume)}/${resolvePerfumeSlug(perfume)}`;
+  const brandSlug = resolveBrandSlug(perfume);
+  const perfumeSlug = resolvePerfumeSlug(perfume);
+  const normalizedSlug = perfumeSlug.startsWith(`${brandSlug}-`)
+    ? (perfumeSlug.slice(brandSlug.length + 1) || perfumeSlug)
+    : perfumeSlug;
+  return `/products/${normalizedSlug}`;
 }

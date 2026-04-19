@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
+import { toPublicApiUrl } from "@/lib/public-api";
 
 interface Perfume {
   id: string;
@@ -310,7 +311,7 @@ function ShopContent() {
     if (sortParam) params.set("sort", sortParam);
 
     try {
-      const perfumeRes = await fetch(`/api/perfumes/search?${params.toString()}`, { signal: controller.signal });
+      const perfumeRes = await fetch(toPublicApiUrl(`/api/perfumes/search?${params.toString()}`), { signal: controller.signal });
       if (!perfumeRes.ok) {
         if (seq !== fetchSeqRef.current) return;
         setPerfumes([]);
@@ -332,7 +333,7 @@ function ShopContent() {
         return;
       }
 
-      const pricingRes = await fetch("/api/pricing", {
+      const pricingRes = await fetch(toPublicApiUrl("/api/pricing"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ perfumeIds: ids }),
@@ -364,7 +365,7 @@ function ShopContent() {
   }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, dealParam, notesParam, sortParam]);
 
   useEffect(() => {
-    fetch("/api/notes-library")
+    fetch(toPublicApiUrl("/api/notes-library"))
       .then((r) => r.json())
       .then((data) => {
         const notes = Array.isArray(data?.noteLabels) ? data.noteLabels : [];
