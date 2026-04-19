@@ -85,17 +85,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
         </div>
         <div className="p-4">
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
-          {perfume.inspiredBy && (
-            <p className="text-sm md:text-base leading-relaxed font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mt-1">
-              Inspired by: {perfume.inspiredBy}
-            </p>
-          )}
           <p className="text-sm md:text-base leading-relaxed font-medium text-[var(--text-muted)] mt-0.5">{perfume.brand}</p>
-          {Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0 && (
-            <p className="text-sm md:text-base leading-relaxed font-semibold uppercase tracking-[0.08em] text-[var(--gold)] mt-2 truncate">
-                {perfume.keyNotes.slice(0, 3).join(" | ")}
-            </p>
-          )}
           <div className="mt-3">
             {lowestPrice ? (
               <p className="font-serif text-lg md:text-2xl leading-snug font-bold text-[var(--gold-light)] drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">

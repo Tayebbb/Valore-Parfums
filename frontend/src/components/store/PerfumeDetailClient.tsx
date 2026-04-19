@@ -78,6 +78,7 @@ export default function PerfumePage({
   const [showRequest, setShowRequest] = useState(false);
   const [reqForm, setReqForm] = useState({ customerName: "", customerPhone: "", desiredMl: 0, quantity: 1 });
   const [wishlisted, setWishlisted] = useState(false);
+  const [isFragranceNotesOpen, setIsFragranceNotesOpen] = useState(true);
 
   const lockedVariant = perfume?.partialDealType === "full_bottle"
     ? "full-bottle"
@@ -326,39 +327,53 @@ export default function PerfumePage({
 
           {(perfume.fragranceNotes?.top?.length || perfume.fragranceNotes?.middle?.length || perfume.fragranceNotes?.base?.length) ? (
             <div className="space-y-3">
-              <h2 className="font-serif text-2xl font-light">Fragrance Notes</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Top Notes</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(perfume.fragranceNotes?.top || []).map((note) => (
-                      <span key={`top-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
-                        {note}
-                      </span>
-                    ))}
+              <button
+                type="button"
+                onClick={() => setIsFragranceNotesOpen((prev) => !prev)}
+                aria-expanded={isFragranceNotesOpen}
+                aria-controls="fragrance-notes-panel"
+                className="w-full flex items-center justify-between rounded border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-left hover:border-[var(--gold)] transition-colors"
+              >
+                <h2 className="font-serif text-2xl font-light">Fragrance Notes</h2>
+                <span className="font-sans text-xs uppercase tracking-[0.15em] text-[var(--gold)]">
+                  {isFragranceNotesOpen ? "Collapse" : "Expand"}
+                </span>
+              </button>
+
+              {isFragranceNotesOpen && (
+                <div id="fragrance-notes-panel" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Top Notes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(perfume.fragranceNotes?.top || []).map((note) => (
+                        <span key={`top-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                          {note}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Middle Notes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(perfume.fragranceNotes?.middle || []).map((note) => (
+                        <span key={`middle-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                          {note}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Base Notes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(perfume.fragranceNotes?.base || []).map((note) => (
+                        <span key={`base-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                          {note}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Middle Notes</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(perfume.fragranceNotes?.middle || []).map((note) => (
-                      <span key={`middle-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
-                        {note}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Base Notes</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(perfume.fragranceNotes?.base || []).map((note) => (
-                      <span key={`base-${note}`} className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
-                        {note}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           ) : null}
 
@@ -397,31 +412,30 @@ export default function PerfumePage({
             </div>
 
             {selectedOption === "decant" && (
-              <div className="space-y-2">
-                <label htmlFor="size-selector" className="block text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Size
-                </label>
-                <div className="relative">
-                  <select
-                    id="size-selector"
-                    value={selectedMl ?? ""}
-                    onChange={(event) => {
-                      const nextMl = Number(event.target.value);
-                      if (Number.isNaN(nextMl)) return;
+              <div className="flex flex-wrap gap-2">
+                {prices.map((p) => (
+                  <button
+                    key={p.ml}
+                    onClick={() => {
+                      if (!p.available) return;
                       setSelectedOptionState("decant");
-                      setSelectedMl(nextMl);
+                      setSelectedMl(p.ml);
                     }}
-                    className="w-full appearance-none rounded border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 pr-10 text-sm text-[var(--text-primary)] font-sans tracking-wide tabular-nums focus:border-[var(--gold)] outline-none"
+                    disabled={!p.available}
+                    className={`px-5 py-3 rounded text-sm transition-all font-sans tabular-nums ${
+                      selectedOption === "decant" && selectedMl === p.ml
+                        ? "bg-[var(--gold)] text-black"
+                        : p.available
+                        ? "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+                        : "border border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed line-through"
+                    }`}
                   >
-                    <option value="" disabled>Select a size</option>
-                    {prices.map((p) => (
-                      <option key={p.ml} value={p.ml} disabled={!p.available}>
-                        {`${p.ml}ml (${getSprayEstimateLabel(p.ml)}) - ${p.sellingPrice.toLocaleString("en-BD")} BDT${p.available ? "" : " - Unavailable"}`}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--text-muted)]">▾</span>
-                </div>
+                    <span className="font-sans text-base uppercase tracking-wide tabular-nums">{p.ml}ml ({getSprayEstimateLabel(p.ml)})</span>
+                    <span className="block text-[10px] uppercase tracking-wider mt-0.5 font-sans tabular-nums">
+                      {p.sellingPrice.toLocaleString("en-BD")} BDT
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
 
