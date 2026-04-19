@@ -311,14 +311,20 @@ function ShopContent() {
 
     try {
       const perfumeRes = await fetch(`/api/perfumes/search?${params.toString()}`, { signal: controller.signal });
+      if (!perfumeRes.ok) {
+        if (seq !== fetchSeqRef.current) return;
+        setPerfumes([]);
+        setAllBrands([]);
+        setPriceMap({});
+        return;
+      }
       const data = await perfumeRes.json();
       if (seq !== fetchSeqRef.current) return;
 
-      const p = (data.perfumes || []) as Perfume[];
+      const p = Array.isArray(data?.perfumes) ? (data.perfumes as Perfume[]) : [];
       setPerfumes(p);
-      if (data.brands) {
-        setAllBrands((data.brands as string[]).filter((b: string) => b.toLowerCase() !== "valore parfums"));
-      }
+      const brandList = Array.isArray(data?.brands) ? (data.brands as string[]) : [];
+      setAllBrands(brandList.filter((b) => b.toLowerCase() !== "valore parfums"));
 
       const ids = p.map((pf) => pf.id);
       if (ids.length === 0) {
@@ -332,11 +338,16 @@ function ShopContent() {
         body: JSON.stringify({ perfumeIds: ids }),
         signal: controller.signal,
       });
+      if (!pricingRes.ok) {
+        if (seq !== fetchSeqRef.current) return;
+        setPriceMap({});
+        return;
+      }
       const map = await pricingRes.json();
       if (seq !== fetchSeqRef.current) return;
 
       const parsed: Record<string, PriceInfo[]> = {};
-      for (const [id, val] of Object.entries(map)) {
+      for (const [id, val] of Object.entries((map && typeof map === "object") ? map : {})) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         parsed[id] = (val as any).prices || [];
       }

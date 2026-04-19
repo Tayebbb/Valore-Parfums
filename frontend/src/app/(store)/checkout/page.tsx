@@ -113,6 +113,14 @@ interface OrderErrorPayload {
   errors?: Array<{ field?: string; message?: string }>;
 }
 
+async function tryReadJson<T>(res: Response): Promise<T | null> {
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 const OrderSummaryPanel = dynamic(() => import("@/components/checkout/OrderSummaryPanel"), {
   ssr: false,
   loading: () => (
@@ -282,11 +290,20 @@ function CheckoutContent() {
 
     if (isBuyNow && productId) {
       Promise.all([
-        fetch(`/api/perfumes/${productId}`).then((r) => r.json() as Promise<PerfumeResponse>),
-        fetch(`/api/pricing?perfumeId=${productId}`).then((r) => r.json() as Promise<PricingResponse>),
+        fetch(`/api/perfumes/${productId}`).then(async (r) => {
+          if (!r.ok) return null;
+          return await tryReadJson<PerfumeResponse>(r);
+        }),
+        fetch(`/api/pricing?perfumeId=${productId}`).then(async (r) => {
+          if (!r.ok) return null;
+          return await tryReadJson<PricingResponse>(r);
+        }),
       ])
         .then(([p, pricing]) => {
           if (!active) return;
+          if (!p || !pricing) {
+            throw new Error("Failed to load buy-now product payload");
+          }
 
           const ml = parseInt(mlStr || "5", 10);
           const qty = parseInt(qtyStr || "1", 10);
@@ -303,7 +320,20 @@ function CheckoutContent() {
             ? Math.ceil(priceObj.sellingPrice * (1 - bulkDiscountPercent / 100))
             : 0;
 
-          const images = p.images ? (JSON.parse(p.images) as string[]) : [];
+          let images: string[] = [];
+          if (typeof p.images === "string" && p.images.trim()) {
+            try {
+              const parsed = JSON.parse(p.images);
+              images = Array.isArray(parsed) ? parsed.filter((img) => typeof img === "string") : [];
+            } catch {
+              images = [];
+            }
+          }
+
+          if (!p.id || !p.name) {
+            throw new Error("Invalid buy-now product payload");
+          }
+
           setDirectProductPath(
             p.canonicalPath || (p.brandSlug && p.slug ? `/brand/${p.brandSlug}/${p.slug}` : ""),
           );
@@ -393,27 +423,32 @@ function CheckoutContent() {
     const loadCheckoutConfig = async () => {
       try {
         const res = await fetch("/api/checkout-config", { signal: abortController.signal });
-        const data = await res.json();
+        const data = await tryReadJson<Record<string, unknown>>(res);
 
         if (!res.ok) {
-          throw new Error(data?.error || "Failed to load checkout settings");
+          const message = data && typeof data.error === "string"
+            ? data.error
+            : "Failed to load checkout settings";
+          throw new Error(message);
         }
 
+        const safeData = data && typeof data === "object" ? data : {};
+
         setCheckoutConfig({
-          deliveryFeeInsideDhaka: Number(data.deliveryFeeInsideDhaka || 0),
-          deliveryFeeOutsideDhaka: Number(data.deliveryFeeOutsideDhaka || 0),
-          bkashAccountName: String(data.bkashAccountName || ""),
-          bkashAccountNumber: String(data.bkashAccountNumber || ""),
-          bkashAccountType: String(data.bkashAccountType || ""),
-          bkashQrImageUrl: String(data.bkashQrImageUrl || ""),
-          bankName: String(data.bankName || ""),
-          bankAccountName: String(data.bankAccountName || ""),
-          bankAccountNumber: String(data.bankAccountNumber || ""),
-          bankAccountType: String(data.bankAccountType || ""),
-          bankDistrict: String(data.bankDistrict || ""),
-          bankBranch: String(data.bankBranch || ""),
-          bankQrImageUrl: String(data.bankQrImageUrl || ""),
-          pickupLocations: Array.isArray(data.pickupLocations) ? data.pickupLocations : [],
+          deliveryFeeInsideDhaka: Number(safeData.deliveryFeeInsideDhaka || 0),
+          deliveryFeeOutsideDhaka: Number(safeData.deliveryFeeOutsideDhaka || 0),
+          bkashAccountName: String(safeData.bkashAccountName || ""),
+          bkashAccountNumber: String(safeData.bkashAccountNumber || ""),
+          bkashAccountType: String(safeData.bkashAccountType || ""),
+          bkashQrImageUrl: String(safeData.bkashQrImageUrl || ""),
+          bankName: String(safeData.bankName || ""),
+          bankAccountName: String(safeData.bankAccountName || ""),
+          bankAccountNumber: String(safeData.bankAccountNumber || ""),
+          bankAccountType: String(safeData.bankAccountType || ""),
+          bankDistrict: String(safeData.bankDistrict || ""),
+          bankBranch: String(safeData.bankBranch || ""),
+          bankQrImageUrl: String(safeData.bankQrImageUrl || ""),
+          pickupLocations: Array.isArray(safeData.pickupLocations) ? (safeData.pickupLocations as PickupLocation[]) : [],
         });
       } catch {
         if (!abortController.signal.aborted) {

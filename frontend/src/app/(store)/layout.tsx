@@ -247,8 +247,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     setSearchLoading(true);
     searchDebounce.current = setTimeout(() => {
       fetch(`/api/perfumes/search?q=${encodeURIComponent(val.trim())}`)
-        .then(r => r.json())
-        .then(data => setSearchResults((data.perfumes || []).slice(0, 6)))
+        .then((r) => {
+          if (!r.ok) return { perfumes: [] };
+          return r.json();
+        })
+        .then((data) => {
+          const perfumes = Array.isArray(data?.perfumes) ? data.perfumes : [];
+          setSearchResults(perfumes.slice(0, 6));
+        })
         .catch(() => setSearchResults([]))
         .finally(() => setSearchLoading(false));
     }, 250);

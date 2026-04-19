@@ -97,21 +97,33 @@ export default function HomePage() {
 
   useEffect(() => {
     fetch("/api/perfumes?active=true")
-      .then((r) => r.json())
-      .then((data: Perfume[]) => {
-        setPerfumes(data);
+      .then((r) => {
+        if (!r.ok) return [] as Perfume[];
+        return r.json();
+      })
+      .then((data: Perfume[] | { perfumes?: Perfume[] }) => {
+        const perfumeList = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.perfumes)
+            ? data.perfumes
+            : [];
+
+        setPerfumes(perfumeList);
         // Batch-fetch pricing for all displayed perfumes in ONE call
-        const ids = data.slice(0, 12).map((p) => p.id);
+        const ids = perfumeList.slice(0, 12).map((p) => p.id);
         if (ids.length > 0) {
           fetch("/api/pricing", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ perfumeIds: ids }),
           })
-            .then((r) => r.json())
+            .then((r) => {
+              if (!r.ok) return {};
+              return r.json();
+            })
             .then((map) => {
               const parsed: Record<string, PriceInfo[]> = {};
-              for (const [id, val] of Object.entries(map)) {
+              for (const [id, val] of Object.entries((map && typeof map === "object") ? map : {})) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 parsed[id] = (val as any).prices || [];
               }
@@ -119,6 +131,10 @@ export default function HomePage() {
             })
             .catch(() => {});
         }
+      })
+      .catch(() => {
+        setPerfumes([]);
+        setPriceMap({});
       })
       .finally(() => setLoading(false));
   }, []);

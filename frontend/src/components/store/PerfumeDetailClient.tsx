@@ -107,10 +107,13 @@ export default function PerfumePage({
       .then(([p, pricing]) => {
         if (!p) return;
 
+        const safePrices = Array.isArray(pricing.prices) ? pricing.prices : [];
+        const safeBulkRules = Array.isArray(pricing.bulkRules) ? pricing.bulkRules : [];
+
         setPerfume(p);
-        setPrices(pricing.prices || []);
-        setBulkRules(pricing.bulkRules || []);
-        const firstAvail = (pricing.prices || []).find((pr: PriceOption) => pr.available);
+        setPrices(safePrices);
+        setBulkRules(safeBulkRules);
+        const firstAvail = safePrices.find((pr: PriceOption) => pr.available);
         if (firstAvail) setSelectedMl(firstAvail.ml);
       })
       .finally(() => setLoading(false));
@@ -122,8 +125,16 @@ export default function PerfumePage({
     fetch("/api/wishlist")
       .then((r) => r.json())
       .then((data) => {
-        const items = Array.isArray(data) ? data : (data.items || []);
-        const inWishlist = items.some((item: { perfume: { id: string } }) => item.perfume.id === id);
+        const items = Array.isArray(data)
+          ? data
+          : (data && typeof data === "object" && Array.isArray((data as { items?: unknown[] }).items))
+            ? (data as { items: unknown[] }).items
+            : [];
+        const inWishlist = items.some((item) => {
+          if (!item || typeof item !== "object") return false;
+          const perfume = (item as { perfume?: { id?: string } }).perfume;
+          return typeof perfume?.id === "string" && perfume.id === id;
+        });
         setWishlisted(inWishlist);
       })
       .catch(() => {});

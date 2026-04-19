@@ -30,7 +30,11 @@ export default function WishlistPage() {
     fetch("/api/wishlist")
       .then((r) => r.json())
       .then((data) => {
-        const nextItems = Array.isArray(data) ? data : (data.items || []);
+        const nextItems = Array.isArray(data)
+          ? data
+          : (data && typeof data === "object" && Array.isArray((data as { items?: WishlistItem[] }).items))
+            ? (data as { items: WishlistItem[] }).items
+            : [];
         setItems(nextItems);
       })
       .catch(() => {})
