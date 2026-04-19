@@ -7,7 +7,7 @@ import { toast } from "@/components/ui/Toaster";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Minus, Plus, ShoppingBag, Heart, Zap } from "lucide-react";
+import { ArrowLeft, ChevronDown, Minus, Plus, ShoppingBag, Heart, Zap } from "lucide-react";
 import { parseImageList } from "@/lib/image-utils";
 
 interface Perfume {
@@ -78,7 +78,7 @@ export default function PerfumePage({
   const [showRequest, setShowRequest] = useState(false);
   const [reqForm, setReqForm] = useState({ customerName: "", customerPhone: "", desiredMl: 0, quantity: 1 });
   const [wishlisted, setWishlisted] = useState(false);
-  const [isFragranceNotesOpen, setIsFragranceNotesOpen] = useState(true);
+  const [isFragranceNotesOpen, setIsFragranceNotesOpen] = useState(false);
 
   const lockedVariant = perfume?.partialDealType === "full_bottle"
     ? "full-bottle"
@@ -335,8 +335,11 @@ export default function PerfumePage({
                 className="w-full flex items-center justify-between rounded border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-left hover:border-[var(--gold)] transition-colors"
               >
                 <h2 className="font-serif text-2xl font-light">Fragrance Notes</h2>
-                <span className="font-sans text-xs uppercase tracking-[0.15em] text-[var(--gold)]">
-                  {isFragranceNotesOpen ? "Collapse" : "Expand"}
+                <span
+                  className="inline-flex items-center justify-center w-8 h-8 rounded border border-[var(--border-gold)] text-[var(--gold)]"
+                  aria-hidden="true"
+                >
+                  <ChevronDown size={16} className={`transition-transform ${isFragranceNotesOpen ? "rotate-180" : ""}`} />
                 </span>
               </button>
 
