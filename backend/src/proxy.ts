@@ -3,6 +3,42 @@ import type { NextRequest } from "next/server";
 
 type RateEntry = { count: number; resetAt: number };
 const apiRateStore = new Map<string, RateEntry>();
+const VERCEL_PREVIEW_ORIGIN_PATTERN = /^https:\/\/valore-parfums(?:-[a-z0-9-]+)?\.vercel\.app$/i;
+
+function parseOrigins(rawValue?: string): string[] {
+  return (rawValue || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function getAllowedOrigins(): string[] {
+  const configured = [
+    ...parseOrigins(process.env.ALLOWED_ORIGINS),
+    ...parseOrigins(process.env.ALLOWED_ORIGIN),
+  ];
+
+  if (configured.length > 0) {
+    return Array.from(new Set(configured));
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return [
+      "https://valore-parfums.vercel.app",
+      "https://valore-parfums-two.vercel.app",
+    ];
+  }
+
+  return [];
+}
+
+function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  return VERCEL_PREVIEW_ORIGIN_PATTERN.test(origin);
+}
 
 function getClientIp(req: NextRequest): string {
   const forwardedFor = req.headers.get("x-forwarded-for") || "";
@@ -33,12 +69,28 @@ export function proxy(request: NextRequest) {
 
   // CORS policy for API routes (restrict in production via env)
   if (request.nextUrl.pathname.startsWith("/api/")) {
-    const allowOrigin = process.env.ALLOWED_ORIGIN || "*";
-    response.headers.set("Access-Control-Allow-Origin", allowOrigin);
+    const requestOrigin = request.headers.get("origin");
+    const allowedOrigins = getAllowedOrigins();
+    const originAllowed = requestOrigin ? isOriginAllowed(requestOrigin, allowedOrigins) : false;
+
+    if (requestOrigin && originAllowed) {
+      response.headers.set("Access-Control-Allow-Origin", requestOrigin);
+      response.headers.append("Vary", "Origin");
+    } else if (!requestOrigin && process.env.NODE_ENV !== "production") {
+      response.headers.set("Access-Control-Allow-Origin", "*");
+    }
+
     response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-webhook-token");
+    response.headers.set("Access-Control-Allow-Credentials", "true");
 
     if (request.method === "OPTIONS") {
+      if (requestOrigin && !originAllowed && process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          { error: "Origin not allowed" },
+          { status: 403, headers: response.headers },
+        );
+      }
       return new NextResponse(null, { status: 204, headers: response.headers });
     }
 

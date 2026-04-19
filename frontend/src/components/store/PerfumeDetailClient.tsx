@@ -177,9 +177,7 @@ export default function PerfumePage({
   const decantUnitPrice = selectedPrice ? Math.ceil(selectedPrice.sellingPrice * (1 - bulkDiscountPercent / 100)) : 0;
   const effectiveUnitPrice = selectedOption === "full-bottle" ? 0 : decantUnitPrice;
   const totalDisplayPrice = effectiveUnitPrice * quantity;
-  const requestHref = perfume
-    ? `/requests?perfumeName=${encodeURIComponent(perfume.name)}&brand=${encodeURIComponent(perfume.brand || "")}&type=full_bottle`
-    : "/requests?type=full_bottle";
+  const fullBottleOrderingEnabled = false;
 
   const handleAddToCart = () => {
     if (!perfume) return;
@@ -373,14 +371,14 @@ export default function PerfumePage({
               {(lockedVariant === null || lockedVariant === "full-bottle") && (
                 <button
                   onClick={() => setSelectedOptionState("full-bottle")}
-                  disabled={lockedVariant !== null}
+                  disabled={lockedVariant !== null || !fullBottleOrderingEnabled}
                   className={`px-5 py-3 rounded text-sm transition-all ${
                     selectedOption === "full-bottle"
                       ? "bg-[var(--gold)] text-black"
                       : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
-                  } ${lockedVariant !== null ? "cursor-default" : ""}`}
+                  } ${lockedVariant !== null || !fullBottleOrderingEnabled ? "opacity-45 cursor-not-allowed" : "font-sans"}`}
                 >
-                  <span className="font-serif text-base">Full Bottle</span>
+                  <span className="font-sans text-base tracking-wide">Full Bottle (Soon)</span>
                 </button>
               )}
               {(lockedVariant === null || lockedVariant === "decant") && (
@@ -391,38 +389,39 @@ export default function PerfumePage({
                     selectedOption === "decant"
                       ? "bg-[var(--gold)] text-black"
                       : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
-                  } ${lockedVariant !== null ? "cursor-default" : ""}`}
+                  } ${lockedVariant !== null ? "cursor-default" : "font-sans"}`}
                 >
-                  <span className="font-serif text-base">Decant</span>
+                  <span className="font-sans text-base tracking-wide">Decant</span>
                 </button>
               )}
             </div>
 
             {selectedOption === "decant" && (
-              <div className="flex flex-wrap gap-2">
-              {prices.map((p) => (
-                <button
-                  key={p.ml}
-                  onClick={() => {
-                    if (!p.available) return;
-                    setSelectedOptionState("decant");
-                    setSelectedMl(p.ml);
-                  }}
-                  disabled={!p.available}
-                  className={`px-5 py-3 rounded text-sm transition-all ${
-                    selectedOption === "decant" && selectedMl === p.ml
-                      ? "bg-[var(--gold)] text-black"
-                      : p.available
-                      ? "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
-                      : "border border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed line-through"
-                  }`}
-                >
-                  <span className="font-serif text-base uppercase">{p.ml}ml Decant ({getSprayEstimateLabel(p.ml)})</span>
-                  <span className="block text-[10px] uppercase tracking-wider mt-0.5">
-                    {p.sellingPrice.toLocaleString("en-BD")} BDT
-                  </span>
-                </button>
-              ))}
+              <div className="space-y-2">
+                <label htmlFor="size-selector" className="block text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Size
+                </label>
+                <div className="relative">
+                  <select
+                    id="size-selector"
+                    value={selectedMl ?? ""}
+                    onChange={(event) => {
+                      const nextMl = Number(event.target.value);
+                      if (Number.isNaN(nextMl)) return;
+                      setSelectedOptionState("decant");
+                      setSelectedMl(nextMl);
+                    }}
+                    className="w-full appearance-none rounded border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 pr-10 text-sm text-[var(--text-primary)] font-sans tracking-wide tabular-nums focus:border-[var(--gold)] outline-none"
+                  >
+                    <option value="" disabled>Select a size</option>
+                    {prices.map((p) => (
+                      <option key={p.ml} value={p.ml} disabled={!p.available}>
+                        {`${p.ml}ml (${getSprayEstimateLabel(p.ml)}) - ${p.sellingPrice.toLocaleString("en-BD")} BDT${p.available ? "" : " - Unavailable"}`}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--text-muted)]">▾</span>
+                </div>
               </div>
             )}
 
@@ -485,23 +484,25 @@ export default function PerfumePage({
 
           {/* Add to Cart / Request */}
           {selectedOption === "full-bottle" ? (
-            <Link
-              href={requestHref}
-              className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
+            <button
+              type="button"
+              disabled
+              title="Full bottle ordering is temporarily disabled"
+              className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums opacity-50 cursor-not-allowed"
             >
-              <ShoppingBag size={18} /> Request Perfume
-            </Link>
+              <ShoppingBag size={18} /> Full Bottle Ordering Disabled
+            </button>
           ) : selectedPrice?.available ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
+                className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-light)] transition-colors"
               >
                 <ShoppingBag size={18} /> Add to Cart
               </button>
               <button
                 onClick={handleBuyNow}
-                className="w-full flex items-center justify-center gap-3 border border-[var(--gold)] text-[var(--gold)] py-4 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-tint)] transition-colors"
+                className="w-full flex items-center justify-center gap-3 border border-[var(--gold)] text-[var(--gold)] py-4 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-tint)] transition-colors"
               >
                 <Zap size={18} /> Buy Now
               </button>
@@ -537,28 +538,30 @@ export default function PerfumePage({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleAddToCart}
-              className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
+              className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums"
             >
               Add to Cart
             </button>
             <button
               onClick={handleBuyNow}
-              className="w-full flex items-center justify-center gap-2 border border-[var(--gold)] text-[var(--gold)] py-3 text-xs uppercase tracking-wider font-medium"
+              className="w-full flex items-center justify-center gap-2 border border-[var(--gold)] text-[var(--gold)] py-3 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums"
             >
               <Zap size={16} /> Buy Now
             </button>
           </div>
         ) : selectedOption === "full-bottle" ? (
-          <Link
-            href={requestHref}
-            className="block w-full text-center bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
+          <button
+            type="button"
+            disabled
+            title="Full bottle ordering is temporarily disabled"
+            className="block w-full text-center bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums opacity-50 cursor-not-allowed"
           >
-            Request Perfume
-          </Link>
+            Full Bottle Ordering Disabled
+          </button>
         ) : (
           <button
             onClick={handleAddToCart}
-            className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium"
+            className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums"
           >
             Add to Cart
           </button>
