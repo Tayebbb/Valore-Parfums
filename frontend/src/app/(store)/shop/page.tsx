@@ -67,17 +67,17 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
               <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
             </div>
           )}
-          <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5 max-w-[calc(100%-1.5rem)]">
             {outOfStock && (
-              <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-[var(--error)] text-white px-2.5 py-1">
+              <span className="inline-flex items-center rounded-full border border-[rgba(220,120,120,0.28)] bg-[rgba(220,120,120,0.10)] px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[#f3b7b7] backdrop-blur-sm shadow-sm">
                 Out of Stock
               </span>
             )}
-            <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-black/60 text-[var(--gold)] px-2.5 py-1 backdrop-blur">
+            <span className="inline-flex items-center rounded-full border border-[rgba(201,165,92,0.18)] bg-black/25 px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gold-light)] backdrop-blur-sm shadow-sm">
               {perfume.category}
             </span>
             {isDynamicBestSeller && (
-              <span className="text-sm md:text-base leading-snug font-semibold uppercase tracking-[0.08em] bg-[var(--gold)] text-black px-2.5 py-1">
+              <span className="inline-flex items-center rounded-full border border-[rgba(201,165,92,0.22)] bg-[rgba(201,165,92,0.12)] px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gold-light)] shadow-sm">
                 Best Seller
               </span>
             )}
