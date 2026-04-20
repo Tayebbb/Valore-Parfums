@@ -48,25 +48,26 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
           )}
           <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5 max-w-[calc(100%-1.5rem)]">
             {outOfStock && (
-              <span className="inline-flex items-center rounded-full border border-[rgba(220,120,120,0.28)] bg-[rgba(220,120,120,0.10)] px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[#f3b7b7] backdrop-blur-sm shadow-sm">
+              <span className="meta-pill meta-pill-danger backdrop-blur-sm">
                 Out of Stock
               </span>
             )}
-            <span className="inline-flex items-center rounded-full border border-[rgba(201,165,92,0.18)] bg-black/25 px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gold-light)] backdrop-blur-sm shadow-sm">
+            <span className="meta-pill meta-pill-accent backdrop-blur-sm">
               {perfume.category}
             </span>
             {isDynamicBestSeller && (
-              <span className="inline-flex items-center rounded-full border border-[rgba(201,165,92,0.22)] bg-[rgba(201,165,92,0.12)] px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gold-light)] shadow-sm">
+              <span className="meta-pill meta-pill-accent">
                 Best Seller
               </span>
             )}
           </div>
         </div>
-        <div className="p-4">
+        {/* Lean card spacing keeps the listing easy to scan. */}
+        <div className="p-3.5">
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
-          <div className="mt-3">
+          <div className="mt-2.5">
             {lowestPrice ? (
-              <p className="font-serif text-lg md:text-2xl leading-snug font-bold text-[var(--gold-light)] drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">
+              <p className="font-serif text-base md:text-xl leading-snug font-medium text-[var(--gold-light)]">
                 From {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
@@ -139,11 +140,9 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative px-[5%] py-24 overflow-hidden">
+      <section className="relative px-4 sm:px-6 md:px-[5%] py-16 sm:py-20 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(201,165,92,0.06)_0%,transparent_70%)]" />
-          <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-[var(--border)] to-transparent" />
-          <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-[var(--border)] to-transparent" />
         </div>
 
         <div className="relative text-center max-w-2xl mx-auto">
@@ -178,7 +177,7 @@ export default function HomePage() {
 
       {/* Best Sellers */}
       {bestSellers.length > 0 && (
-        <section className="px-[5%] py-12">
+        <section className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
           <div className="flex items-end justify-between mb-8">
             <div>
               <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-2">Most Popular</p>
@@ -188,7 +187,7 @@ export default function HomePage() {
               View All <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {bestSellers.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
                 <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
@@ -201,7 +200,7 @@ export default function HomePage() {
       <div className="gold-line" />
 
       {/* New Arrivals / All Perfumes */}
-      <section className="px-[5%] py-12">
+      <section className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
         <div className="flex items-end justify-between mb-8">
           <div>
             <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-2">Latest Additions</p>
@@ -213,7 +212,7 @@ export default function HomePage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {[...Array(8)].map((_, i) => (
               <div key={i}>
                 <div className="skeleton aspect-[3/4] rounded" />
@@ -228,7 +227,7 @@ export default function HomePage() {
             <p className="text-sm text-[var(--text-muted)] mt-2">Check back soon for new arrivals</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {newArrivals.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
                 <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />

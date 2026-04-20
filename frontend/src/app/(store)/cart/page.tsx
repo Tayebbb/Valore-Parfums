@@ -11,7 +11,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="px-[5%] py-20 text-center">
+      <div className="px-4 sm:px-6 md:px-[5%] py-16 sm:py-20 text-center">
         <ShoppingBag size={48} className="mx-auto text-[var(--text-muted)] mb-4" />
         <h1 className="font-serif text-3xl font-light mb-2">Your Cart is Empty</h1>
         <p className="text-sm text-[var(--text-secondary)] mb-6">Discover our collection and find your signature scent</p>
@@ -29,21 +29,20 @@ export default function CartPage() {
     <div className="px-4 sm:px-6 md:px-[5%] py-8">
       <Link
         href="/"
-        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-8"
+        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-6"
       >
         <ArrowLeft size={14} /> Continue Shopping
       </Link>
 
       <h1 className="font-serif text-3xl font-light mb-2">Shopping Cart</h1>
-      <div className="gold-line mb-8" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-3">
           {items.map((item) => (
             <div
               key={`${item.perfumeId}-${item.ml}-${item.isFullBottle ? "full" : "decant"}-${item.fullBottleSize || ""}`}
-              className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-4"
+              className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-3.5"
             >
               <div className="flex items-start gap-3">
               {/* Image */}
@@ -111,7 +110,7 @@ export default function CartPage() {
 
         {/* Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-6 sticky top-24">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5 sticky top-24">
             <h2 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Order Summary</h2>
             
             <div className="space-y-2 mb-4">
@@ -125,16 +124,16 @@ export default function CartPage() {
               ))}
             </div>
 
-            <div className="gold-line my-4" />
+            <div className="border-t border-[var(--border)] my-4" />
 
             <div className="flex justify-between items-center mb-6">
               <span className="text-sm text-[var(--text-muted)]">Subtotal</span>
-              <span className="font-serif text-2xl text-[var(--gold)]">{total.toLocaleString("en-BD")} BDT</span>
+              <span className="font-serif text-xl text-[var(--gold)]">{total.toLocaleString("en-BD")} BDT</span>
             </div>
 
             <Link
               href="/checkout"
-              className="block w-full text-center bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
+              className="block w-full text-center bg-[var(--gold)] text-black py-2.5 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-light)] transition-colors"
             >
               Proceed to Checkout
             </Link>

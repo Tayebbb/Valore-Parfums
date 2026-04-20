@@ -127,7 +127,7 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.55;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 html,
@@ -160,7 +160,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 
@@ -199,13 +199,6 @@ small,
   line-height: 1.5;
 }
 
-/* Prevent ultra-thin text from reducing readability */
-.font-thin,
-.font-extralight,
-.font-light {
-  font-weight: 500 !important;
-}
-
 button,
 a {
   transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
@@ -239,6 +232,50 @@ a[href]:hover {
 .gold-line {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.55;
+}
+
+/* ── Shared minimal UI tokens ── */
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+  .meta-pill {
+    font-size: 11px;
+  }
+}
+
+.meta-pill-accent {
+  border: 1px solid var(--border-gold);
+  background: var(--gold-tint);
+  color: var(--gold);
+}
+
+.meta-pill-danger {
+  border: 1px solid rgba(220, 120, 120, 0.24);
+  background: rgba(220, 120, 120, 0.08);
+  color: #f3b7b7;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent);
+  background: var(--gold-tint);
+  color: var(--gold);
 }
 
 /* ── Shimmer / Skeleton ── */
@@ -364,11 +401,11 @@ a[href]:hover {
 
 /* ── Card hover ── */
 .card-hover {
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
 }
 .card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px var(--shadow-color);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px var(--shadow-color);
   border-color: var(--border-hover);
 }
 
@@ -380,7 +417,7 @@ a[href]:hover {
   transition: transform 0.4s ease;
 }
 .img-zoom:hover img {
-  transform: scale(1.08);
+  transform: scale(1.04);
 }
 
 /* ── Range slider thumb reset ── */

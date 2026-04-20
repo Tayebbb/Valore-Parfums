@@ -2,10 +2,10 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-[5%] py-16">
+    <div className="min-h-[70vh] flex items-center justify-center px-4 sm:px-6 md:px-[5%] py-12 sm:py-16">
       <div className="max-w-xl text-center space-y-5">
         <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)]">404</p>
-        <h1 className="font-serif text-4xl font-light">Page not found</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl font-light">Page not found</h1>
         <p className="text-sm md:text-base leading-relaxed text-[var(--text-secondary)]">
           The page may have moved or the link may be outdated. Start from the collection to find the right fragrance.
         </p>

@@ -240,8 +240,8 @@ export default function PerfumePage({
 
   if (loading) {
     return (
-      <div className="px-[5%] py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div className="px-4 sm:px-6 md:px-[5%] py-10 sm:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="skeleton aspect-[3/4] rounded" />
           <div className="space-y-4">
             <div className="skeleton h-8 rounded w-3/4" />
@@ -255,7 +255,7 @@ export default function PerfumePage({
 
   if (!perfume) {
     return (
-      <div className="px-[5%] py-20 text-center">
+      <div className="px-4 sm:px-6 md:px-[5%] py-16 sm:py-20 text-center">
         <p className="font-serif text-2xl text-[var(--text-muted)]">Perfume not found</p>
         <Link href="/" className="text-sm text-[var(--gold)] mt-4 inline-block hover:underline">
           ← Back to collection
@@ -265,15 +265,15 @@ export default function PerfumePage({
   }
 
   return (
-    <div className="px-[5%] py-8">
+    <div className="px-4 sm:px-6 md:px-[5%] py-7 sm:py-8">
       <Link
         href="/"
-        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-8"
+        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-6"
       >
         <ArrowLeft size={14} /> Back to Collection
       </Link>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Images */}
         <div>
           <div className="aspect-square bg-[var(--bg-surface)] rounded overflow-hidden img-zoom relative">
@@ -297,7 +297,8 @@ export default function PerfumePage({
         </div>
 
         {/* Details */}
-        <div className="space-y-6">
+        {/* Slightly tighter vertical rhythm keeps details clear without feeling dense. */}
+        <div className="space-y-5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--gold)] border border-[var(--border-gold)] px-2 py-1 rounded">
               {perfume.category || "Perfume"}
@@ -311,7 +312,7 @@ export default function PerfumePage({
             </button>
           </div>
 
-          <h1 className="font-serif text-4xl font-light">{perfume.brand} {perfume.name}</h1>
+          <h1 className="font-serif text-3xl md:text-4xl font-light">{perfume.brand} {perfume.name}</h1>
 
           {perfume.inspiredBy && (
             <p className="text-xs uppercase tracking-[0.15em] text-[var(--text-muted)]">
@@ -332,11 +333,11 @@ export default function PerfumePage({
                 onClick={() => setIsFragranceNotesOpen((prev) => !prev)}
                 aria-expanded={isFragranceNotesOpen}
                 aria-controls="fragrance-notes-panel"
-                className="w-full flex items-center justify-between rounded border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-left hover:border-[var(--gold)] transition-colors"
+                className="w-full flex items-center justify-between border-b border-[var(--border)] px-0 py-2.5 text-left hover:border-[var(--border-gold)] transition-colors"
               >
                 <h2 className="font-serif text-2xl font-light">Fragrance Notes</h2>
                 <span
-                  className="inline-flex items-center justify-center w-8 h-8 rounded border border-[var(--border-gold)] text-[var(--gold)]"
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-[var(--border-gold)] text-[var(--gold)]"
                   aria-hidden="true"
                 >
                   <ChevronDown size={16} className={`transition-transform ${isFragranceNotesOpen ? "rotate-180" : ""}`} />
@@ -390,7 +391,7 @@ export default function PerfumePage({
                 <button
                   onClick={() => setSelectedOptionState("full-bottle")}
                   disabled={lockedVariant !== null || !fullBottleOrderingEnabled}
-                  className={`px-5 py-3 rounded text-sm transition-all ${
+                  className={`px-4 py-2.5 rounded text-sm transition-all ${
                     selectedOption === "full-bottle"
                       ? "bg-[var(--gold)] text-black"
                       : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
@@ -403,7 +404,7 @@ export default function PerfumePage({
                 <button
                   onClick={() => setSelectedOptionState("decant")}
                   disabled={lockedVariant !== null}
-                  className={`px-5 py-3 rounded text-sm transition-all ${
+                  className={`px-4 py-2.5 rounded text-sm transition-all ${
                     selectedOption === "decant"
                       ? "bg-[var(--gold)] text-black"
                       : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
@@ -425,7 +426,7 @@ export default function PerfumePage({
                       setSelectedMl(p.ml);
                     }}
                     disabled={!p.available}
-                    className={`px-5 py-3 rounded text-sm transition-all font-sans tabular-nums ${
+                    className={`px-4 py-2.5 rounded text-sm transition-all font-sans tabular-nums ${
                       selectedOption === "decant" && selectedMl === p.ml
                         ? "bg-[var(--gold)] text-black"
                         : p.available
@@ -468,7 +469,7 @@ export default function PerfumePage({
 
           {/* Price Display */}
           {selectedOption === "decant" && selectedPrice && (
-            <div className="py-4 space-y-3">
+            <div className="py-3 space-y-3">
               <div className="flex items-baseline gap-3">
                 <p className="font-serif text-3xl text-[var(--gold)]">
                   {totalDisplayPrice.toLocaleString("en-BD")} BDT
@@ -513,20 +514,20 @@ export default function PerfumePage({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-4 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-light)] transition-colors"
+                className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-3.5 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-light)] transition-colors"
               >
                 <ShoppingBag size={18} /> Add to Cart
               </button>
               <button
                 onClick={handleBuyNow}
-                className="w-full flex items-center justify-center gap-3 border border-[var(--gold)] text-[var(--gold)] py-4 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-tint)] transition-colors"
+                className="w-full flex items-center justify-center gap-3 border border-[var(--gold)] text-[var(--gold)] py-3.5 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-tint)] transition-colors"
               >
                 <Zap size={18} /> Buy Now
               </button>
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="w-full py-4 text-center bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-muted)] text-xs uppercase tracking-wider">
+              <div className="w-full py-3.5 text-center bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-muted)] text-xs uppercase tracking-wider">
                 {outOfStock ? "Out of Stock" : "Select an available size"}
               </div>
               {outOfStock && (
@@ -550,7 +551,7 @@ export default function PerfumePage({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-elevated)] border-t border-[var(--border)] p-3 md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-elevated)] border-t border-[var(--border)] p-2.5 md:hidden">
         {selectedOption === "decant" && selectedPrice?.available ? (
           <div className="grid grid-cols-2 gap-2">
             <button

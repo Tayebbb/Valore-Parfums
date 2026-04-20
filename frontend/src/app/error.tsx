@@ -9,10 +9,10 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error]);
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-[5%] py-16">
+    <div className="min-h-[70vh] flex items-center justify-center px-4 sm:px-6 md:px-[5%] py-12 sm:py-16">
       <div className="max-w-xl text-center space-y-5">
         <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)]">Something went wrong</p>
-        <h1 className="font-serif text-4xl font-light">We could not load this page</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl font-light">We could not load this page</h1>
         <p className="text-sm md:text-base leading-relaxed text-[var(--text-secondary)]">
           A server or rendering error interrupted the page. You can try again, or return to the catalog and continue browsing.
         </p>

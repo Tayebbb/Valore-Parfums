@@ -77,14 +77,14 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="px-[5%] py-12">
+    <div className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
       <div className="mb-10 text-center">
         <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-3">Your Collection</p>
         <h1 className="font-serif text-4xl font-light italic">Wishlist</h1>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i}>
               <div className="skeleton aspect-[3/4] rounded" />
@@ -105,7 +105,7 @@ export default function WishlistPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {items.map((item) => {
             const images: string[] = JSON.parse(item.perfume.images || "[]");
             return (
@@ -120,9 +120,9 @@ export default function WishlistPage() {
                       </div>
                     )}
                   </div>
-                  <div className="p-4">
+                  <div className="p-3.5">
                     <h3 className="font-serif text-lg font-light leading-tight">{item.perfume.name}</h3>
-                    <p className="text-sm md:text-base leading-relaxed font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mt-1">{item.perfume.brand}</p>
+                    <p className="text-sm md:text-base leading-relaxed font-medium text-[var(--text-muted)] mt-0.5">{item.perfume.brand}</p>
                   </div>
                 </Link>
                 <button

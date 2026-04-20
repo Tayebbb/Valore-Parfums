@@ -37,17 +37,17 @@ export async function SeoRichContentPage({ title, intro, sections, ctaText, ctaH
   }));
 
   return (
-    <main className="px-[5%] py-10 max-w-5xl mx-auto">
-      <header className="mb-8">
-        <h1 className="font-serif text-4xl md:text-5xl font-light leading-tight">{title}</h1>
-        <p className="mt-4 text-[var(--text-secondary)] leading-relaxed text-sm md:text-base">{intro}</p>
+    <main className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10 max-w-5xl mx-auto">
+      <header className="mb-7 sm:mb-8">
+        <h1 className="font-serif text-3xl md:text-5xl font-light leading-tight">{title}</h1>
+        <p className="mt-3 sm:mt-4 text-[var(--text-secondary)] leading-relaxed text-sm md:text-base max-w-3xl">{intro}</p>
       </header>
 
-      <div className="space-y-10">
+      <div className="space-y-8 sm:space-y-10">
         {sections.map((section) => (
           <section key={section.heading}>
-            <h2 className="font-serif text-2xl md:text-3xl font-light mb-4">{section.heading}</h2>
-            <div className="space-y-4 text-sm md:text-base text-[var(--text-secondary)] leading-relaxed">
+            <h2 className="font-serif text-2xl md:text-3xl font-light mb-3">{section.heading}</h2>
+            <div className="space-y-3.5 text-[15px] md:text-base text-[var(--text-secondary)] leading-relaxed max-w-[72ch]">
               {section.paragraphs.map((paragraph, idx) => (
                 <p key={`${section.heading}-${idx}`}>{paragraph}</p>
               ))}
@@ -56,14 +56,14 @@ export async function SeoRichContentPage({ title, intro, sections, ctaText, ctaH
         ))}
       </div>
 
-      <section className="mt-12">
+      <section className="mt-10 sm:mt-12">
         <h2 className="font-serif text-2xl md:text-3xl font-light mb-4">Popular Perfume Decants</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {internalLinks.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="border border-[var(--border)] rounded px-4 py-3 text-sm hover:border-[var(--gold)] transition-colors"
+              className="border border-[var(--border)] bg-[var(--bg-card)]/35 rounded px-3.5 py-2.5 text-sm hover:border-[var(--gold)] transition-colors"
             >
               {item.label}
             </Link>
@@ -71,7 +71,7 @@ export async function SeoRichContentPage({ title, intro, sections, ctaText, ctaH
         </div>
       </section>
 
-      <section className="mt-10 border border-[var(--border)] rounded-lg p-6 bg-[var(--bg-card)]">
+      <section className="mt-8 sm:mt-10 border border-[var(--border)] rounded p-5 sm:p-6 bg-[var(--bg-card)]/55">
         <h2 className="font-serif text-2xl font-light mb-3">Ready To Shop?</h2>
         <p className="text-[var(--text-secondary)] mb-5 text-sm md:text-base">
           Start with a decant, validate performance on your skin, then request a full bottle when you are fully confident.

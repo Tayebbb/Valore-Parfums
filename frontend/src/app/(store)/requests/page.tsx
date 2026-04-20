@@ -173,7 +173,7 @@ function RequestsPageContent() {
 
   if (authLoading) {
     return (
-      <div className="px-[5%] py-20">
+      <div className="px-4 sm:px-6 md:px-[5%] py-14 sm:py-20">
         <div className="max-w-2xl mx-auto space-y-4">
           <div className="skeleton h-10 w-48 rounded" />
           <div className="skeleton h-40 rounded" />
@@ -184,7 +184,7 @@ function RequestsPageContent() {
 
   if (!user) {
     return (
-      <div className="px-[5%] py-20 text-center">
+      <div className="px-4 sm:px-6 md:px-[5%] py-14 sm:py-20 text-center">
         <FlaskConical size={48} className="mx-auto mb-4 text-[var(--text-muted)]" />
         <h1 className="font-serif text-3xl font-light mb-3">Requests</h1>
         <p className="text-[var(--text-secondary)] mb-6">Sign in to request decants or full bottles.</p>
@@ -199,12 +199,12 @@ function RequestsPageContent() {
   }
 
   return (
-    <div className="px-[5%] py-12">
+    <div className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-12">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-serif text-3xl font-light">My Requests</h1>
+            <h1 className="font-serif text-2xl sm:text-3xl font-light">My Requests</h1>
             <p className="text-sm text-[var(--text-secondary)] mt-1">Request decants or full bottles</p>
           </div>
           <button
@@ -218,7 +218,7 @@ function RequestsPageContent() {
 
         {/* Request Form */}
         {showForm && (
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-6 animate-fade-up">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-4 sm:p-6 animate-fade-up">
             <h2 className="font-serif text-xl font-light mb-5">New Request</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Type Selection */}
@@ -438,7 +438,7 @@ export default function RequestsPage() {
   return (
     <Suspense
       fallback={
-        <div className="px-[5%] py-20">
+        <div className="px-4 sm:px-6 md:px-[5%] py-14 sm:py-20">
           <div className="max-w-2xl mx-auto space-y-4">
             <div className="skeleton h-10 w-48 rounded" />
             <div className="skeleton h-40 rounded" />

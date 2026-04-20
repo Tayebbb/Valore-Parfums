@@ -37,7 +37,7 @@ function OrderSummaryPanelBase({
         {items.map((item) => (
           <div
             key={`${item.perfumeId}-${item.ml}-${item.isFullBottle ? "full" : "decant"}-${item.fullBottleSize || ""}`}
-            className="rounded-xl border border-gray-700/70 bg-[var(--bg-surface)] px-3 py-2.5"
+            className="rounded border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -54,7 +54,7 @@ function OrderSummaryPanelBase({
         ))}
       </div>
 
-      <div className="mt-4 space-y-2.5 border-t border-gray-700/80 pt-3.5 text-sm">
+      <div className="mt-4 space-y-2.5 border-t border-[var(--border)] pt-3.5 text-sm">
         <div className="flex items-center justify-between">
           <span className="text-[var(--text-secondary)]">Subtotal</span>
           <span className="text-[var(--text-primary)]">{displaySubtotal.toLocaleString("en-BD")} BDT</span>
@@ -71,7 +71,7 @@ function OrderSummaryPanelBase({
         </div>
       </div>
 
-      <div className="mt-3.5 border-t border-gray-700/80 pt-3.5">
+      <div className="mt-3.5 border-t border-[var(--border)] pt-3.5">
         <div className="flex items-end justify-between">
           <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Total</span>
           <span className="text-2xl font-semibold tracking-tight text-[#C9A96E]">

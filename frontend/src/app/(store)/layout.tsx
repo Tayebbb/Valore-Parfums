@@ -671,9 +671,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <main>{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--border)] mt-20 bg-[var(--bg-surface)]">
-        <div className="px-[5%] py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+      <footer className="border-t border-[var(--border)] mt-16 bg-[var(--bg-surface)]">
+        <div className="px-[5%] py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-1">
                 <Image src="/valore-logo.png" alt="Valore Parfums" width={32} height={32} className="rounded-full object-cover" />

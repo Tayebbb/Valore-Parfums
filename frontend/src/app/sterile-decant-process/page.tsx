@@ -8,13 +8,13 @@ export const metadata: Metadata = {
 
 export default function SterileDecantProcessPage() {
   return (
-    <main className="px-[5%] py-10 max-w-4xl mx-auto">
-      <h1 className="font-serif text-4xl font-light">Sterile Decant Process</h1>
+    <main className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10 max-w-4xl mx-auto">
+      <h1 className="font-serif text-3xl md:text-4xl font-light leading-tight">Sterile Decant Process</h1>
       <p className="mt-4 text-sm md:text-base text-[var(--text-secondary)] leading-relaxed">
         We use sanitized tools, sealed atomizers, and documented handling steps to deliver 100% authentic perfume decants.
       </p>
 
-      <section className="mt-8 space-y-4 text-sm md:text-base text-[var(--text-secondary)] leading-relaxed">
+      <section className="mt-7 sm:mt-8 space-y-4 text-sm md:text-base text-[var(--text-secondary)] leading-relaxed max-w-[72ch]">
         <h2 className="font-serif text-2xl font-light">100% Authentic Guarantee</h2>
         <p>Every decant is sourced from original branded bottles. We do not use inspired oil blends or unverified bulk juice.</p>
         <h2 className="font-serif text-2xl font-light">Hygiene Workflow</h2>

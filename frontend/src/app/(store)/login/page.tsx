@@ -52,12 +52,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-[5%] py-16">
+    <div className="min-h-[70vh] flex items-center justify-center px-4 sm:px-6 md:px-[5%] py-10 sm:py-16">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 sm:mb-10">
           <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-3">Welcome Back</p>
-          <h1 className="font-serif text-4xl font-light italic">Sign In</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl font-light italic">Sign In</h1>
           <p className="text-sm text-[var(--text-muted)] mt-2">
             Access your account to manage orders and wishlist
           </p>
@@ -136,7 +136,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="gold-line my-8" />
+        <div className="gold-line my-6 sm:my-8" />
 
         <p className="text-center text-sm text-[var(--text-muted)]">
           Don&apos;t have an account?{" "}

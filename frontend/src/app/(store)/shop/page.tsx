@@ -69,26 +69,27 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
           )}
           <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5 max-w-[calc(100%-1.5rem)]">
             {outOfStock && (
-              <span className="inline-flex items-center rounded-full border border-[rgba(220,120,120,0.28)] bg-[rgba(220,120,120,0.10)] px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[#f3b7b7] backdrop-blur-sm shadow-sm">
+              <span className="meta-pill meta-pill-danger backdrop-blur-sm">
                 Out of Stock
               </span>
             )}
-            <span className="inline-flex items-center rounded-full border border-[rgba(201,165,92,0.18)] bg-black/25 px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gold-light)] backdrop-blur-sm shadow-sm">
+            <span className="meta-pill meta-pill-accent backdrop-blur-sm">
               {perfume.category}
             </span>
             {isDynamicBestSeller && (
-              <span className="inline-flex items-center rounded-full border border-[rgba(201,165,92,0.22)] bg-[rgba(201,165,92,0.12)] px-2.5 py-1 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gold-light)] shadow-sm">
+              <span className="meta-pill meta-pill-accent">
                 Best Seller
               </span>
             )}
           </div>
         </div>
-        <div className="p-4">
+        {/* Keep card text compact so product browsing feels lighter. */}
+        <div className="p-3.5">
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
           <p className="text-sm md:text-base leading-relaxed font-medium text-[var(--text-muted)] mt-0.5">{perfume.brand}</p>
-          <div className="mt-3">
+          <div className="mt-2.5">
             {lowestPrice ? (
-              <p className="font-serif text-lg md:text-2xl leading-snug font-bold text-[var(--gold-light)] drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">
+              <p className="font-serif text-base md:text-xl leading-snug font-medium text-[var(--gold-light)]">
                 From {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
@@ -107,7 +108,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
 function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-[var(--border)] pb-4 mb-4 last:border-b-0 last:mb-0 last:pb-0">
+    <div className="border-b border-[var(--border)] pb-3 mb-3 last:border-b-0 last:mb-0 last:pb-0">
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full text-left group"
@@ -117,7 +118,7 @@ function FilterSection({ title, children, defaultOpen = true }: { title: string;
         </span>
         {open ? <ChevronUp size={14} className="text-[var(--text-muted)]" /> : <ChevronDown size={14} className="text-[var(--text-muted)]" />}
       </button>
-      {open && <div className="mt-3">{children}</div>}
+      {open && <div className="mt-2.5">{children}</div>}
     </div>
   );
 }
@@ -475,7 +476,7 @@ function ShopContent() {
         <div className="flex flex-col gap-1.5">
           <button
             onClick={() => updateFilter("category", "")}
-            className={`text-left text-sm px-3 py-1.5 rounded transition-colors ${
+            className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
               !categoryParam ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
             }`}
           >
@@ -485,7 +486,7 @@ function ShopContent() {
             <button
               key={c}
               onClick={() => updateFilter("category", c)}
-              className={`text-left text-sm px-3 py-1.5 rounded transition-colors ${
+              className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
                 categoryParam === c ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
               }`}
             >
@@ -500,7 +501,7 @@ function ShopContent() {
         <div className="flex flex-col gap-1.5">
           <button
             onClick={() => updateFilter("season", "")}
-            className={`text-left text-sm px-3 py-1.5 rounded transition-colors ${
+            className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
               !seasonParam ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
             }`}
           >
@@ -510,7 +511,7 @@ function ShopContent() {
             <button
               key={s}
               onClick={() => updateFilter("season", s)}
-              className={`text-left text-sm px-3 py-1.5 rounded transition-colors ${
+              className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
                 seasonParam === s ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
               }`}
             >
@@ -525,7 +526,7 @@ function ShopContent() {
         <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
           <button
             onClick={() => updateFilter("brand", "")}
-            className={`flex items-center w-full text-left text-sm px-3 py-1.5 rounded transition-colors ${
+            className={`flex items-center w-full text-left text-sm px-2.5 py-1 rounded transition-colors ${
               !brandParam ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
             }`}
           >
@@ -535,7 +536,7 @@ function ShopContent() {
             <button
               key={b}
               onClick={() => updateFilter("brand", b)}
-              className={`flex items-center w-full text-left text-sm px-3 py-1.5 rounded transition-colors ${
+              className={`flex items-center w-full text-left text-sm px-2.5 py-1 rounded transition-colors ${
                 brandParam === b ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
               }`}
             >
@@ -550,7 +551,7 @@ function ShopContent() {
 
       {/* Best Seller Toggle */}
       <FilterSection title="Special">
-        <label className="flex items-center gap-2.5 cursor-pointer group px-3 py-1.5">
+        <label className="flex items-center gap-2.5 cursor-pointer group px-2.5 py-1">
           <div className="relative">
             <input
               type="checkbox"
@@ -642,9 +643,9 @@ function ShopContent() {
   );
 
   return (
-    <div className="px-[5%] py-10">
+    <div className="px-4 sm:px-6 md:px-[5%] py-6 sm:py-8">
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-2">Our Collection</p>
           <h1 className="font-serif text-4xl font-light italic">{title}</h1>
@@ -689,43 +690,43 @@ function ShopContent() {
       {hasFilters && (
         <div className="flex flex-wrap gap-2 mb-6">
           {qParam && (
-            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span className="filter-chip">
               Search: {qParam}
               <button onClick={() => { setSearchInput(""); updateFilter("q", ""); }}><X size={12} /></button>
             </span>
           )}
           {categoryParam && (
-            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span className="filter-chip">
               {categoryParam === "Men" ? "For Him" : categoryParam === "Women" ? "For Her" : categoryParam}
               <button onClick={() => updateFilter("category", "")}><X size={12} /></button>
             </span>
           )}
           {seasonParam && (
-            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span className="filter-chip">
               {seasonParam}
               <button onClick={() => updateFilter("season", "")}><X size={12} /></button>
             </span>
           )}
           {brandParam && (
-            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span className="filter-chip">
               {brandParam}
               <button onClick={() => updateFilter("brand", "")}><X size={12} /></button>
             </span>
           )}
           {dealParam && (
-            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span className="filter-chip">
               Partial Deals
               <button onClick={() => updateFilter("deal", "")}><X size={12} /></button>
             </span>
           )}
           {bestSellerParam && (
-            <span className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span className="filter-chip">
               Best Sellers
               <button onClick={() => updateFilter("bestSeller", "")}><X size={12} /></button>
             </span>
           )}
           {selectedNotes.map((note) => (
-            <span key={note} className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[var(--gold-tint)] text-[var(--gold)] rounded border border-[var(--gold)]/20">
+            <span key={note} className="filter-chip">
               Note: {note}
               <button onClick={() => toggleNote(note)}><X size={12} /></button>
             </span>
@@ -735,17 +736,17 @@ function ShopContent() {
 
       {/* Mobile Filters Panel */}
       {mobileFiltersOpen && (
-        <div className="lg:hidden mb-8 p-5 bg-[var(--bg-card)] border border-[var(--border)] rounded animate-fade-up">
+        <div className="lg:hidden mb-8 p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded animate-fade-up">
           {filtersContent}
         </div>
       )}
 
       {/* Main Layout: Sidebar + Grid */}
-      <div className="flex gap-8">
+      <div className="flex gap-6 lg:gap-8">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-64 flex-shrink-0">
-          <div className="sticky top-24 bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
-            <h2 className="text-xs uppercase tracking-[0.2em] text-[var(--gold)] mb-5 font-medium">Filters</h2>
+          <div className="sticky top-24 bg-[var(--bg-card)] border border-[var(--border)] rounded p-4">
+            <h2 className="text-xs uppercase tracking-[0.2em] text-[var(--gold)] mb-4 font-medium">Filters</h2>
             {filtersContent}
           </div>
         </aside>
@@ -753,7 +754,7 @@ function ShopContent() {
         {/* Product Grid */}
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {[...Array(9)].map((_, i) => (
                 <div key={i}>
                   <div className="skeleton aspect-[3/4] rounded" />
@@ -771,7 +772,7 @@ function ShopContent() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {filteredPerfumes.map((perfume, i) => (
                 <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
                   <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
@@ -788,14 +789,14 @@ function ShopContent() {
 export default function ShopPage() {
   return (
     <Suspense fallback={
-      <div className="px-[5%] py-10">
+      <div className="px-4 sm:px-6 md:px-[5%] py-6 sm:py-8">
         <div className="flex gap-8">
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="skeleton h-96 rounded" />
           </aside>
           <div className="flex-1">
-            <div className="skeleton h-10 w-64 mb-8 rounded" />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+            <div className="skeleton h-10 w-64 mb-6 rounded" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {[...Array(9)].map((_, i) => (
                 <div key={i}>
                   <div className="skeleton aspect-[3/4] rounded" />
