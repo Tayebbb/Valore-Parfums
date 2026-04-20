@@ -41,12 +41,12 @@ html.light {
   --bg-card: #ffffff;
   --bg-input: #ffffff;
 
-  --gold: #9a7b3c;
-  --gold-hover: #86692f;
-  --gold-light: #b8943f;
-  --gold-dim: #7a6230;
-  --gold-tint: rgba(154, 123, 60, 0.06);
-  --gold-glow: rgba(154, 123, 60, 0.12);
+  --gold: #5f7489;
+  --gold-hover: #4f6274;
+  --gold-light: #7b8ea0;
+  --gold-dim: #3f5162;
+  --gold-tint: rgba(95, 116, 137, 0.08);
+  --gold-glow: rgba(95, 116, 137, 0.14);
 
   --foreground: #1a1a1a;
   --text-primary: #1a1a1a;
@@ -54,8 +54,8 @@ html.light {
   --text-muted: #4a4a4a;
 
   --border: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(154, 123, 60, 0.3);
-  --border-gold: rgba(154, 123, 60, 0.5);
+  --border-hover: rgba(95, 116, 137, 0.3);
+  --border-gold: rgba(95, 116, 137, 0.5);
 
   --success: #16a34a;
   --warning: #d97706;
@@ -69,27 +69,27 @@ html.light {
 /* ── Checkout Light Mode Enhancements ── */
 html.light .checkout-shell {
   background:
-    radial-gradient(900px 420px at 5% -10%, rgba(154, 123, 60, 0.09), transparent 55%),
-    radial-gradient(700px 340px at 95% 10%, rgba(77, 127, 166, 0.1), transparent 58%),
+    radial-gradient(900px 420px at 5% -10%, rgba(95, 116, 137, 0.1), transparent 55%),
+    radial-gradient(700px 340px at 95% 10%, rgba(124, 146, 168, 0.12), transparent 58%),
     linear-gradient(180deg, #fffdf8 0%, #fffaf1 48%, #fffefc 100%);
 }
 
 html.light .checkout-shell .checkout-panel {
-  border-color: rgba(154, 123, 60, 0.2) !important;
+  border-color: rgba(95, 116, 137, 0.22) !important;
   background: linear-gradient(180deg, #ffffff 0%, #fffaf2 100%) !important;
   box-shadow:
-    0 10px 22px rgba(154, 123, 60, 0.08),
+    0 10px 22px rgba(95, 116, 137, 0.09),
     0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 html.light .checkout-shell .checkout-tab {
-  border-color: rgba(154, 123, 60, 0.22) !important;
+  border-color: rgba(95, 116, 137, 0.24) !important;
   background: linear-gradient(180deg, #ffffff 0%, #fff9ef 100%);
   color: #5a4a2a;
 }
 
 html.light .checkout-shell .checkout-tab:hover {
-  border-color: rgba(154, 123, 60, 0.45) !important;
+  border-color: rgba(95, 116, 137, 0.48) !important;
   background: #fff5e6;
 }
 
