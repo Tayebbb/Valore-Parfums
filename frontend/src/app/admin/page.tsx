@@ -150,7 +150,7 @@ export default function AdminDashboard() {
           {/* Owner 1 */}
           <div className="space-y-3">
             <h4 className="font-serif text-lg text-[var(--gold)]">{data.owners.owner1Name}</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total</p>
                 <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.owners.totalProfit.owner1)} BDT</p>
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
           {/* Owner 2 */}
           <div className="space-y-3">
             <h4 className="font-serif text-lg text-[var(--gold)]">{data.owners.owner2Name}</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total</p>
                 <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.owners.totalProfit.owner2)} BDT</p>
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
             {data.ownerAccounts.map((acct) => (
               <div key={acct.name} className="space-y-3">
                 <h4 className="font-serif text-lg text-[var(--gold)]">{acct.name}</h4>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-[var(--bg-surface)] rounded p-3">
                     <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Owner Stock Profit</p>
                     <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.totalEarned)} BDT</p>

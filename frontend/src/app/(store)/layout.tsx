@@ -309,7 +309,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             : "bg-[var(--bg-base)]"
         }`}
       >
-        <div className="px-[5%] flex items-center justify-between h-16">
+        <div className="px-4 sm:px-6 md:px-[5%] flex items-center justify-between h-16">
           {/* Mobile menu button */}
           <button
             className="lg:hidden text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -489,7 +489,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* Search Overlay */}
         {searchOpen && (
           <div className="border-t border-[var(--border)] bg-[var(--bg-base)]">
-            <form onSubmit={handleSearch} className="px-[5%] py-4 flex items-center gap-3">
+            <form onSubmit={handleSearch} className="px-4 sm:px-6 md:px-[5%] py-4 flex items-center gap-3">
               <Search size={18} className="text-[var(--text-muted)] flex-shrink-0" />
               <input
                 ref={searchRef}
@@ -510,7 +510,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </form>
             {/* Live search results */}
             {searchQuery.trim() && (
-              <div className="px-[5%] pb-4">
+              <div className="px-4 sm:px-6 md:px-[5%] pb-4">
                 {searchResults.length > 0 ? (
                   <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded divide-y divide-[var(--border)] max-h-80 overflow-y-auto">
                     {searchResults.map((p) => {
@@ -558,7 +558,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 top-[calc(2.5rem+4rem)] z-40 bg-[var(--bg-base)] border-t border-[var(--border)] overflow-y-auto">
-          <nav className="px-[5%] py-6 space-y-1">
+          <nav className="px-4 sm:px-6 md:px-[5%] py-6 space-y-1">
             <Link href="/" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
               Home
             </Link>
@@ -672,7 +672,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       {/* Footer */}
       <footer className="border-t border-[var(--border)] mt-16 bg-[var(--bg-surface)]">
-        <div className="px-[5%] py-12">
+        <div className="px-4 sm:px-6 md:px-[5%] py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-1">

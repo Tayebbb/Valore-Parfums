@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,6 +15,8 @@ import {
   BarChart3,
   Bell,
   MapPin,
+  Menu,
+  X,
 } from "lucide-react";
 
 const navItems = [
@@ -33,11 +36,46 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen bg-[var(--bg-base)]">
+      <header className="md:hidden fixed top-0 inset-x-0 z-30 h-14 border-b border-[var(--border)] bg-[var(--bg-base)]/95 backdrop-blur-md">
+        <div className="h-full px-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((prev) => !prev)}
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            aria-label={mobileNavOpen ? "Close admin menu" : "Open admin menu"}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <Link href="/admin" className="font-serif text-lg font-light tracking-wide text-[var(--gold)]">
+            Valore Admin
+          </Link>
+          <div className="w-9" aria-hidden="true" />
+        </div>
+      </header>
+
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="md:hidden fixed inset-0 top-14 z-30 bg-black/50"
+          onClick={() => setMobileNavOpen(false)}
+          aria-label="Close navigation overlay"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-[var(--bg-surface)] border-r border-[var(--border)] flex flex-col fixed h-full z-40">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] md:w-64 bg-[var(--bg-surface)] border-r border-[var(--border)] flex flex-col transform transition-transform duration-200 md:translate-x-0 ${
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         {/* Logo */}
         <div className="px-6 py-6 border-b border-[var(--border)]">
           <Link href="/admin" className="block">
@@ -84,8 +122,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className="ml-64 flex-1 min-h-screen">
-        <div className="p-8">{children}</div>
+      <main className="min-h-screen flex-1 md:ml-64">
+        <div className="p-4 sm:p-6 md:p-8 pt-16 md:pt-8">{children}</div>
       </main>
     </div>
   );

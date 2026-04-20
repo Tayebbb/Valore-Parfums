@@ -60,7 +60,7 @@ export default function WishlistPage() {
 
   if (!user) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-[5%]">
+      <div className="min-h-[60vh] flex items-center justify-center px-4 sm:px-6 md:px-[5%]">
         <div className="text-center">
           <Heart size={48} className="text-[var(--text-muted)] mx-auto mb-4" />
           <h1 className="font-serif text-3xl font-light italic mb-2">Your Wishlist</h1>

@@ -62,7 +62,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-4">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Total Revenue</p>
           <p className="font-serif text-2xl mt-2 text-[var(--gold)]">{fmt(data.totalRevenue)} BDT</p>

@@ -194,7 +194,7 @@ export default function SettingsPage() {
           {/* Budget */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded px-4 py-3">
             <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Budget Tier <span className="text-[var(--text-muted)]">(Bottle &lt; 3,000 BDT)</span></p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {["3", "10", "15", "30"].map((ml) => (
                 <div key={ml}>
                   <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">{ml === "3" ? "3–6" : ml}ml</label>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
           {/* Premium */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded px-4 py-3">
             <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Premium Tier <span className="text-[var(--text-muted)]">(3,000 – 8,000 BDT)</span></p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {["3", "10", "15", "30"].map((ml) => (
                 <div key={ml}>
                   <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">{ml === "3" ? "3–6" : ml}ml</label>
@@ -242,7 +242,7 @@ export default function SettingsPage() {
           {/* Luxury */}
           <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded px-4 py-3">
             <p className="text-xs font-medium text-[var(--text-primary)] mb-3">Luxury Tier <span className="text-[var(--text-muted)]">(Bottle &gt; 8,000 BDT)</span></p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {["3", "10", "15"].map((ml) => (
                 <div key={ml}>
                   <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">{ml === "3" ? "3–6" : ml === "15" ? "15+" : ml}ml</label>
