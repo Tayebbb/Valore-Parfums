@@ -190,7 +190,7 @@ export function getProductKeywordBundle(perfumeName: string): ProductKeywordBund
 }
 
 export function buildProductMetaTitle(perfume: Pick<PerfumeDocument, "name" | "brand">): string {
-  return `${perfume.name} by ${perfume.brand} Decant (3ml-30ml) & Full Bottle | ${SITE_NAME}`;
+  return `${perfume.name} by ${perfume.brand} | ${SITE_NAME}`;
 }
 
 export function buildProductMetaDescription(perfume: Pick<PerfumeDocument, "name">): string {

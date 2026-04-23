@@ -21,7 +21,7 @@ export async function GET() {
 
       return {
         id: perfume.id,
-        title: `${perfume.name} by ${perfume.brand} Decant`,
+        title: `${perfume.name} by ${perfume.brand}`,
         description: perfume.description || `Authentic ${perfume.name} decants in Bangladesh with full bottle request option.`,
         link: buildCanonicalProductUrl(perfume),
         image,
