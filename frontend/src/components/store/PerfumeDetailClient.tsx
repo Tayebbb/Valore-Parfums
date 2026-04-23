@@ -243,7 +243,7 @@ export default function PerfumePage({
     return (
       <div className="px-4 sm:px-6 md:px-[5%] py-10 sm:py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="skeleton aspect-[3/4] rounded" />
+          <div className="skeleton aspect-square rounded" />
           <div className="space-y-4">
             <div className="skeleton h-8 rounded w-3/4" />
             <div className="skeleton h-4 rounded w-1/2" />
@@ -274,10 +274,10 @@ export default function PerfumePage({
         <ArrowLeft size={14} /> Back to Collection
       </Link>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-10">
         {/* Images */}
         <div>
-          <div className="aspect-square bg-[var(--bg-surface)] rounded overflow-hidden img-zoom relative">
+          <div className="aspect-square max-h-[760px] bg-[var(--bg-surface)] rounded overflow-hidden img-zoom relative">
             {images[0] ? (
               <Image src={images[0]} alt={perfume.name} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" priority />
             ) : (
