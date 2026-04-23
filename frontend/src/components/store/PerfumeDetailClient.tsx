@@ -31,6 +31,7 @@ interface Perfume {
     base?: string[];
     all?: string[];
   };
+  season?: string[];
 }
 
 interface PriceOption {
@@ -380,6 +381,19 @@ export default function PerfumePage({
               )}
             </div>
           ) : null}
+
+          {perfume.season && perfume.season.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="font-serif text-2xl font-light">Best Seasons</h2>
+              <div className="flex flex-wrap gap-2">
+                {perfume.season.map((season) => (
+                  <span key={season} className="text-sm uppercase tracking-wider px-3 py-1.5 rounded border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                    {season}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <h2 className="font-serif text-2xl font-light">Select Your Size</h2>
 

@@ -14,7 +14,7 @@ type SearchPerfume = {
   inspiredBy?: string;
   description?: string;
   category?: string;
-  season?: string;
+  season?: string[];
   isBestSeller?: boolean;
   totalOrders?: number;
   marketPricePerMl?: number;
@@ -258,8 +258,12 @@ export async function GET(req: Request) {
   if (season) {
     const expectedSeason = normalizeSeason(season);
     perfumes = perfumes.filter((p) => {
-      if (typeof p.season !== "string") return false;
-      return normalizeSeason(p.season) === expectedSeason;
+      if (Array.isArray(p.season)) {
+        return p.season.some(s => normalizeSeason(s) === expectedSeason);
+      } else if (typeof p.season === "string") {
+        return normalizeSeason(p.season) === expectedSeason;
+      }
+      return false;
     });
   }
   if (bestSeller === "true") {

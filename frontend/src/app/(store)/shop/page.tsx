@@ -18,7 +18,7 @@ interface Perfume {
   category: string;
   images: string;
   totalStockMl: number;
-  season: string;
+  season: string[];
   isBestSeller: boolean;
   totalOrders?: number;
   marketPricePerMl: number;

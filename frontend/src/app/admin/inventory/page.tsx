@@ -44,7 +44,7 @@ interface Perfume {
   purchasePricePerMl: number;
   totalStockMl: number;
   lowStockThreshold: number;
-  season: string;
+  season: string[];
   isBestSeller: boolean;
   isActive: boolean;
   owner: string;
@@ -65,7 +65,7 @@ interface PerfumeForm {
   marketPricePerMl: number;
   purchasePricePerMl: number;
   lowStockThreshold: number;
-  season: string;
+  season: string[];
   isBestSeller: boolean;
   isActive: boolean;
   owner: string;
@@ -81,7 +81,7 @@ interface PerfumeForm {
 
 const categories = ["Men", "Women", "Unisex", "Oud", "Premium", "Budget"];
 
-const seasons = ["Summer", "Winter", "Spring", "Fall", ""];
+const seasons = ["Summer", "Winter", "Spring", "Autumn", "Rainy", "All Season"];
 
 const owners = ["Store", "Tayeb", "Enid"];
 
@@ -99,7 +99,7 @@ function createEmptyPerfumeForm(): PerfumeForm {
     marketPricePerMl: 0,
     purchasePricePerMl: 0,
     lowStockThreshold: 20,
-    season: "",
+    season: [],
     isBestSeller: false,
     isActive: true,
     owner: "Store",
@@ -432,7 +432,7 @@ export default function InventoryPage() {
       marketPricePerMl,
       purchasePricePerMl,
       lowStockThreshold: Number(p.lowStockThreshold || 20),
-      season: p.season || "",
+      season: Array.isArray(p.season) ? p.season : p.season ? [p.season] : [],
       isBestSeller: p.isBestSeller || false,
       isActive: p.isActive !== false,
       owner: p.owner || "Store",
@@ -916,15 +916,26 @@ export default function InventoryPage() {
                 </div>
               </div>
               <div>
-                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Season</label>
-                <select
-                  value={form.season}
-                  onChange={(e) => setForm({ ...form, season: e.target.value })}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
-                >
-                  <option value="">No Season</option>
-                  {seasons.filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Seasons</label>
+                <div className="flex flex-wrap gap-2">
+                  {seasons.map((season) => (
+                    <label key={season} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.season.includes(season)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setForm({ ...form, season: [...form.season, season] });
+                          } else {
+                            setForm({ ...form, season: form.season.filter(s => s !== season) });
+                          }
+                        }}
+                        className="w-4 h-4 accent-[var(--gold)]"
+                      />
+                      {season}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Owner</label>
