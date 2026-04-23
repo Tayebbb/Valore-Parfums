@@ -18,7 +18,7 @@ interface Perfume {
   category: string;
   images: string;
   totalStockMl: number;
-  season: string;
+  season: string[];
   isBestSeller: boolean;
   totalOrders?: number;
   marketPricePerMl: number;
@@ -59,7 +59,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
   return (
     <Link href={perfume.canonicalPath || buildCanonicalProductPath(perfume)}>
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group">
-        <div className="aspect-[3/4] bg-[var(--bg-surface)] relative img-zoom">
+        <div className="aspect-square bg-[var(--bg-surface)] relative img-zoom">
           {images[0] ? (
             <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
           ) : (
@@ -757,7 +757,7 @@ function ShopContent() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {[...Array(9)].map((_, i) => (
                 <div key={i}>
-                  <div className="skeleton aspect-[3/4] rounded" />
+                  <div className="skeleton aspect-square rounded" />
                   <div className="skeleton h-4 mt-3 rounded w-3/4" />
                   <div className="skeleton h-3 mt-2 rounded w-1/2" />
                 </div>

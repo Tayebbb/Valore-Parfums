@@ -549,10 +549,18 @@ export function serializePerfumeForApi(perfume: Partial<PerfumeDocument> & { id:
   const safeName = perfume.name || "Perfume";
   const safeBrand = perfume.brand || "Brand";
 
+  // Normalize season to array
+  const season = Array.isArray(perfume.season)
+    ? perfume.season
+    : perfume.season
+      ? [perfume.season]
+      : [];
+
   return serializeDocSafe({
     ...perfume,
     name: safeName,
     brand: safeBrand,
+    season,
     slug: resolvePerfumeSlug({ name: safeName, slug: perfume.slug }),
     brandSlug: resolveBrandSlug({ brand: safeBrand, brandSlug: perfume.brandSlug }),
     canonicalPath: buildCanonicalProductPath({ name: safeName, brand: safeBrand, slug: perfume.slug, brandSlug: perfume.brandSlug }),

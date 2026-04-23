@@ -87,7 +87,7 @@ export default function WishlistPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i}>
-              <div className="skeleton aspect-[3/4] rounded" />
+              <div className="skeleton aspect-square rounded" />
               <div className="skeleton h-4 mt-3 rounded w-3/4" />
             </div>
           ))}
@@ -111,7 +111,7 @@ export default function WishlistPage() {
             return (
               <div key={item.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group relative">
                 <Link href={buildCanonicalProductPath(item.perfume)}>
-                  <div className="aspect-[3/4] bg-[var(--bg-surface)] img-zoom relative">
+                  <div className="aspect-square bg-[var(--bg-surface)] img-zoom relative">
                     {images[0] ? (
                       <Image src={images[0]} alt={item.perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
                     ) : (

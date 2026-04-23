@@ -27,7 +27,9 @@ const seasonsDropdown = [
   { label: "Summer", href: "/shop?season=Summer" },
   { label: "Winter", href: "/shop?season=Winter" },
   { label: "Spring", href: "/shop?season=Spring" },
-  { label: "Fall", href: "/shop?season=Fall" },
+  { label: "Autumn", href: "/shop?season=Autumn" },
+  { label: "Rainy", href: "/shop?season=Rainy" },
+  { label: "All Season", href: "/shop?season=All%20Season" },
 ];
 
 const brandsDropdown = [
