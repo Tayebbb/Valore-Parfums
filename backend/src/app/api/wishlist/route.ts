@@ -28,12 +28,15 @@ export async function GET() {
 
     const items = [];
     for (const entry of entries) {
-      const perfumeDoc = await db.collection(Collections.perfumes).doc(entry.perfumeId).get();
-      items.push(serializeDoc({
-        ...entry,
-        perfume: perfumeDoc.exists ? { id: perfumeDoc.id, ...perfumeDoc.data() } : null,
-      }));
-    }
+        // Batch fetch all perfumes at once instead of N+1 queries
+        const perfumeIds = entries.map((e) => e.perfumeId);
+        const perfumeSnap = await db.collection(Collections.perfumes)
+          .where("__name__", "in", perfumeIds.length > 0 ? perfumeIds : ["__placeholder__"])
+          .get();
+        const perfumesMap = new Map();
+        perfumeSnap.docs.forEach((doc) => {
+          perfumesMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
     return NextResponse.json({ items });
   } catch {
     return NextResponse.json({ items: [] });

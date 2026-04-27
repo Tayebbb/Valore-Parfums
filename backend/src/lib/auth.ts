@@ -155,6 +155,6 @@ export async function requireAdmin(): Promise<SessionUser | null> {
 
 // ─── Email normalization ───────────────────────────────
 // Normalize emails to lowercase for consistent lookups
-export function normalizeEmail(email: string): string {
+export function normalizeEmail(email?: string | null): string {
   return String(email || "").toLowerCase().trim();
 }

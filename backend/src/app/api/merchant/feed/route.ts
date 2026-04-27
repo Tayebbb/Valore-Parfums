@@ -10,7 +10,21 @@ function xmlEscape(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
+// Cache merchant feed for 30 minutes to reduce database load
+let feedCacheTs = 0;
+let feedCacheData: string = "";
+
 export async function GET() {
+  // Return cached feed if recent
+  if (feedCacheData && Date.now() - feedCacheTs < 1800000) {
+    return new NextResponse(feedCacheData, {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
+      },
+    });
+  }
+
   const perfumes = await getActivePerfumes();
   const items = await Promise.all(
     perfumes.map(async (perfume) => {
@@ -56,10 +70,14 @@ export async function GET() {
   </channel>
 </rss>`;
 
+  // Cache the generated XML
+  feedCacheData = xml;
+  feedCacheTs = Date.now();
+
   return new NextResponse(xml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
     },
   });
 }

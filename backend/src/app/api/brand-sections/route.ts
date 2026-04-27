@@ -55,16 +55,32 @@ function sanitizeBrandList(value: unknown): string[] {
   return Array.from(new Set(cleaned)).sort((a, b) => a.localeCompare(b));
 }
 
+let brandCacheTs = 0;
+let brandCacheData: string[] = [];
+
 async function getAvailableBrands(): Promise<string[]> {
-  const snap = await db.collection(Collections.perfumes).where("isActive", "==", true).get();
-  const brands = new Set<string>();
-  for (const doc of snap.docs) {
-    const data = doc.data() as { brand?: unknown };
-    if (typeof data.brand === "string" && data.brand.trim()) {
-      brands.add(data.brand.trim());
-    }
+  // Cache for 5 minutes
+  if (brandCacheData.length > 0 && Date.now() - brandCacheTs < 300000) {
+    return brandCacheData;
   }
-  return Array.from(brands).sort((a, b) => a.localeCompare(b));
+
+  // Only fetch brand and isActive fields to minimize bandwidth
+  const snap = await db.collection(Collections.perfumes)
+    .where("isActive", "==", true)
+    .select("brand")
+    .get();
+  
+  const brands = new Set<string>();
+  snap.docs.forEach((doc) => {
+    const brand = (doc.data() as { brand?: unknown }).brand;
+    if (typeof brand === "string" && brand.trim()) {
+      brands.add(brand.trim());
+    }
+  });
+  
+  brandCacheData = Array.from(brands).sort((a, b) => a.localeCompare(b));
+  brandCacheTs = Date.now();
+  return brandCacheData;
 }
 
 // GET brand sections config — admin only

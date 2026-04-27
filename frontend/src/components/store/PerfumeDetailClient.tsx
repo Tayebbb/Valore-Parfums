@@ -128,20 +128,12 @@ export default function PerfumePage({
   // Check wishlist status
   useEffect(() => {
     if (!user) return;
-    fetch("/api/wishlist")
+    fetch(`/api/wishlist-status?perfumeId=${id}`)
       .then((r) => r.json())
       .then((data) => {
-        const items = Array.isArray(data)
-          ? data
-          : (data && typeof data === "object" && Array.isArray((data as { items?: unknown[] }).items))
-            ? (data as { items: unknown[] }).items
-            : [];
-        const inWishlist = items.some((item) => {
-          if (!item || typeof item !== "object") return false;
-          const perfume = (item as { perfume?: { id?: string } }).perfume;
-          return typeof perfume?.id === "string" && perfume.id === id;
-        });
-        setWishlisted(inWishlist);
+        if (data && typeof data === "object" && typeof (data as { wishlisted?: unknown }).wishlisted === "boolean") {
+          setWishlisted((data as { wishlisted: boolean }).wishlisted);
+        }
       })
       .catch(() => {});
   }, [user, id]);
