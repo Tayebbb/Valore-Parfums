@@ -3,6 +3,7 @@
 ## Executive Summary
 
 Valore Parfums is now optimized for extreme performance:
+
 - ✅ N+1 query patterns eliminated where possible
 - ✅ Batch API endpoints implemented
 - ✅ Intelligent caching strategies in place
@@ -15,10 +16,13 @@ Valore Parfums is now optimized for extreme performance:
 ## 🎯 Critical Performance Improvements
 
 ### 1. **Checkout N+1 Query Fix** [CRITICAL PERFORMANCE]
+
 **Problem:** 5 items in cart = 5 separate API calls to get pricing
+
 - Impact: 5x slower than necessary, 5x higher Vercel function invocations
 
 **Solution:** Batch Pricing Endpoint Already Exists
+
 ```javascript
 // OLD (5 calls):
 for (const item of cartItems) {
@@ -30,45 +34,57 @@ for (const item of cartItems) {
 const prices = await fetch("/api/pricing", {
   method: "POST",
   body: JSON.stringify({
-    perfumeIds: cartItems.map(i => i.id)
-  })
+    perfumeIds: cartItems.map((i) => i.id),
+  }),
 });
 ```
+
 **Implementation:** Update frontend checkout component to batch call
 **Expected Impact:** 80% reduction in API calls, 5x faster checkout
 
 ### 2. **Order History N+1 Query Fix** [HIGH PERFORMANCE]
+
 **Problem:** 10 orders = 10 extra Firestore reads for items subcollections
+
 - Impact: High latency on order history page
 
 **Solution:** Already Optimized with collectionGroup
+
 ```javascript
 // Server-side optimization already in place:
 const [ordersSnap, allItemsSnap] = await Promise.all([
   db.collection(Collections.orders).get(),
-  db.collectionGroup("items").get()  // ← Single batch read
+  db.collectionGroup("items").get(), // ← Single batch read
 ]);
 ```
+
 **Implementation:** ✅ Already optimized
 **Expected Impact:** 90% reduction in Firestore reads
 
 ### 3. **Product List Pagination** [MEDIUM PERFORMANCE]
+
 **Problem:** All perfumes loaded in memory (hundreds/thousands)
+
 - Impact: Large memory footprint, client-side filtering slow
 
 **Solution Framework Ready**
+
 ```javascript
 // GET /api/perfumes?limit=20&cursor=abc123
 // Returns 20 items with next cursor for pagination
 ```
+
 **Implementation:** Add cursor-based pagination to perfumes endpoint
 **Expected Impact:** 70% reduction in memory, faster load times
 
 ### 4. **Search Input Debouncing** [MEDIUM PERFORMANCE]
+
 **Problem:** Search API called on every keystroke
+
 - Impact: 100+ API calls for typing "iphone"
 
 **Solution:** Frontend Debounce (300ms)
+
 ```javascript
 const [searchTerm, setSearchTerm] = useState("");
 
@@ -76,7 +92,7 @@ const debouncedSearch = useCallback(
   debounce((term) => {
     if (term) fetch(`/api/perfumes/search?q=${term}`);
   }, 300),
-  []
+  [],
 );
 
 const handleSearch = (e) => {
@@ -84,20 +100,25 @@ const handleSearch = (e) => {
   debouncedSearch(e.target.value);
 };
 ```
+
 **Implementation:** Add to frontend search component
 **Expected Impact:** 95% reduction in search API calls
 
 ### 5. **Pricing Cache Optimization** [MEDIUM PERFORMANCE]
+
 **Current:** 30-second TTL on pricing cache
+
 - Issue: Concurrent users might see different prices
 
 **Recommended:** Reduce to 5 seconds or implement reactive invalidation
+
 ```javascript
 // When inventory updates, invalidate pricing cache
 function invalidatePricingCache() {
-  configCache = null;  // Already exists in pricing route
+  configCache = null; // Already exists in pricing route
 }
 ```
+
 **Implementation:** Call on inventory updates
 **Expected Impact:** Better price consistency, acceptable cache overhead
 
@@ -107,29 +128,30 @@ function invalidatePricingCache() {
 
 ### HTTP Response Caching (Client & CDN)
 
-| Endpoint | TTL | Strategy | Use Case |
-|----------|-----|----------|----------|
-| `/api/perfumes` | 20-60s | Max-age + SWR | Product catalog |
-| `/api/pricing` | 30s | Max-age + SWR | Pricing lookups |
-| `/api/bottles` | 20s | Max-age + SWR | Bottle options |
-| `/api/decant-sizes` | 20s | Max-age + SWR | Size options |
-| `/api/orders/my` | no-store | Dynamic | Personal orders |
-| Product pages | 24h + ISR | Incremental | SEO optimization |
+| Endpoint            | TTL       | Strategy      | Use Case         |
+| ------------------- | --------- | ------------- | ---------------- |
+| `/api/perfumes`     | 20-60s    | Max-age + SWR | Product catalog  |
+| `/api/pricing`      | 30s       | Max-age + SWR | Pricing lookups  |
+| `/api/bottles`      | 20s       | Max-age + SWR | Bottle options   |
+| `/api/decant-sizes` | 20s       | Max-age + SWR | Size options     |
+| `/api/orders/my`    | no-store  | Dynamic       | Personal orders  |
+| Product pages       | 24h + ISR | Incremental   | SEO optimization |
 
 ### In-Memory Server Cache (Vercel Functions)
 
-| Data | TTL | Purpose |
-|------|-----|---------|
+| Data                              | TTL | Purpose              |
+| --------------------------------- | --- | -------------------- |
 | Config (sizes, bottles, settings) | 60s | Pricing calculations |
-| Active perfumes index | 60s | Search queries |
-| Brand sections | 60s | Filter options |
-| Perfume prices (batch) | 30s | Checkout speed |
+| Active perfumes index             | 60s | Search queries       |
+| Brand sections                    | 60s | Filter options       |
+| Perfume prices (batch)            | 30s | Checkout speed       |
 
 ---
 
 ## 🚀 Implementation Priority
 
 ### Phase 1: Frontend Optimization (Quick Wins)
+
 - [ ] **Batch Pricing** - Update checkout to POST `/api/pricing` with multiple IDs
 - [ ] **Search Debounce** - Add 300ms debounce to search input
 - [ ] **Image Optimization** - Ensure Cloudinary WebP/AVIF formats used
@@ -138,6 +160,7 @@ function invalidatePricingCache() {
 **Expected Impact:** 40% faster checkout, 95% fewer search calls
 
 ### Phase 2: Backend Optimization (Infrastructure)
+
 - [ ] **Pagination** - Add cursor-based pagination to `/api/perfumes`
 - [ ] **Cache Headers** - Verify all endpoints have correct Cache-Control
 - [ ] **Compression** - Ensure gzip/brotli enabled on all responses
@@ -146,6 +169,7 @@ function invalidatePricingCache() {
 **Expected Impact:** Better scalability, faster database queries
 
 ### Phase 3: Advanced Optimization (Long-term)
+
 - [ ] **Search Service** - Consider Algolia/Typesense for faceted search
 - [ ] **CDN** - Use Vercel Edge Functions for cache at edge
 - [ ] **Revalidation** - ISR on product updates for instant cache refresh
@@ -158,27 +182,30 @@ function invalidatePricingCache() {
 ## 💾 Vercel Serverless Optimization
 
 ### Function Execution Limits (Vercel Pro)
+
 - **Max Duration:** 60 seconds
 - **Max Bundle:** 250MB (uncompressed)
 
 ### Optimization Tips
 
 **1. Keep Functions Lightweight**
+
 ```javascript
 // ✅ GOOD: Direct Firebase access
 const doc = await db.collection("perfumes").doc(id).get();
 
 // ❌ BAD: Unnecessary processing
 const allPerfumes = await getAllPerfumes();
-const filtered = allPerfumes.find(p => p.id === id); // Much slower
+const filtered = allPerfumes.find((p) => p.id === id); // Much slower
 ```
 
 **2. Use Batch Operations**
+
 ```javascript
 // ✅ GOOD: Single batch read
 await Promise.all([
   db.collection("orders").get(),
-  db.collectionGroup("items").get()
+  db.collectionGroup("items").get(),
 ]);
 
 // ❌ BAD: Sequential reads (3x slower)
@@ -187,6 +214,7 @@ const items = await db.collectionGroup("items").get();
 ```
 
 **3. Cache Aggressively**
+
 ```javascript
 // ✅ GOOD: 60-second in-memory cache
 const cached = configCache.get(key);
@@ -199,12 +227,13 @@ return await db.collection("settings").doc("default").get();
 ```
 
 **4. Return Only Needed Data**
+
 ```javascript
 // ✅ GOOD: Filter fields early
 return {
   id: doc.id,
   name: doc.data().name,
-  price: doc.data().price
+  price: doc.data().price,
 };
 
 // ❌ BAD: Return entire document
@@ -216,21 +245,23 @@ return { id: doc.id, ...doc.data() }; // Includes unnecessary fields
 ## 📈 Performance Metrics & Goals
 
 ### Current Benchmarks (Before Optimization)
-| Metric | Current | Target | Improvement |
-|--------|---------|--------|-------------|
-| Checkout Load | ~2s | <500ms | 75% ↓ |
-| Search Response | ~800ms | <100ms | 87% ↓ |
-| Order History | ~1.5s | <300ms | 80% ↓ |
-| Vercel Invocations | 5 (checkout) | 1 | 80% ↓ |
-| Firebase Reads | 100/min | 20/min | 80% ↓ |
+
+| Metric             | Current      | Target | Improvement |
+| ------------------ | ------------ | ------ | ----------- |
+| Checkout Load      | ~2s          | <500ms | 75% ↓       |
+| Search Response    | ~800ms       | <100ms | 87% ↓       |
+| Order History      | ~1.5s        | <300ms | 80% ↓       |
+| Vercel Invocations | 5 (checkout) | 1      | 80% ↓       |
+| Firebase Reads     | 100/min      | 20/min | 80% ↓       |
 
 ### Frontend Performance Goals
-| Metric | Target | How |
-|--------|--------|-----|
-| Largest Contentful Paint | <1.5s | Image optimization, code splitting |
-| First Input Delay | <100ms | Remove expensive JS, defer non-critical |
-| Cumulative Layout Shift | <0.1 | Fixed dimensions, lazy loading |
-| Time to Interactive | <2s | Bundle optimization, code splitting |
+
+| Metric                   | Target | How                                     |
+| ------------------------ | ------ | --------------------------------------- |
+| Largest Contentful Paint | <1.5s  | Image optimization, code splitting      |
+| First Input Delay        | <100ms | Remove expensive JS, defer non-critical |
+| Cumulative Layout Shift  | <0.1   | Fixed dimensions, lazy loading          |
+| Time to Interactive      | <2s    | Bundle optimization, code splitting     |
 
 ---
 
@@ -248,18 +279,18 @@ async function loadCartPricing(cartItems) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        perfumeIds: cartItems.map(item => item.perfumeId)
-      })
+        perfumeIds: cartItems.map((item) => item.perfumeId),
+      }),
     });
-    
+
     const pricesByPerfume = await response.json();
-    
+
     // Map prices back to cart items
-    const itemsWithPrices = cartItems.map(item => ({
+    const itemsWithPrices = cartItems.map((item) => ({
       ...item,
-      prices: pricesByPerfume[item.perfumeId].prices
+      prices: pricesByPerfume[item.perfumeId].prices,
     }));
-    
+
     return itemsWithPrices;
   } catch (error) {
     console.error("Failed to load pricing:", error);
@@ -281,25 +312,25 @@ export function SearchBar() {
 
   const handleSearch = useCallback((value) => {
     setQuery(value);
-    
+
     // Clear existing timeout
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    
+
     // Set new timeout
     timeoutRef.current = setTimeout(() => {
       if (value.trim()) {
         fetch(`/api/perfumes/search?q=${encodeURIComponent(value)}`)
-          .then(r => r.json())
-          .then(results => updateResults(results))
-          .catch(err => console.error("Search failed:", err));
+          .then((r) => r.json())
+          .then((results) => updateResults(results))
+          .catch((err) => console.error("Search failed:", err));
       }
     }, 300); // 300ms debounce
   }, []);
 
   return (
-    <input 
-      type="text" 
-      value={query} 
+    <input
+      type="text"
+      value={query}
       onChange={(e) => handleSearch(e.target.value)}
       placeholder="Search perfumes..."
     />
@@ -319,9 +350,9 @@ export async function GET(req: Request) {
   const cursor = searchParams.get("cursor");
 
   const baseQuery = db.collection(Collections.perfumes).where("isActive", "==", true);
-  
+
   let query = baseQuery.orderBy("createdAt", "desc").limit(limit + 1);
-  
+
   if (cursor) {
     const cursorDoc = await db.collection(Collections.perfumes).doc(cursor).get();
     query = query.startAfter(cursorDoc);
@@ -374,6 +405,7 @@ export async function GET(req: Request) {
 ## 📞 Monitoring & Maintenance
 
 ### Recommended Monitoring
+
 ```javascript
 // Track performance in production
 console.time("api-checkout-pricing");
@@ -382,11 +414,13 @@ console.timeEnd("api-checkout-pricing");
 ```
 
 ### Database Query Monitoring
+
 - Monitor Firestore read/write counts in Firebase Console
 - Set up alerts if reads exceed 100/min during normal usage
 - Review audit logs for unusual access patterns
 
 ### Frontend Performance Monitoring
+
 - Integrate with Vercel Analytics (built-in)
 - Monitor Core Web Vitals in browser
 - Set up RUM (Real User Monitoring) alerts

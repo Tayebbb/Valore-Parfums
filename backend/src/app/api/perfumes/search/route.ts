@@ -12,7 +12,6 @@ type SearchPerfume = {
   name?: string;
   brand?: string;
   inspiredBy?: string;
-  description?: string;
   category?: string;
   season?: string[];
   isBestSeller?: boolean;
@@ -302,7 +301,6 @@ export async function GET(req: Request) {
       p.name?.toLowerCase().includes(q) ||
       p.brand?.toLowerCase().includes(q) ||
       p.inspiredBy?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q) ||
       asLowerList(p.fragranceNotes?.all).some((note) => note.includes(q)) ||
       asLowerList(p.noteSearchIndex).some((note) => note.includes(q)),
     );
@@ -331,22 +329,24 @@ export async function GET(req: Request) {
       const productSlug = buildProductSlug({ name: perfume.name || "", slug, brand: perfume.brand || "", brandSlug });
       
       if (Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0) {
+        const { description, ...result } = serializeDoc(perfume);
         return {
-          ...serializeDoc(perfume),
+          ...result,
           slug,
           brandSlug,
           canonicalPath: `/products/${productSlug}`,
         };
       }
       const normalized = buildStructuredNotes(perfume, library);
+      const { description, ...result } = serializeDoc({
+        ...perfume,
+        keyNotes: normalized.keyNotes,
+        fragranceNotes: normalized.fragranceNotes,
+        fragranceNoteIds: normalized.fragranceNoteIds,
+        noteSearchIndex: normalized.noteSearchIndex,
+      });
       return {
-        ...serializeDoc({
-          ...perfume,
-          keyNotes: normalized.keyNotes,
-          fragranceNotes: normalized.fragranceNotes,
-          fragranceNoteIds: normalized.fragranceNoteIds,
-          noteSearchIndex: normalized.noteSearchIndex,
-        }),
+        ...result,
         slug,
         brandSlug,
         canonicalPath: `/products/${productSlug}`,

@@ -27,17 +27,17 @@ function StickyPlaceOrderBarBase({
   disabled,
 }: StickyPlaceOrderBarProps) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-700/80 bg-[rgba(10,10,12,0.94)] px-4 py-3 backdrop-blur-md lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--bg-base)] px-4 py-3 backdrop-blur-md lg:hidden">
       <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Total</p>
-          <p className="truncate text-lg font-semibold tracking-tight text-[#C9A96E]">{total.toLocaleString("en-BD")} BDT</p>
+          <p className="truncate text-lg font-semibold tracking-tight text-[var(--gold)]">{total.toLocaleString("en-BD")} BDT</p>
         </div>
         <button
           type="button"
           onClick={onPlaceOrder}
           disabled={Boolean(disabled) || placing}
-          className="rounded-xl bg-[#C9A96E] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-black shadow-[0_10px_22px_rgba(201,169,110,0.2)] transition-all hover:bg-[#d4b67d] disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-[var(--gold)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-black shadow-[0_10px_22px_var(--gold-glow)] transition-all hover:bg-[var(--gold-light)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {getButtonLabel(paymentMethod, placing)}
         </button>

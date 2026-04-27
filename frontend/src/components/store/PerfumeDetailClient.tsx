@@ -17,7 +17,6 @@ interface Perfume {
   slug?: string;
   brandSlug?: string;
   inspiredBy?: string;
-  description?: string;
   category?: string;
   images?: string;
   totalStockMl?: number;
@@ -322,10 +321,6 @@ export default function PerfumePage({
           )}
 
           <div className="gold-line" />
-
-          {perfume.description && (
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{perfume.description}</p>
-          )}
 
           {(perfume.fragranceNotes?.top?.length || perfume.fragranceNotes?.middle?.length || perfume.fragranceNotes?.base?.length) ? (
             <div className="space-y-3">

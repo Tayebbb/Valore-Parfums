@@ -74,7 +74,7 @@ function OrderSummaryPanelBase({
       <div className="mt-3.5 border-t border-[var(--border)] pt-3.5">
         <div className="flex items-end justify-between">
           <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Total</span>
-          <span className="text-2xl font-semibold tracking-tight text-[#C9A96E]">
+          <span className="text-2xl font-semibold tracking-tight text-[var(--gold)]">
             {total.toLocaleString("en-BD")} BDT
           </span>
         </div>

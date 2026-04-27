@@ -66,6 +66,12 @@ html.light {
   --shadow-color: rgba(0, 0, 0, 0.08);
 }
 
+/* ── Light Mode Sticky Bar Override ── */
+html.light .fixed.inset-x-0.bottom-0 {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(95, 116, 137, 0.12) !important;
+}
+
 /* ── Checkout Light Mode Enhancements ── */
 html.light .checkout-shell {
   background:

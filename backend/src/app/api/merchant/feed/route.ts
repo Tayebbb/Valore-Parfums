@@ -22,7 +22,6 @@ export async function GET() {
       return {
         id: perfume.id,
         title: `${perfume.name} by ${perfume.brand}`,
-        description: `Authentic ${perfume.name} decants in Bangladesh with full bottle request option.`,
         link: buildCanonicalProductUrl(perfume),
         image,
         price: firstInStock?.price || 0,
@@ -44,7 +43,6 @@ export async function GET() {
     <item>
       <g:id>${xmlEscape(item.id)}</g:id>
       <g:title>${xmlEscape(item.title)}</g:title>
-      <g:description>${xmlEscape(item.description)}</g:description>
       <g:link>${xmlEscape(item.link)}</g:link>
       <g:image_link>${xmlEscape(item.image)}</g:image_link>
       <g:condition>new</g:condition>

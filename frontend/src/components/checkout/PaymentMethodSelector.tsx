@@ -36,14 +36,14 @@ function PaymentMethodSelectorBase({ value, onChange }: PaymentMethodSelectorPro
             className={[
               "min-w-0 rounded-xl border px-2 py-2.5 text-center transition-all duration-200",
               selected
-                ? "border-[#C9A96E] bg-[rgba(201,169,110,0.12)] shadow-[0_0_0_1px_rgba(201,169,110,0.55),0_12px_24px_rgba(201,169,110,0.14)]"
-                : "border-[var(--border)] bg-[var(--bg-surface)] hover:border-[#C9A96E]/60",
+                ? "border-[var(--gold)] bg-[var(--gold-tint)] shadow-[0_0_0_1px_var(--border-gold),0_12px_24px_var(--gold-glow)]"
+                : "border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--gold)]/60",
             ].join(" ")}
             aria-pressed={selected}
           >
             <div className="flex flex-col items-center gap-1.5">
               <img src={method.iconSrc} alt={method.iconAlt} className="h-4 w-auto object-contain sm:h-5" loading="lazy" />
-              <span className={selected ? "text-xs font-semibold uppercase tracking-[0.14em] text-[#C9A96E]" : "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]"}>
+              <span className={selected ? "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]" : "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]"}>
                 {method.label}
               </span>
             </div>
