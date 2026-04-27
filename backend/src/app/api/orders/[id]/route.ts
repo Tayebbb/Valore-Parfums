@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { requireAdmin } from "@/lib/auth";
+import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
 import { splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";

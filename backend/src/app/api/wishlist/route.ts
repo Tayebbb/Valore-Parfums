@@ -26,17 +26,23 @@ export async function GET() {
         return bTime - aTime;
       });
 
-    const items = [];
-    for (const entry of entries) {
-        // Batch fetch all perfumes at once instead of N+1 queries
-        const perfumeIds = entries.map((e) => e.perfumeId);
-        const perfumeSnap = await db.collection(Collections.perfumes)
-          .where("__name__", "in", perfumeIds.length > 0 ? perfumeIds : ["__placeholder__"])
-          .get();
-        const perfumesMap = new Map();
-        perfumeSnap.docs.forEach((doc) => {
-          perfumesMap.set(doc.id, { id: doc.id, ...doc.data() });
-        });
+    // Batch fetch all perfumes at once instead of N+1 queries
+    const perfumeIds = entries.map((entry) => entry.perfumeId);
+    const perfumeSnap = perfumeIds.length > 0
+      ? await db.collection(Collections.perfumes).where("__name__", "in", perfumeIds).get()
+      : null;
+    const perfumesMap = new Map<string, { id: string; [key: string]: unknown }>();
+    perfumeSnap?.docs.forEach((doc) => {
+      perfumesMap.set(doc.id, { id: doc.id, ...doc.data() });
+    });
+
+    const items = entries.map((entry) =>
+      serializeDoc({
+        ...entry,
+        perfume: perfumesMap.get(entry.perfumeId) || null,
+      }),
+    );
+
     return NextResponse.json({ items });
   } catch {
     return NextResponse.json({ items: [] });
