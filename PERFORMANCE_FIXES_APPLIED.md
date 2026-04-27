@@ -3,7 +3,9 @@
 ## Critical Performance Issues Fixed
 
 ### 1. ✅ **Wishlist N+1 Query** (FIXED)
+
 **File**: `backend/src/app/api/wishlist/route.ts`
+
 - **Before**: 1 DB call + N individual perfume fetches (N = wishlist count)
   - 10 items = 11 queries
   - Impact: +200-500ms per request
@@ -12,6 +14,7 @@
   - **Improvement**: 80% faster (~100-200ms reduction)
 
 **Code Change**:
+
 ```typescript
 // OLD - N+1 pattern
 for (const entry of entries) {
@@ -27,8 +30,10 @@ const perfumesMap = await db.collection(Collections.perfumes)
 ---
 
 ### 2. ✅ **Brand Sections Inefficiency** (FIXED)
+
 **File**: `backend/src/app/api/brand-sections/route.ts`
-- **Before**: 
+
+- **Before**:
   - Loads entire perfume documents (50-100KB each)
   - No caching (query on every request)
   - Impact: 5-10s response time
@@ -38,14 +43,17 @@ const perfumesMap = await db.collection(Collections.perfumes)
   - Impact: <100ms response time
 
 **Code Change**:
+
 ```typescript
 // OLD - Full documents
-const snap = await db.collection(Collections.perfumes)
+const snap = await db
+  .collection(Collections.perfumes)
   .where("isActive", "==", true)
   .get(); // Downloads entire documents
 
 // NEW - Field selection + cache
-const snap = await db.collection(Collections.perfumes)
+const snap = await db
+  .collection(Collections.perfumes)
   .where("isActive", "==", true)
   .select("brand") // Only fetch brand field
   .get();
@@ -56,8 +64,10 @@ const snap = await db.collection(Collections.perfumes)
 ---
 
 ### 3. ✅ **Merchant Feed Performance** (FIXED)
+
 **File**: `backend/src/app/api/merchant/feed/route.ts`
-- **Before**: 
+
+- **Before**:
   - Generated on every request (200+ queries)
   - 5-15 seconds generation time
 - **After**:
@@ -67,6 +77,7 @@ const snap = await db.collection(Collections.perfumes)
   - Cache-Control: 5 minute CDN cache + 30min fallback
 
 **Code Change**:
+
 ```typescript
 // Checks cache before generating
 if (feedCacheData && Date.now() - feedCacheTs < 1800000) {
@@ -80,8 +91,10 @@ if (feedCacheData && Date.now() - feedCacheTs < 1800000) {
 ---
 
 ### 4. ✅ **Product Page Wishlist Check** (NEW ENDPOINT)
+
 **File**: `backend/src/app/api/wishlist-status/route.ts` (NEW)
-- **Before**: 
+
+- **Before**:
   - Product page fetches entire wishlist (100+ items)
   - Filter in JavaScript
   - Impact: +100-300ms per page load
@@ -91,6 +104,7 @@ if (feedCacheData && Date.now() - feedCacheTs < 1800000) {
   - Impact: +10-30ms per page load
 
 **New Endpoint**:
+
 ```typescript
 GET /api/wishlist-status?perfumeId=xxx
 // Response: { wishlisted: true/false }
@@ -103,45 +117,52 @@ GET /api/wishlist-status?perfumeId=xxx
 ## Expected Page Load Improvements
 
 ### Product Detail Page
-| Metric | Before | After | Improvement |
-|--------|--------|-------|------------|
-| Wishlist check | +100-300ms | +10-30ms | **90% faster** |
-| Page render | ~2-3s | ~0.5-1s | **60% faster** |
-| **Total** | **2-3s** | **0.5-1s** | **✅ 2-6x faster** |
+
+| Metric         | Before     | After      | Improvement        |
+| -------------- | ---------- | ---------- | ------------------ |
+| Wishlist check | +100-300ms | +10-30ms   | **90% faster**     |
+| Page render    | ~2-3s      | ~0.5-1s    | **60% faster**     |
+| **Total**      | **2-3s**   | **0.5-1s** | **✅ 2-6x faster** |
 
 ### Wishlist Page
-| Metric | Before | After | Improvement |
-|--------|--------|-------|------------|
+
+| Metric     | Before     | After    | Improvement    |
+| ---------- | ---------- | -------- | -------------- |
 | Data fetch | +200-500ms | +20-40ms | **90% faster** |
-| Total load | ~3-5s | ~0.5-1s | **80% faster** |
+| Total load | ~3-5s      | ~0.5-1s  | **80% faster** |
 
 ### Brand Page
-| Metric | Before | After | Improvement |
-|--------|--------|-------|------------|
-| Brand list | 5-10s | ~100ms | **98% faster** |
+
+| Metric     | Before | After  | Improvement    |
+| ---------- | ------ | ------ | -------------- |
+| Brand list | 5-10s  | ~100ms | **98% faster** |
 
 ### Merchant Feed
-| Metric | Before | After (cached) | Improvement |
-|--------|--------|---|------------|
-| Generation | 5-15s | <50ms | **99% faster** |
+
+| Metric     | Before | After (cached) | Improvement    |
+| ---------- | ------ | -------------- | -------------- |
+| Generation | 5-15s  | <50ms          | **99% faster** |
 
 ---
 
 ## Database Performance Impact
 
 ### Query Reductions
-| Operation | Before | After | Reduction |
-|-----------|--------|-------|-----------|
-| Wishlist GET | 1 + N | 1 + 1 | 80% fewer |
-| Brand sections | 1 full load | 1 cached read | 95% fewer |
-| Merchant feed | 200+ queries | 1 + cache | 95% fewer |
+
+| Operation      | Before       | After         | Reduction |
+| -------------- | ------------ | ------------- | --------- |
+| Wishlist GET   | 1 + N        | 1 + 1         | 80% fewer |
+| Brand sections | 1 full load  | 1 cached read | 95% fewer |
+| Merchant feed  | 200+ queries | 1 + cache     | 95% fewer |
 
 ### Firestore Read Operations
+
 - **Before**: 500-1000 reads/minute on popular pages
 - **After**: 50-100 reads/minute
 - **Reduction**: 80-90% ✅
 
 ### Bandwidth Reduction
+
 - **Brand sections**: 100MB/day → 2MB/day (98% ↓)
 - **Wishlist**: 50MB/day → 10MB/day (80% ↓)
 
@@ -150,6 +171,7 @@ GET /api/wishlist-status?perfumeId=xxx
 ## Implementation Summary
 
 ### Files Modified
+
 ```
 ✅ backend/src/app/api/wishlist/route.ts
    └─ Batch fetch perfumes instead of N+1 queries
@@ -208,6 +230,7 @@ For additional 20-30% improvement, consider:
 ✅ **Production ready**
 
 **Deploy and monitor**:
+
 - Monitor Vercel function execution time
 - Check Firestore read count reduction
 - Measure Core Web Vitals improvement
