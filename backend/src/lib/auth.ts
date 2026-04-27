@@ -86,13 +86,48 @@ export interface SessionUser {
 
 const COOKIE_NAME = "vp-session";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const SESSION_SIGNING_KEY = process.env.SESSION_SIGNING_KEY || "default-insecure-key-change-in-production";
+
+// Create a signed session token (prevents tampering with role/email)
+async function signSessionToken(user: SessionUser): Promise<string> {
+  const data = JSON.stringify(user);
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(SESSION_SIGNING_KEY);
+  const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+  const sigHex = Array.from(new Uint8Array(signature)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${data}.${sigHex}`;
+}
+
+// Verify and extract session data from signed token
+async function verifySessionToken(token: string): Promise<SessionUser | null> {
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+
+  const [data, sigHex] = parts;
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(SESSION_SIGNING_KEY);
+  const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+  const signature = new Uint8Array(sigHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
+
+  try {
+    const valid = await crypto.subtle.verify("HMAC", key, signature, encoder.encode(data));
+    if (!valid) return null;
+    const user = JSON.parse(data) as SessionUser;
+    if (!user.id || !user.role || !user.email) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
 
 export async function setSessionCookie(user: SessionUser): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, JSON.stringify(user), {
+  const signedToken = await signSessionToken(user);
+  cookieStore.set(COOKIE_NAME, signedToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: MAX_AGE,
     path: "/",
   });
@@ -102,13 +137,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const session = cookieStore.get(COOKIE_NAME);
   if (!session?.value) return null;
-  try {
-    const user = JSON.parse(session.value);
-    if (!user.id || !user.role) return null;
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
-  } catch {
-    return null;
-  }
+  return verifySessionToken(session.value);
 }
 
 export async function clearSessionCookie(): Promise<void> {
@@ -122,4 +151,10 @@ export async function requireAdmin(): Promise<SessionUser | null> {
   const user = await getSessionUser();
   if (!user || user.role !== "admin") return null;
   return user;
+}
+
+// ─── Email normalization ───────────────────────────────
+// Normalize emails to lowercase for consistent lookups
+export function normalizeEmail(email: string): string {
+  return String(email || "").toLowerCase().trim();
 }

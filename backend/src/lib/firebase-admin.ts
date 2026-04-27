@@ -92,4 +92,5 @@ export const Collections = {
   blogPosts: "blogPosts",
   ownerAccounts: "ownerAccounts",
   profitTransactions: "profitTransactions",
+  auditLogs: "auditLogs",
 } as const;

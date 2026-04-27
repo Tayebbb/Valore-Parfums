@@ -486,7 +486,7 @@ export function buildProductJsonLd(
     "@context": "https://schema.org",
     "@type": "Product",
     name: `${perfume.name} by ${perfume.brand}`,
-    description: perfume.description || buildProductMetaDescription(perfume),
+    description: buildProductMetaDescription(perfume),
     image: images,
     brand: {
       "@type": "Brand",
@@ -556,8 +556,11 @@ export function serializePerfumeForApi(perfume: Partial<PerfumeDocument> & { id:
       ? [perfume.season]
       : [];
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { description, ...perfumeWithoutDesc } = perfume;
+
   return serializeDocSafe({
-    ...perfume,
+    ...perfumeWithoutDesc,
     name: safeName,
     brand: safeBrand,
     season,

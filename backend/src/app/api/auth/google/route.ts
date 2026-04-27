@@ -3,7 +3,7 @@ import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuid } from "uuid";
 import { db, Collections } from "@/lib/prisma";
-import { setSessionCookie } from "@/lib/auth";
+import { setSessionCookie, normalizeEmail } from "@/lib/auth";
 
 // POST /api/auth/google
 export async function POST(req: Request) {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     const decoded = await getAuth().verifyIdToken(idToken);
-    const email = String(decoded.email || "").trim().toLowerCase();
+    const email = normalizeEmail(decoded.email);
     if (!email) {
       return NextResponse.json({ error: "Google account email is required" }, { status: 400 });
     }

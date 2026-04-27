@@ -49,8 +49,10 @@ function isOrderPaymentReceived(orderData: Record<string, unknown>, statusHint?:
 }
 
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const user = await getSessionUser();
+  
   const orderRef = db.collection(Collections.orders).doc(id);
 
   // Fetch order doc and items in parallel
@@ -60,9 +62,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   ]);
   if (!doc.exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const data = doc.data()!;
+  
+  // Security: Verify user ownership (admin can view any order, users can only view their own)
+  const admin = await requireAdmin();
+  if (!admin) {
+    // Non-admin user: verify they own this order
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (data.customerEmail !== user.email && data.userId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  const data = doc.data()!;
   return NextResponse.json(serializeDoc({
     id: doc.id,
     ...data,
