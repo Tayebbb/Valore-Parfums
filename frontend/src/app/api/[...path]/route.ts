@@ -66,19 +66,42 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
 
   let upstream: Response;
   try {
-    upstream = await fetch(targetUrl, {
-      method,
-      headers,
-      body,
-      redirect: "manual",
-      cache: useCatalogCache ? "force-cache" : "no-store",
-      next: useCatalogCache ? { revalidate: 20 } : undefined,
-    });
+    // Add timeout for backend requests - 15s for general, 20s for catalog (may be large)
+    // Mobile networks may be slower, so we use longer timeouts than client-side
+    const timeoutMs = isPublicCatalogPath ? 20000 : 15000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      upstream = await fetch(targetUrl, {
+        method,
+        headers,
+        body,
+        redirect: "manual",
+        signal: controller.signal,
+        cache: useCatalogCache ? "force-cache" : "no-store",
+        next: useCatalogCache ? { revalidate: 20 } : undefined,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch (error) {
-    console.error("API proxy request failed", { targetUrl, error });
+    const isTimeout = error instanceof Error && (
+      error.name === "AbortError" || 
+      error.message.includes("timeout")
+    );
+    console.error("API proxy request failed", { 
+      targetUrl, 
+      error,
+      isTimeout,
+    });
     return NextResponse.json(
-      { error: "Failed to reach backend API service." },
-      { status: 502 },
+      { 
+        error: isTimeout 
+          ? "Backend API request timeout - please retry"
+          : "Failed to reach backend API service."
+      },
+      { status: isTimeout ? 504 : 502 },
     );
   }
 

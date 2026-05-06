@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
 interface Perfume {
   id: string;
@@ -86,11 +87,18 @@ export default function HomePage() {
   const [perfumes, setPerfumes] = useState<Perfume[]>([]);
   const [priceMap, setPriceMap] = useState<Record<string, PriceInfo[]>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(toPublicApiUrl("/api/perfumes?active=true"))
+    // Use fetch with timeout for mobile stability
+    fetchWithTimeout(toPublicApiUrl("/api/perfumes?active=true"), {
+      timeout: 12000,
+      retries: 1,
+    })
       .then((r) => {
-        if (!r.ok) return [] as Perfume[];
+        if (!r.ok) {
+          throw new Error(`API returned ${r.status}`);
+        }
         return r.json();
       })
       .then((data: Perfume[] | { perfumes?: Perfume[] }) => {
@@ -100,17 +108,28 @@ export default function HomePage() {
             ? data.perfumes
             : [];
 
+        if (perfumeList.length === 0) {
+          console.warn("No perfumes returned from API");
+        }
+
         setPerfumes(perfumeList);
+        setError(null);
         // Batch-fetch pricing for all displayed perfumes in ONE call
         const ids = perfumeList.slice(0, 12).map((p) => p.id);
         if (ids.length > 0) {
-          fetch(toPublicApiUrl("/api/pricing"), {
+          // Use fetch with timeout for pricing API
+          fetchWithTimeout(toPublicApiUrl("/api/pricing"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ perfumeIds: ids }),
+            timeout: 10000,
+            retries: 1,
           })
             .then((r) => {
-              if (!r.ok) return {};
+              if (!r.ok) {
+                console.warn("Pricing API returned", r.status);
+                return {};
+              }
               return r.json();
             })
             .then((map) => {
@@ -121,10 +140,18 @@ export default function HomePage() {
               }
               setPriceMap(parsed);
             })
-            .catch(() => {});
+            .catch((err) => {
+              console.error("Pricing fetch failed:", err);
+            });
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to load perfumes:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load perfumes. Please refresh the page."
+        );
         setPerfumes([]);
         setPriceMap({});
       })
@@ -220,6 +247,17 @@ export default function HomePage() {
                 <div className="skeleton h-3 mt-2 rounded w-1/2" />
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-20 bg-[var(--bg-surface)] border border-red-500/20 rounded p-8">
+            <p className="font-serif text-2xl text-red-500 mb-2">Failed to Load Perfumes</p>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-[var(--gold)] text-black px-6 py-2 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-hover)] transition-colors rounded"
+            >
+              Try Again
+            </button>
           </div>
         ) : newArrivals.length === 0 ? (
           <div className="text-center py-20">

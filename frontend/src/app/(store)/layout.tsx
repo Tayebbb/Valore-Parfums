@@ -10,6 +10,7 @@ import { useAuth } from "@/store/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
 const ANNOUNCEMENTS_CACHE_KEY = "vp-announcements";
 const ANNOUNCEMENTS_CACHE_TTL = 60_000;
@@ -170,7 +171,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       // ignore parse errors
     }
 
-    fetch(toPublicApiUrl("/api/notifications?active=true"))
+    // Use fetch with timeout for mobile stability
+    fetchWithTimeout(toPublicApiUrl("/api/notifications?active=true"), {
+      timeout: 8000,
+      retries: 1,
+    })
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -182,7 +187,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           }
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to load announcements:", err);
+      });
 
     return () => {
       if (cacheTimer !== null) window.clearTimeout(cacheTimer);
@@ -249,16 +256,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
     setSearchLoading(true);
     searchDebounce.current = setTimeout(() => {
-      fetch(toPublicApiUrl(`/api/perfumes/search?q=${encodeURIComponent(val.trim())}`))
+      // Use fetch with timeout for mobile stability
+      fetchWithTimeout(toPublicApiUrl(`/api/perfumes/search?q=${encodeURIComponent(val.trim())}`), {
+        timeout: 8000,
+        retries: 1,
+      })
         .then((r) => {
-          if (!r.ok) return { perfumes: [] };
+          if (!r.ok) {
+            console.warn("Search API returned", r.status);
+            return { perfumes: [] };
+          }
           return r.json();
         })
         .then((data) => {
           const perfumes = Array.isArray(data?.perfumes) ? data.perfumes : [];
           setSearchResults(perfumes.slice(0, 6));
         })
-        .catch(() => setSearchResults([]))
+        .catch((err) => {
+          console.error("Search failed:", err);
+          setSearchResults([]);
+        })
         .finally(() => setSearchLoading(false));
     }, 250);
   }, []);

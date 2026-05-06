@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
 interface Perfume {
   id: string;
@@ -268,6 +269,7 @@ function ShopContent() {
   const [allNotes, setAllNotes] = useState<string[]>([]);
   const [noteCategories, setNoteCategories] = useState<NotesCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(qParam);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
@@ -302,9 +304,16 @@ function ShopContent() {
     if (sortParam) params.set("sort", sortParam);
 
     try {
-      const perfumeRes = await fetch(toPublicApiUrl(`/api/perfumes/search?${params.toString()}`), { signal: controller.signal });
+      // Use fetch with timeout for mobile stability
+      const perfumeRes = await fetchWithTimeout(toPublicApiUrl(`/api/perfumes/search?${params.toString()}`), {
+        timeout: 12000,
+        retries: 1,
+        signal: controller.signal,
+      });
       if (!perfumeRes.ok) {
         if (seq !== fetchSeqRef.current) return;
+        console.error("Perfume search API returned:", perfumeRes.status);
+        setError(`Failed to load perfumes (${perfumeRes.status})`);
         setPerfumes([]);
         setAllBrands([]);
         setPriceMap({});
@@ -315,6 +324,7 @@ function ShopContent() {
 
       const p = Array.isArray(data?.perfumes) ? (data.perfumes as Perfume[]) : [];
       setPerfumes(p);
+      setError(null);
       const brandList = Array.isArray(data?.brands) ? (data.brands as string[]) : [];
       setAllBrands(brandList.filter((b) => b.toLowerCase() !== "valore parfums"));
 
@@ -324,14 +334,18 @@ function ShopContent() {
         return;
       }
 
-      const pricingRes = await fetch(toPublicApiUrl("/api/pricing"), {
+      // Use fetch with timeout for pricing API
+      const pricingRes = await fetchWithTimeout(toPublicApiUrl("/api/pricing"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ perfumeIds: ids }),
+        timeout: 10000,
+        retries: 1,
         signal: controller.signal,
       });
       if (!pricingRes.ok) {
         if (seq !== fetchSeqRef.current) return;
+        console.warn("Pricing API returned:", pricingRes.status);
         setPriceMap({});
         return;
       }
@@ -344,8 +358,13 @@ function ShopContent() {
         parsed[id] = (val as any).prices || [];
       }
       setPriceMap(parsed);
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Failed to load perfumes";
+      console.error("Shop fetch error:", err);
       if (seq === fetchSeqRef.current) {
+        setError(errMsg);
+        setPerfumes([]);
+        setAllBrands([]);
         setPriceMap({});
       }
     } finally {
@@ -356,7 +375,11 @@ function ShopContent() {
   }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, dealParam, notesParam, sortParam]);
 
   useEffect(() => {
-    fetch(toPublicApiUrl("/api/notes-library"))
+    // Use fetch with timeout for notes library
+    fetchWithTimeout(toPublicApiUrl("/api/notes-library"), {
+      timeout: 8000,
+      retries: 1,
+    })
       .then((r) => r.json())
       .then((data) => {
         const notes = Array.isArray(data?.noteLabels) ? data.noteLabels : [];
@@ -753,7 +776,18 @@ function ShopContent() {
 
         {/* Product Grid */}
         <div className="flex-1 min-w-0">
-          {loading ? (
+          {error ? (
+            <div className="text-center py-20 bg-[var(--bg-surface)] border border-red-500/20 rounded p-8">
+              <p className="font-serif text-2xl text-red-500 mb-2">Failed to Load Perfumes</p>
+              <p className="text-sm text-[var(--text-secondary)] mb-6">{error}</p>
+              <button
+                onClick={() => router.refresh()}
+                className="bg-[var(--gold)] text-black px-6 py-2 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-hover)] transition-colors rounded"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {[...Array(9)].map((_, i) => (
                 <div key={i}>
