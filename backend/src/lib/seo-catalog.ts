@@ -403,6 +403,18 @@ function computeFullBottlePrice(perfume: PerfumeDocument): number {
 }
 
 export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ decantOffers: PerfumeOffer[]; fullBottleOffer: PerfumeOffer }> {
+  // In-memory short-lived cache to avoid recalculating offers repeatedly
+  const PERFUME_OFFERS_TTL = 30_000; // 30 seconds
+  // store cache on global to survive module reloads in serverless dev
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!(global as any)._perfumeOffersCache) (global as any)._perfumeOffersCache = new Map<string, { ts: number; data: { decantOffers: PerfumeOffer[]; fullBottleOffer: PerfumeOffer } }>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const _perfumeOffersCache: Map<string, { ts: number; data: { decantOffers: PerfumeOffer[]; fullBottleOffer: PerfumeOffer } }> = (global as any)._perfumeOffersCache;
+  const cached = _perfumeOffersCache.get(perfume.id);
+  if (cached && Date.now() - cached.ts < PERFUME_OFFERS_TTL) {
+    return cached.data;
+  }
+
   const { sizes, bottles, packagingCost, margins } = await getPricingConfig();
   const marketPricePerMl = Number(perfume.marketPricePerMl || 0);
   const purchasePricePerMl = Number(perfume.purchasePricePerMl || marketPricePerMl || 0);
@@ -442,7 +454,9 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
     url: `${buildCanonicalProductUrl(perfume)}#request-full-bottle`,
   };
 
-  return { decantOffers, fullBottleOffer };
+  const result = { decantOffers, fullBottleOffer };
+  _perfumeOffersCache.set(perfume.id, { ts: Date.now(), data: result });
+  return result;
 }
 
 export function computeAggregateRating(perfume: PerfumeDocument, reviewCountOverride?: number, ratingOverride?: number): { ratingValue: number; reviewCount: number } {

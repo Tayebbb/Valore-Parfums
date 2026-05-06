@@ -32,9 +32,19 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const active = searchParams.get("active");
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+    const limit = Number.isFinite(Number(limitParam)) && Number(limitParam) > 0 ? Number(limitParam) : 0;
+    const offset = Number.isFinite(Number(offsetParam)) && Number(offsetParam) >= 0 ? Number(offsetParam) : 0;
     const cacheKey = active === "true" ? "active:true" : "active:all";
     const cached = perfumesCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < PERFUMES_CACHE_TTL) {
+      if (limit > 0) {
+        const arr = Array.isArray(cached.data) ? (cached.data as unknown[]) : [];
+        const slice = arr.slice(offset, offset + limit);
+        const nextOffset = offset + limit < arr.length ? offset + limit : null;
+        return NextResponse.json({ perfumes: slice, nextOffset }, { headers: { "Cache-Control": PERFUMES_CACHE_CONTROL } });
+      }
       return NextResponse.json(cached.data, { headers: { "Cache-Control": PERFUMES_CACHE_CONTROL } });
     }
 
@@ -94,6 +104,11 @@ export async function GET(req: Request) {
       });
     });
     perfumesCache.set(cacheKey, { data: payload, ts: Date.now() });
+    if (limit > 0) {
+      const slice = payload.slice(offset, offset + limit);
+      const nextOffset = offset + limit < payload.length ? offset + limit : null;
+      return NextResponse.json({ perfumes: slice, nextOffset }, { headers: { "Cache-Control": PERFUMES_CACHE_CONTROL } });
+    }
     return NextResponse.json(payload, { headers: { "Cache-Control": PERFUMES_CACHE_CONTROL } });
   } catch (error) {
     console.error("perfumes GET failed", error);
