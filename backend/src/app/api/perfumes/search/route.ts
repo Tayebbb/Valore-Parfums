@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { buildStructuredNotes, getCanonicalNotesLibrary, getNoteLookup } from "@/lib/fragrance-notes";
-import { buildProductSlug, resolvePerfumeSlug, resolveBrandSlug } from "@/lib/seo-catalog";
+import { buildProductSlug, resolvePerfumeSlug, resolveBrandSlug, getActivePerfumes } from "@/lib/seo-catalog";
 
 const ACTIVE_CACHE_TTL = 60_000;
 const SEARCH_CACHE_TTL = 20_000;
@@ -196,22 +196,23 @@ function normalizeSeason(value: string): string {
   return v;
 }
 
-async function getActivePerfumeIndex(): Promise<{ perfumes: SearchPerfume[]; brands: string[] }> {
-  if (activePerfumesCache && Date.now() - activePerfumesCache.ts < ACTIVE_CACHE_TTL) {
-    return { perfumes: activePerfumesCache.data, brands: activePerfumesCache.brands };
-  }
-
-  const snap = await db.collection(Collections.perfumes).where("isActive", "==", true).get();
-  const perfumes = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SearchPerfume[];
-  const brandSet = new Set<string>();
-  for (const p of perfumes) {
-    if (typeof p.brand === "string" && p.brand) brandSet.add(p.brand);
-  }
-
-  const brands = Array.from(brandSet).sort();
-  activePerfumesCache = { data: perfumes, brands, ts: Date.now() };
-  return { perfumes, brands };
-}
+// Removed: getActivePerfumeIndex() - now using centralized getActivePerfumes() from seo-catalog for better caching
+// async function getActivePerfumeIndex(): Promise<{ perfumes: SearchPerfume[]; brands: string[] }> {
+//   if (activePerfumesCache && Date.now() - activePerfumesCache.ts < ACTIVE_CACHE_TTL) {
+//     return { perfumes: activePerfumesCache.data, brands: activePerfumesCache.brands };
+//   }
+//
+//   const snap = await db.collection(Collections.perfumes).where("isActive", "==", true).get();
+//   const perfumes = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SearchPerfume[];
+//   const brandSet = new Set<string>();
+//   for (const p of perfumes) {
+//     if (typeof p.brand === "string" && p.brand) brandSet.add(p.brand);
+//   }
+//
+//   const brands = Array.from(brandSet).sort();
+//   activePerfumesCache = { data: perfumes, brands, ts: Date.now() };
+//   return { perfumes, brands };
+// }
 
 // GET /api/perfumes/search?q=...&category=...&season=...&brand=...&sort=...
 // Updated: Firestore doesn't support OR/contains queries natively,
@@ -240,11 +241,18 @@ export async function GET(req: Request) {
   const selectedNoteIds = Array.from(new Set(selectedNotes.map((note) => byLabel.get(note)?.id || "").filter(Boolean)));
   const sort = searchParams.get("sort") || "newest";
 
-  const [activeIndex, brandSections] = await Promise.all([
-    getActivePerfumeIndex(),
+  // Use centralized cached function
+  const activePerfumes = await getActivePerfumes();
+  const brandSet = new Set<string>();
+  for (const p of activePerfumes) {
+    if (typeof p.brand === "string" && p.brand) brandSet.add(p.brand);
+  }
+  const brands = Array.from(brandSet).sort();
+  
+  const [brandSections] = await Promise.all([
     getBrandSections(),
   ]);
-  let perfumes = [...activeIndex.perfumes];
+  let perfumes = [...activePerfumes] as SearchPerfume[];
 
   // Apply filters in memory (replaces Prisma where clauses)
   if (category) {
@@ -352,7 +360,7 @@ export async function GET(req: Request) {
         canonicalPath: `/products/${productSlug}`,
       };
     }),
-    brands: activeIndex.brands,
+    brands: brands,
   };
   searchResultCache.set(cacheKey, { body, ts: Date.now() });
   if (searchResultCache.size > 50) {
