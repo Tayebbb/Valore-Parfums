@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { safeStorageGetItem, safeStorageSetItem } from "@/lib/safe-storage";
 
 type Theme = "dark" | "light";
 
@@ -12,14 +13,14 @@ interface ThemeStore {
 
 export const useTheme = create<ThemeStore>((set) => ({
   theme: (typeof window !== "undefined"
-    ? (localStorage.getItem("vp-theme") as Theme) || "dark"
+    ? (safeStorageGetItem("vp-theme", "localStorage") as Theme) || "dark"
     : "dark"),
 
   toggle: () =>
     set((state) => {
       const next = state.theme === "dark" ? "light" : "dark";
       if (typeof window !== "undefined") {
-        localStorage.setItem("vp-theme", next);
+        safeStorageSetItem("vp-theme", next, "localStorage");
         document.documentElement.classList.remove("dark", "light");
         document.documentElement.classList.add(next);
       }
@@ -28,7 +29,7 @@ export const useTheme = create<ThemeStore>((set) => ({
 
   setTheme: (t: Theme) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("vp-theme", t);
+      safeStorageSetItem("vp-theme", t, "localStorage");
       document.documentElement.classList.remove("dark", "light");
       document.documentElement.classList.add(t);
     }

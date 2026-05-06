@@ -11,6 +11,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { safeStorageGetJSON, safeStorageSetJSON } from "@/lib/safe-storage";
 
 const ANNOUNCEMENTS_CACHE_KEY = "vp-announcements";
 const ANNOUNCEMENTS_CACHE_TTL = 60_000;
@@ -155,12 +156,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     let cacheTimer: number | null = null;
 
     try {
-      const cached = sessionStorage.getItem(ANNOUNCEMENTS_CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached) as { ts: number; data: { id: string; message: string }[] };
-        if (Date.now() - parsed.ts < ANNOUNCEMENTS_CACHE_TTL) {
+      // Use safe storage that works in incognito mode
+      const cached = safeStorageGetJSON<{ ts: number; data: { id: string; message: string }[] }>(
+        ANNOUNCEMENTS_CACHE_KEY,
+        "sessionStorage"
+      );
+      
+      if (cached && cached.data) {
+        if (Date.now() - cached.ts < ANNOUNCEMENTS_CACHE_TTL) {
           cacheTimer = window.setTimeout(() => {
-            setAnnouncements(parsed.data || []);
+            setAnnouncements(cached.data || []);
           }, 0);
           return () => {
             if (cacheTimer !== null) window.clearTimeout(cacheTimer);
@@ -180,11 +185,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setAnnouncements(data);
-          try {
-            sessionStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
-          } catch {
-            // ignore storage errors (e.g., disabled, quota exceeded, private mode)
-          }
+          // Use safe storage that works in incognito mode
+          safeStorageSetJSON(ANNOUNCEMENTS_CACHE_KEY, { ts: Date.now(), data }, "sessionStorage");
         }
       })
       .catch((err) => {
