@@ -45,6 +45,8 @@ interface Order {
   } | null;
   deliveryZone?: string;
   deliveryFee?: number;
+  estimatedPrepTime?: string;
+  pickupContactNumber?: string;
   status: string;
   voucherCode: string | null;
   discount: number;
@@ -212,6 +214,8 @@ export default function OrdersPage() {
   const [requestSellingPrice, setRequestSellingPrice] = useState("");
   const [savingRequestPrices, setSavingRequestPrices] = useState(false);
   const [verifyingBkash, setVerifyingBkash] = useState(false);
+  const [editingPrepTime, setEditingPrepTime] = useState("");
+  const [savingPrepTime, setSavingPrepTime] = useState(false);
   const [pendingCancellationChange, setPendingCancellationChange] = useState<PendingStatusChange | null>(null);
   const [selectedCancellationReason, setSelectedCancellationReason] = useState("");
   const [customCancellationReason, setCustomCancellationReason] = useState("");
@@ -284,6 +288,28 @@ export default function OrdersPage() {
     updateOrderInState(updated);
     toast(`Order ${status.toLowerCase()}`, "success");
     return true;
+  };
+
+  const savePrepTime = async () => {
+    if (!selectedOrder) return;
+    const value = editingPrepTime.trim();
+    if (!value) return;
+    setSavingPrepTime(true);
+    const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estimatedPrepTime: value }),
+    });
+    setSavingPrepTime(false);
+    if (!res.ok) {
+      toast("Failed to update prep time", "error");
+      return;
+    }
+    const updated = await res.json();
+    updateOrderInState(updated);
+    setSelectedOrder((prev) => prev ? { ...prev, estimatedPrepTime: value } : prev);
+    toast("Prep time updated", "success");
+    setEditingPrepTime("");
   };
 
   const verifyBkashAndConfirm = async () => {
@@ -582,6 +608,7 @@ export default function OrdersPage() {
 
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
+    setEditingPrepTime("");
     const initialSellingDrafts = (order.items || []).reduce<Record<string, string>>((acc, item) => {
       if (item.isFullBottle) {
         acc[item.id] = String(item.unitPrice ?? 0);
@@ -1033,6 +1060,49 @@ export default function OrdersPage() {
                   <span className="max-w-[65%] text-right">
                     {selectedOrder.pickupLocationName || selectedOrder.pickupLocationId || "-"}
                   </span>
+                </div>
+              )}
+              {selectedOrder.pickupMethod === "Pickup" && (
+                <div className="flex flex-col gap-2 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Pickup Prep Time</p>
+                  {selectedOrder.estimatedPrepTime && !editingPrepTime && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm">{selectedOrder.estimatedPrepTime}</span>
+                      <button
+                        onClick={() => setEditingPrepTime(selectedOrder.estimatedPrepTime || "")}
+                        className="text-[10px] text-[var(--gold)] uppercase tracking-wider hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                  {(!selectedOrder.estimatedPrepTime || editingPrepTime) && (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editingPrepTime}
+                        onChange={(e) => setEditingPrepTime(e.target.value)}
+                        placeholder="e.g. 30 minutes, 2 hours"
+                        maxLength={100}
+                        className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                      />
+                      <button
+                        onClick={savePrepTime}
+                        disabled={savingPrepTime || !editingPrepTime.trim()}
+                        className="px-2 py-1 text-[9px] uppercase bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] disabled:opacity-50"
+                      >
+                        {savingPrepTime ? "Saving..." : "Save"}
+                      </button>
+                      {selectedOrder.estimatedPrepTime && (
+                        <button
+                          onClick={() => setEditingPrepTime("")}
+                          className="px-2 py-1 text-[9px] uppercase border border-[var(--border)] rounded hover:border-[var(--gold)]"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               <div className="flex justify-between">
