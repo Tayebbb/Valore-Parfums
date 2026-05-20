@@ -829,24 +829,12 @@ function CheckoutContent() {
         ) : null}
 
         {form.pickupMethod === "Pickup" ? (
-          placedPickupContactNumber ? (
-            <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-left">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Pickup Contact</p>
-              <p className="mt-1.5 font-medium text-[var(--text-primary)]">{placedPickupContactNumber}</p>
-              {placedEstimatedPrepTime ? (
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">Ready within {placedEstimatedPrepTime}. Contact this number before arriving.</p>
-              ) : (
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">Contact this number before arriving.</p>
-              )}
-            </div>
-          ) : (
-            <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-left">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Pickup Order</p>
-              <p className="mt-1.5 text-sm text-[var(--text-primary)]">
-                Once your order is confirmed, you will receive the pickup time and contact details via email.
-              </p>
-            </div>
-          )
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-left">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Pickup Order</p>
+            <p className="mt-1.5 text-sm text-[var(--text-primary)]">
+              Once your order is confirmed, you will receive the pickup time and contact details via email.
+            </p>
+          </div>
         ) : null}
 
         <Link
