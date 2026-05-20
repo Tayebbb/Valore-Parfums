@@ -39,10 +39,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { user, loading: authLoading, fetchUser } = useAuth();
+  // initialized: true once THIS layout's fetchUser call has resolved.
+  // Without this, the redirect fires immediately when the Zustand store already
+  // has loading:false + user:null from a previous navigation (e.g. transient
+  // backend failure, cold-start, or 30-s TTL skip), before the fresh fetch
+  // for this page even has a chance to run.
+  const [initialized, setInitialized] = useState(false);
+  const { user, fetchUser } = useAuth();
 
   useEffect(() => {
-    fetchUser();
+    void fetchUser().finally(() => setInitialized(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -51,12 +57,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [pathname]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (initialized && !user) {
       router.replace("/login?next=/admin");
     }
-  }, [authLoading, user, router]);
+  }, [initialized, user, router]);
 
-  if (authLoading) {
+  if (!initialized) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)]">
         <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--text-muted)] animate-pulse">Loading…</p>
