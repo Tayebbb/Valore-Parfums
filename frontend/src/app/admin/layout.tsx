@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -18,6 +18,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { useAuth } from "@/store/auth";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -36,11 +37,48 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { user, loading: authLoading, fetchUser } = useAuth();
+
+  useEffect(() => {
+    fetchUser();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login?next=/admin");
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)]">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--text-muted)] animate-pulse">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  if (user.role !== "admin") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)] px-4">
+        <div className="text-center space-y-4">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--error)]">Unauthorized</p>
+          <p className="text-sm text-[var(--text-secondary)]">You do not have permission to access the admin panel.</p>
+          <Link href="/" className="inline-block mt-2 text-xs uppercase tracking-wider text-[var(--gold)] hover:underline">← Go Home</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">

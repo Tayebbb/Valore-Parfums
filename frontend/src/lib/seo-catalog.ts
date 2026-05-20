@@ -203,23 +203,28 @@ const getActivePerfumesCached = unstable_cache(
       const dataLayer = await getDataLayer();
       if (!dataLayer) return [];
 
-      const snap = await dataLayer.db.collection(dataLayer.Collections.perfumes).where("isActive", "==", true).get();
-      return snap.docs.map((doc) => {
-        const raw = doc.data() as Record<string, unknown>;
-        const perfume: PerfumeDocument = {
-          id: doc.id,
-          name: String(raw.name || "Perfume"),
-          brand: String(raw.brand || "Brand"),
-          ...raw,
-        };
+      // Fetch all perfumes and filter client-side using isActive !== false.
+      // This matches the admin UI behaviour and ensures products added directly
+      // to Firestore without an explicit isActive field are still visible.
+      const snap = await dataLayer.db.collection(dataLayer.Collections.perfumes).get();
+      return snap.docs
+        .map((doc) => {
+          const raw = doc.data() as Record<string, unknown>;
+          const perfume: PerfumeDocument = {
+            id: doc.id,
+            name: String(raw.name || "Perfume"),
+            brand: String(raw.brand || "Brand"),
+            ...raw,
+          };
 
-        return {
-          ...perfume,
-          slug: resolvePerfumeSlug(perfume),
-          brandSlug: resolveBrandSlug(perfume),
-          fullBottleAvailable: perfume.fullBottleAvailable ?? true,
-        };
-      });
+          return {
+            ...perfume,
+            slug: resolvePerfumeSlug(perfume),
+            brandSlug: resolveBrandSlug(perfume),
+            fullBottleAvailable: perfume.fullBottleAvailable ?? true,
+          };
+        })
+        .filter((p) => p.isActive !== false);
     } catch (error) {
       console.error("getActivePerfumes failed", error);
       return [];
