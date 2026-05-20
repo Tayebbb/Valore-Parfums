@@ -143,7 +143,8 @@ export async function GET(req: Request) {
     const ownerProfitPercent = config.ownerProfitPercent;
     const { ownerProfit, otherOwnerProfit } = splitProfit(profit, owner, ownerProfitPercent);
     const inStock = perfume.totalStockMl >= size.ml;
-    const bottleAvailable = bottle ? bottle.availableCount > 0 : false;
+    // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
+    const bottleAvailable = !bottle || bottle.availableCount > 0;
 
     return {
       ml: size.ml,
@@ -225,7 +226,8 @@ export async function POST(req: Request) {
           profitMargin,
         );
       const inStock = perfume.totalStockMl >= size.ml;
-      const bottleAvailable = bottle ? bottle.availableCount > 0 : false;
+      // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
+      const bottleAvailable = !bottle || bottle.availableCount > 0;
       return { ml: size.ml, sellingPrice, available: inStock && bottleAvailable };
     });
 

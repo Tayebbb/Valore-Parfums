@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { validateBatch, validateEmail, validateOrderData, validateString } from "@/lib/validation";
-import { generateOrderConfirmationEmail, sendEmail } from "@/lib/email";
+import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, sendEmail } from "@/lib/email";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
 
 async function notifyAdminViaWebhook(payload: {
@@ -503,6 +503,13 @@ export async function POST(req: Request) {
       owner1Share,
     });
 
+    // Fetch global operational settings for pickup details
+    const globalSettingsDoc = await db.collection(Collections.settings).doc("globalOperationalSettings").get();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const globalSettings = globalSettingsDoc.exists ? (globalSettingsDoc.data() as any) : null;
+    const pickupContactNumber = pickupMethod === "Pickup" ? String(globalSettings?.pickup?.contactNumber || "") : "";
+    const estimatedPrepTime = pickupMethod === "Pickup" ? String(globalSettings?.pickup?.estimatedPrepTime || "") : "";
+
     // Create order document (replaces prisma.order.create)
     const orderId = uuid();
     const now = Timestamp.now();
@@ -517,6 +524,8 @@ export async function POST(req: Request) {
     deliveryZone: isDelivery ? deliveryZone : "",
     pickupLocationId: orderData.pickupLocationId || "",
     pickupLocationName: orderData.pickupLocationName || "",
+    pickupContactNumber,
+    estimatedPrepTime,
     deliveryAddress: orderData.deliveryAddress || "",
     deliveryFee: isDelivery ? deliveryFee : 0,
     status: isBkashManualPayment ? "Pending Bkash Verification" : isBankManualPayment ? "Pending Bank Verification" : "Pending",
@@ -638,24 +647,35 @@ export async function POST(req: Request) {
     // Send confirmation email asynchronously (non-blocking)
     const customerEmail = String(orderDoc.customerEmail || "").trim();
     if (customerEmail) {
-      void sendEmail(
-        generateOrderConfirmationEmail({
+      const emailItems = createdItems.map((it) => ({
+        perfumeName: String(it.perfumeName || "Perfume"),
+        quantity: Number(it.quantity || 0),
+        ml: Number(it.ml || 0),
+        unitPrice: Number(it.unitPrice || 0),
+      }));
+      const emailNotification = pickupMethod === "Pickup" && pickupContactNumber
+        ? generatePickupConfirmationEmail({
           orderId,
           customerName: String(orderData.customerName || "Customer"),
           customerEmail,
-          items: createdItems.map((it) => ({
-            perfumeName: String(it.perfumeName || "Perfume"),
-            quantity: Number(it.quantity || 0),
-            ml: Number(it.ml || 0),
-            unitPrice: Number(it.unitPrice || 0),
-          })),
+          items: emailItems,
+          total,
+          pickupContactNumber,
+          estimatedPrepTime,
+          pickupLocationName: String(orderData.pickupLocationName || ""),
+        })
+        : generateOrderConfirmationEmail({
+          orderId,
+          customerName: String(orderData.customerName || "Customer"),
+          customerEmail,
+          items: emailItems,
           subtotal,
           discount,
           deliveryFee,
           total,
           paymentMethod: normalizedPaymentMethod,
-        }),
-      ).catch((error) => {
+        });
+      void sendEmail(emailNotification).catch((error) => {
         console.error("Failed to send order confirmation email:", error);
       });
     }

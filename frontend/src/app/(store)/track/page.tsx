@@ -23,6 +23,8 @@ interface OrderResult {
   voucherCode?: string | null;
   finalAmount: number;
   pickupMethod: string;
+  pickupContactNumber?: string;
+  estimatedPrepTime?: string;
   deliveryZone?: string;
   deliveryAddress?: string;
   customerName: string;
@@ -286,6 +288,17 @@ export default function TrackOrderPage() {
               <p>{order.deliveryZone || "N/A"}</p>
             </div>
           )}
+          {order.pickupMethod === "Pickup" && order.pickupContactNumber ? (
+            <div className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
+              <span className="text-[var(--text-muted)]">Pickup Contact</span>
+              <p className="font-medium">{order.pickupContactNumber}</p>
+              {order.estimatedPrepTime ? (
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">Ready within {order.estimatedPrepTime}. Contact this number before arriving.</p>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">Contact this number before arriving.</p>
+              )}
+            </div>
+          ) : null}
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Items</span>
             <p>{order.items?.length ?? 0}</p>

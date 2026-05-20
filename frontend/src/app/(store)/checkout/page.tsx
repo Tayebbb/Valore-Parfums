@@ -221,6 +221,7 @@ function CheckoutContent() {
     bankQrImageUrl: "",
     pickupLocations: [],
   });
+  const [globalPickup, setGlobalPickup] = useState<{ enabled: boolean; availableFrom: string | null }>({ enabled: true, availableFrom: null });
 
   const [loadingCheckoutConfig, setLoadingCheckoutConfig] = useState(true);
   const [voucherCode, setVoucherCode] = useState("");
@@ -229,6 +230,8 @@ function CheckoutContent() {
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [placedPaymentMethod, setPlacedPaymentMethod] = useState<CheckoutPaymentMethod>("Cash on Delivery");
+  const [placedPickupContactNumber, setPlacedPickupContactNumber] = useState("");
+  const [placedEstimatedPrepTime, setPlacedEstimatedPrepTime] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -422,7 +425,10 @@ function CheckoutContent() {
 
     const loadCheckoutConfig = async () => {
       try {
-        const res = await fetch("/api/checkout-config", { signal: abortController.signal });
+        const [res, gsRes] = await Promise.all([
+          fetch("/api/checkout-config", { signal: abortController.signal }),
+          fetch("/api/global-settings", { signal: abortController.signal }).catch(() => null),
+        ]);
         const data = await tryReadJson<Record<string, unknown>>(res);
 
         if (!res.ok) {
@@ -430,6 +436,16 @@ function CheckoutContent() {
             ? data.error
             : "Failed to load checkout settings";
           throw new Error(message);
+        }
+
+        if (gsRes?.ok) {
+          const gs = await gsRes.json().catch(() => null);
+          if (gs?.pickup) {
+            setGlobalPickup({
+              enabled: Boolean(gs.pickup.enabled),
+              availableFrom: gs.pickup.availableFrom || null,
+            });
+          }
         }
 
         const safeData = data && typeof data === "object" ? data : {};
@@ -470,6 +486,13 @@ function CheckoutContent() {
       setForm((prev) => ({ ...prev, pickupLocationId: checkoutConfig.pickupLocations[0].id }));
     }
   }, [checkoutConfig.pickupLocations, form.pickupLocationId, form.pickupMethod]);
+
+  // If global pickup is disabled, force Delivery method
+  useEffect(() => {
+    if (!globalPickup.enabled && form.pickupMethod === "Pickup") {
+      setForm((prev) => ({ ...prev, pickupMethod: "Delivery" }));
+    }
+  }, [globalPickup.enabled, form.pickupMethod]);
 
   useEffect(() => {
     if (form.pickupMethod !== "Pickup") return;
@@ -693,6 +716,10 @@ function CheckoutContent() {
         const order = await res.json();
         setOrderId(order.id);
         setPlacedPaymentMethod(form.paymentMethod);
+        if (form.pickupMethod === "Pickup") {
+          setPlacedPickupContactNumber(String(order.pickupContactNumber || ""));
+          setPlacedEstimatedPrepTime(String(order.estimatedPrepTime || ""));
+        }
         if (!isBuyNow) clearCart();
         toast("Order placed successfully!", "success");
         return;
@@ -798,6 +825,18 @@ function CheckoutContent() {
             <p className="mt-1.5 text-sm text-[var(--text-primary)]">
               Save this Order ID. It is required for tracking if you checked out without an account.
             </p>
+          </div>
+        ) : null}
+
+        {form.pickupMethod === "Pickup" && placedPickupContactNumber ? (
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-left">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Pickup Contact</p>
+            <p className="mt-1.5 font-medium text-[var(--text-primary)]">{placedPickupContactNumber}</p>
+            {placedEstimatedPrepTime ? (
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Ready within {placedEstimatedPrepTime}. Contact this number before arriving.</p>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">Contact this number before arriving.</p>
+            )}
           </div>
         ) : null}
 
@@ -947,20 +986,35 @@ function CheckoutContent() {
               <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Delivery Address</h2>
 
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-gray-700/70 bg-[var(--bg-surface)] p-1">
-                {(["Pickup", "Delivery"] as const).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setField("pickupMethod", method)}
-                    className={
-                      form.pickupMethod === method
-                        ? "rounded-lg bg-[#C9A96E] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-black shadow-[0_10px_20px_rgba(201,169,110,0.2)]"
-                        : "rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]"
-                    }
-                  >
-                    {method}
-                  </button>
-                ))}
+                {(["Pickup", "Delivery"] as const).map((method) => {
+                  const isPickupDisabled = method === "Pickup" && !globalPickup.enabled;
+                  const isActive = form.pickupMethod === method;
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => !isPickupDisabled && setField("pickupMethod", method)}
+                      disabled={isPickupDisabled}
+                      title={isPickupDisabled ? "Pickup is currently unavailable" : undefined}
+                      className={
+                        isPickupDisabled
+                          ? "relative rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] opacity-50 cursor-not-allowed select-none"
+                          : isActive
+                            ? "rounded-lg bg-[#C9A96E] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-black shadow-[0_10px_20px_rgba(201,169,110,0.2)]"
+                            : "rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]"
+                      }
+                    >
+                      {method}
+                      {isPickupDisabled ? (
+                        <span className="block text-[8px] uppercase tracking-wider opacity-80 mt-0.5 font-normal">
+                          {globalPickup.availableFrom
+                            ? `From ${new Date(globalPickup.availableFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                            : "Unavailable"}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
 
               {form.pickupMethod === "Pickup" ? (

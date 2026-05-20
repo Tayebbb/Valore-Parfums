@@ -44,7 +44,22 @@ interface BulkRule {
   isActive: boolean;
 }
 
+interface PickupSettings {
+  enabled: boolean;
+  availableFrom: string;
+  contactNumber: string;
+  estimatedPrepTime: string;
+}
+
 export default function SettingsPage() {
+  const [pickupSettings, setPickupSettings] = useState<PickupSettings>({
+    enabled: true,
+    availableFrom: "",
+    contactNumber: "",
+    estimatedPrepTime: "",
+  });
+  const [savingPickup, setSavingPickup] = useState(false);
+
   const [settings, setSettings] = useState<Settings>({
     packagingCost: 20,
     deliveryFeeInsideDhaka: 80,
@@ -81,7 +96,16 @@ export default function SettingsPage() {
     Promise.all([
       fetch("/api/settings").then((r) => r.json()),
       fetch("/api/bulk-pricing").then((r) => r.json()),
-    ]).then(([s, rules]) => {
+      fetch("/api/global-settings").then((r) => r.json()).catch(() => null),
+    ]).then(([s, rules, gs]) => {
+      if (gs?.pickup) {
+        setPickupSettings({
+          enabled: Boolean(gs.pickup.enabled),
+          availableFrom: gs.pickup.availableFrom || "",
+          contactNumber: gs.pickup.contactNumber || "",
+          estimatedPrepTime: gs.pickup.estimatedPrepTime || "",
+        });
+      }
       const legacyDeliveryFee = Number(s.deliveryFee ?? 80);
       setSettings((prev) => ({
         ...prev,
@@ -97,6 +121,49 @@ export default function SettingsPage() {
       setBulkRules(rules);
     }).finally(() => setLoading(false));
   }, []);
+
+  const savePickup = async () => {
+    if (pickupSettings.enabled) {
+      if (!pickupSettings.contactNumber.trim()) {
+        toast("Contact number is required when pickup is enabled", "error");
+        return;
+      }
+      if (!pickupSettings.estimatedPrepTime.trim()) {
+        toast("Estimated prep time is required when pickup is enabled", "error");
+        return;
+      }
+    }
+    if (pickupSettings.availableFrom) {
+      const d = new Date(pickupSettings.availableFrom);
+      if (isNaN(d.getTime()) || d < new Date()) {
+        toast("Available from date must be a valid future date", "error");
+        return;
+      }
+    }
+    setSavingPickup(true);
+    try {
+      const res = await fetch("/api/global-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pickup: {
+            enabled: pickupSettings.enabled,
+            availableFrom: pickupSettings.availableFrom || null,
+            contactNumber: pickupSettings.contactNumber,
+            estimatedPrepTime: pickupSettings.estimatedPrepTime,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || "Save failed");
+      }
+      toast("Pickup settings saved", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to save pickup settings", "error");
+    }
+    setSavingPickup(false);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -656,6 +723,76 @@ export default function SettingsPage() {
             <div className="h-full bg-[var(--success)] rounded-r-full transition-all" style={{ width: `${100 - settings.ownerProfitPercent}%` }} />
           </div>
           <p className="text-xs text-[var(--text-muted)] mt-2">e.g. If {settings.owner1Name} owns the bottle, {settings.owner1Name} gets {settings.ownerProfitPercent}% and {settings.owner2Name} gets {100 - settings.ownerProfitPercent}%</p>
+        </div>
+      </div>
+
+      {/* Global Pickup Settings */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Global Pickup Availability</h3>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">Control whether customers can select pickup at checkout, and configure contact details shown in order confirmation.</p>
+
+        <div className="space-y-4">
+          {/* Enabled toggle */}
+          <div className="flex items-center justify-between bg-[var(--bg-surface)] border border-[var(--border)] rounded px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Pickup Enabled</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">When disabled, pickup option is hidden at checkout</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPickupSettings((p) => ({ ...p, enabled: !p.enabled }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${pickupSettings.enabled ? "bg-[var(--gold)]" : "bg-[var(--bg-input)]"}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pickupSettings.enabled ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">
+                Contact Number <span className="text-[var(--gold)]">*</span>
+              </label>
+              <input
+                type="text"
+                value={pickupSettings.contactNumber}
+                onChange={(e) => setPickupSettings((p) => ({ ...p, contactNumber: e.target.value }))}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                placeholder="01XXXXXXXXX"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">
+                Estimated Prep Time <span className="text-[var(--gold)]">*</span>
+              </label>
+              <input
+                type="text"
+                value={pickupSettings.estimatedPrepTime}
+                onChange={(e) => setPickupSettings((p) => ({ ...p, estimatedPrepTime: e.target.value }))}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                placeholder="e.g. 30–45 minutes"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">
+                Available From (optional)
+              </label>
+              <input
+                type="date"
+                value={pickupSettings.availableFrom}
+                onChange={(e) => setPickupSettings((p) => ({ ...p, availableFrom: e.target.value }))}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              />
+              <p className="text-xs text-[var(--text-muted)] mt-1">If set, customers see &quot;Available from [date]&quot; when pickup is disabled</p>
+            </div>
+          </div>
+
+          <button
+            onClick={savePickup}
+            disabled={savingPickup}
+            className="bg-[var(--gold)] text-black px-6 py-2.5 text-xs uppercase tracking-wider hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
+          >
+            {savingPickup ? "Saving..." : "Save Pickup Settings"}
+          </button>
         </div>
       </div>
 

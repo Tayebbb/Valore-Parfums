@@ -433,7 +433,8 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
       const ml = Number(size.ml);
       const bottle = bottles.find((item) => Number(item.ml) === ml);
       const bottleCost = Number((bottle as { costPerBottle?: number } | undefined)?.costPerBottle || 0);
-      const bottleAvailable = Number((bottle as { availableCount?: number } | undefined)?.availableCount || 0) > 0;
+      // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
+      const bottleAvailable = bottle === undefined || Number((bottle as { availableCount?: number }).availableCount ?? 0) > 0;
       const margin = getTierProfitMargin(tier, ml, margins);
       const price = calculateSellingPrice(marketPricePerMl || purchasePricePerMl, ml, bottleCost, packagingCost, margin);
       const available = totalStockMl >= ml && bottleAvailable;
@@ -457,6 +458,18 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
     availability: fullBottleAvailable ? "https://schema.org/PreOrder" : "https://schema.org/BackOrder",
     url: `${buildCanonicalProductUrl(perfume)}#request-full-bottle`,
   };
+
+  // Safeguard: warn when cached data shows all decant sizes unavailable but perfume has stock.
+  // This indicates a stale cache or misconfigured bottle records. The bug-fix above (treating
+  // missing bottle records as available) prevents the most common case, but we log here to catch
+  // any future regression or Firestore data issues.
+  if (totalStockMl > 0 && decantOffers.length > 0 && decantOffers.every((o) => !o.available)) {
+    console.warn(
+      `[seo-catalog] Availability safeguard: perfume "${perfume.name}" (${perfume.id}) has ` +
+      `${totalStockMl}ml stock but all ${decantOffers.length} decant sizes show unavailable. ` +
+      `Consider revalidating cache (tag: "perfumes") or reviewing bottle records.`,
+    );
+  }
 
   return { decantOffers, fullBottleOffer };
 }

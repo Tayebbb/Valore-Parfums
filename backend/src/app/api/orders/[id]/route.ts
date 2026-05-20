@@ -124,6 +124,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!reasonValidation.valid) {
       return NextResponse.json({ error: "Cancellation reason is required", errors: reasonValidation.errors }, { status: 400 });
     }
+    // Sanitize optional cancellationNote (not required)
+    if (orderPatch.cancellationNote !== undefined && orderPatch.cancellationNote !== null) {
+      const note = String(orderPatch.cancellationNote).trim().slice(0, 1000);
+      orderPatch.cancellationNote = note || null;
+    }
+    orderPatch.cancelledAt = Timestamp.now();
   }
 
   // Fetch settings once (needed for profit crediting & reversal)

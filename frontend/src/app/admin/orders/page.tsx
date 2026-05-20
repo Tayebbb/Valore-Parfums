@@ -97,12 +97,15 @@ const statuses = [
 const requestStatuses = ["Pending", "Confirmed", "Dispatched", "Cancelled"];
 const procurementStatuses = ["Pending", "Sourcing", "Ready", "Dispatched", "Cancelled"];
 const cancellationReasonOptions = [
-  "Out of stock",
-  "Customer request",
-  "Payment verification failed",
-  "Unable to contact customer",
-  "Delivery area not serviceable",
-  "Duplicate order",
+  "Out of Stock",
+  "Supplier Delay",
+  "Product Damaged",
+  "Pricing Error",
+  "Payment Verification Failed",
+  "Duplicate Order",
+  "Customer Request",
+  "Delivery Area Unavailable",
+  "Technical Issue",
   "Other",
 ];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
@@ -118,6 +121,7 @@ interface PendingStatusChange {
   fromStatus: string;
   toStatus: string;
   cancelReason?: string;
+  cancellationNote?: string;
 }
 
 const normalizeStatus = (status?: string) => {
@@ -209,8 +213,9 @@ export default function OrdersPage() {
   const [savingRequestPrices, setSavingRequestPrices] = useState(false);
   const [verifyingBkash, setVerifyingBkash] = useState(false);
   const [pendingCancellationChange, setPendingCancellationChange] = useState<PendingStatusChange | null>(null);
-  const [selectedCancellationReason, setSelectedCancellationReason] = useState(cancellationReasonOptions[0]);
+  const [selectedCancellationReason, setSelectedCancellationReason] = useState("");
   const [customCancellationReason, setCustomCancellationReason] = useState("");
+  const [cancellationNote, setCancellationNote] = useState("");
   const [submittingCancellation, setSubmittingCancellation] = useState(false);
 
   const load = async () => {
@@ -254,11 +259,13 @@ export default function OrdersPage() {
     setSortBy("newest");
   };
 
-  const updateStatus = async (id: string, status: string, cancelReason?: string) => {
-    const payload: { status: string; cancelReason?: string } = { status };
+  const updateStatus = async (id: string, status: string, cancelReason?: string, cancellationNoteVal?: string) => {
+    const payload: { status: string; cancelReason?: string; cancellationNote?: string } = { status };
     if (status === "Cancelled") {
       const selectedReason = String(cancelReason || "").trim();
       payload.cancelReason = selectedReason.length >= 5 ? selectedReason.slice(0, 500) : "Cancelled by admin";
+      const note = String(cancellationNoteVal || "").trim();
+      if (note) payload.cancellationNote = note.slice(0, 1000);
     }
 
     const res = await fetch(`/api/orders/${id}`, {
@@ -487,11 +494,12 @@ export default function OrdersPage() {
     if (change.kind === "order") {
       if (change.toStatus === "Cancelled" && !change.cancelReason) {
         setPendingCancellationChange(change);
-        setSelectedCancellationReason(cancellationReasonOptions[0]);
+        setSelectedCancellationReason("");
         setCustomCancellationReason("");
+        setCancellationNote("");
         return false;
       }
-      return updateStatus(change.id, change.toStatus, change.cancelReason);
+      return updateStatus(change.id, change.toStatus, change.cancelReason, change.cancellationNote);
     } else if (change.kind === "request") {
       return updateRequestStatus(change.id, change.toStatus);
     } else {
@@ -502,30 +510,37 @@ export default function OrdersPage() {
   const closeCancellationPicker = () => {
     if (submittingCancellation) return;
     setPendingCancellationChange(null);
-    setSelectedCancellationReason(cancellationReasonOptions[0]);
+    setSelectedCancellationReason("");
     setCustomCancellationReason("");
+    setCancellationNote("");
   };
 
   const submitCancellationReason = async () => {
     if (!pendingCancellationChange) return;
+
+    if (!selectedCancellationReason) {
+      toast("Please select a cancellation reason", "error");
+      return;
+    }
 
     const reason = selectedCancellationReason === "Other"
       ? customCancellationReason.trim()
       : selectedCancellationReason;
 
     if (reason.length < 5) {
-      toast("Please select a valid cancellation reason", "error");
+      toast("Please provide a valid cancellation reason", "error");
       return;
     }
 
     setSubmittingCancellation(true);
-    const success = await queueStatusChange({ ...pendingCancellationChange, cancelReason: reason });
+    const success = await queueStatusChange({ ...pendingCancellationChange, cancelReason: reason, cancellationNote: cancellationNote.trim() || undefined });
     setSubmittingCancellation(false);
 
     if (success) {
       setPendingCancellationChange(null);
-      setSelectedCancellationReason(cancellationReasonOptions[0]);
+      setSelectedCancellationReason("");
       setCustomCancellationReason("");
+      setCancellationNote("");
     }
   };
 
@@ -1556,12 +1571,13 @@ export default function OrdersPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Reason</label>
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Reason <span className="text-red-400">*</span></label>
               <select
                 value={selectedCancellationReason}
                 onChange={(e) => setSelectedCancellationReason(e.target.value)}
                 className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
               >
+                <option value="">— Select a reason —</option>
                 {cancellationReasonOptions.map((reason) => (
                   <option key={reason} value={reason}>{reason}</option>
                 ))}
@@ -1578,6 +1594,18 @@ export default function OrdersPage() {
               )}
             </div>
 
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Admin Note <span className="text-[var(--text-muted)]">(Optional)</span></label>
+              <textarea
+                maxLength={1000}
+                rows={2}
+                value={cancellationNote}
+                onChange={(e) => setCancellationNote(e.target.value)}
+                placeholder="Internal note (not shown to customer)"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none resize-none"
+              />
+            </div>
+
             <div className="flex justify-end gap-2">
               <button
                 type="button"
@@ -1590,7 +1618,7 @@ export default function OrdersPage() {
               <button
                 type="button"
                 onClick={submitCancellationReason}
-                disabled={submittingCancellation}
+                disabled={submittingCancellation || !selectedCancellationReason || (selectedCancellationReason === "Other" && customCancellationReason.trim().length < 5)}
                 className="px-3 py-2 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] transition-colors disabled:opacity-50"
               >
                 {submittingCancellation ? "Cancelling..." : "Cancel Order"}
