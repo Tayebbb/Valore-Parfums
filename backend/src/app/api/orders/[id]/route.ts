@@ -11,6 +11,7 @@ import {
   generateOrderConfirmedEmail,
   generateOrderDeliveredEmail,
   generateOrderDispatchedEmail,
+  generatePickupConfirmationEmail,
   sendEmail,
 } from "@/lib/email";
 import { validateString } from "@/lib/validation";
@@ -666,6 +667,29 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   });
 
   const customerEmail = String(updatedData.customerEmail || "").trim();
+
+  // Send updated pickup confirmation email when admin sets/updates estimatedPrepTime on a pickup order
+  const prepTimeUpdated = typeof orderPatch.estimatedPrepTime === "string" && String(orderPatch.estimatedPrepTime).trim().length > 0;
+  if (customerEmail && prepTimeUpdated && String(updatedData.pickupMethod || "") === "Pickup") {
+    const pickupContactNumber = String(updatedData.pickupContactNumber || "").trim();
+    const estimatedPrepTime = String(updatedData.estimatedPrepTime || "").trim();
+    if (pickupContactNumber && estimatedPrepTime) {
+      void sendEmail(
+        generatePickupConfirmationEmail({
+          orderId: id,
+          customerName: String(updatedData.customerName || "Customer"),
+          customerEmail,
+          items: emailItems,
+          total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+          pickupContactNumber,
+          estimatedPrepTime,
+          pickupLocationName: String(updatedData.pickupLocationName || ""),
+        }),
+      ).catch((error) => {
+        console.error("Failed to send pickup confirmation email:", error);
+      });
+    }
+  }
 
   if (customerEmail && (newStatus === "Confirmed" || newStatus === "Paid") && previousStatus !== newStatus) {
     void sendEmail(
