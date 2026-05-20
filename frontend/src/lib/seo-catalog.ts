@@ -217,10 +217,12 @@ const getActivePerfumesCached = unstable_cache(
             ...raw,
           };
 
+          // Always recompute slug/brandSlug from name/brand so stale
+          // stored values (e.g. copy-pasted from another product) are ignored.
           return {
             ...perfume,
-            slug: resolvePerfumeSlug(perfume),
-            brandSlug: resolveBrandSlug(perfume),
+            slug: slugify(String(raw.name || perfume.name || "")),
+            brandSlug: slugify(String(raw.brand || perfume.brand || "")),
             fullBottleAvailable: perfume.fullBottleAvailable ?? true,
           };
         })
