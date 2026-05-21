@@ -101,10 +101,16 @@ async function signSessionToken(user: SessionUser): Promise<string> {
 
 // Verify and extract session data from signed token
 async function verifySessionToken(token: string): Promise<SessionUser | null> {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
+  // The token format is `${JSON.stringify(user)}.${sigHex}`.
+  // The sigHex is a lowercase hex string (no dots), so the last "." is always
+  // the separator. We must NOT use split(".") because email addresses inside
+  // the JSON data contain dots (e.g. "user@gmail.com"), which would break
+  // split into more than 2 parts.
+  const lastDot = token.lastIndexOf(".");
+  if (lastDot === -1) return null;
 
-  const [data, sigHex] = parts;
+  const data = token.slice(0, lastDot);
+  const sigHex = token.slice(lastDot + 1);
   const encoder = new TextEncoder();
   const keyData = encoder.encode(SESSION_SIGNING_KEY);
   const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
