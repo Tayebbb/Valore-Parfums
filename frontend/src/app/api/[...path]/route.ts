@@ -21,12 +21,28 @@ function copyUpstreamHeaders(upstream: Response): Headers {
     if (
       lower === "content-length" ||
       lower === "transfer-encoding" ||
-      lower === "content-encoding"
+      lower === "content-encoding" ||
+      // set-cookie is handled separately below — in Node.js 20+ (browser-spec
+      // alignment) forEach() skips set-cookie entirely, so we must use
+      // getSetCookie() to read them. Excluding here prevents double-setting on
+      // Node.js 18 where forEach() still yields them.
+      lower === "set-cookie"
     ) {
       return;
     }
     headers.set(key, value);
   });
+
+  // Explicitly forward every Set-Cookie header from the upstream response.
+  // getSetCookie() is available in Node.js 18+ (undici) and returns all
+  // Set-Cookie values as an array, even in Node.js 20+ where they are
+  // hidden from the regular iteration methods.
+  const upstreamCookies =
+    (upstream.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+  for (const cookie of upstreamCookies) {
+    headers.append("set-cookie", cookie);
+  }
+
   return headers;
 }
 
