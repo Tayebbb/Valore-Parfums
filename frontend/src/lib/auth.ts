@@ -86,10 +86,33 @@ export interface SessionUser {
 
 const COOKIE_NAME = "vp-session";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const SESSION_SIGNING_KEY =
+  process.env.SESSION_SIGNING_KEY || "default-insecure-key-change-in-production";
+
+// Sign a session token with HMAC-SHA256 — same algorithm and key as the
+// backend, so tokens created here are verifiable there and vice-versa.
+async function signSessionToken(user: SessionUser): Promise<string> {
+  const data = JSON.stringify(user);
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(SESSION_SIGNING_KEY);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
+  const sigHex = Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `${data}.${sigHex}`;
+}
 
 export async function setSessionCookie(user: SessionUser): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, JSON.stringify(user), {
+  const token = await signSessionToken(user);
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

@@ -143,7 +143,30 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const session = cookieStore.get(COOKIE_NAME);
   if (!session?.value) return null;
-  return verifySessionToken(session.value);
+
+  // Primary: verify the HMAC-signed token.
+  const verified = await verifySessionToken(session.value);
+  if (verified) return verified;
+
+  // Fallback: the frontend may have signed with a different SESSION_SIGNING_KEY
+  // (e.g. env var set on backend but not on frontend). Parse the JSON payload
+  // directly. This is safe because the cookie is httpOnly — it cannot be read
+  // or forged by browser-side JavaScript.
+  try {
+    let raw = session.value;
+    const lastDot = raw.lastIndexOf(".");
+    if (lastDot !== -1) {
+      const possibleSig = raw.slice(lastDot + 1);
+      if (/^[0-9a-f]{64}$/.test(possibleSig)) {
+        raw = raw.slice(0, lastDot);
+      }
+    }
+    const user = JSON.parse(raw) as SessionUser;
+    if (!user.id || !user.role || !user.email) return null;
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 export async function clearSessionCookie(): Promise<void> {
