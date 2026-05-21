@@ -684,6 +684,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           pickupContactNumber,
           estimatedPrepTime,
           pickupLocationName: String(updatedData.pickupLocationName || ""),
+          pickupLocationAddress: String(updatedData.pickupLocationAddress || ""),
         }),
       ).catch((error) => {
         console.error("Failed to send pickup confirmation email:", error);

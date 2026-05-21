@@ -417,6 +417,7 @@ export function generatePickupConfirmationEmail(orderData: {
   pickupContactNumber: string;
   estimatedPrepTime: string;
   pickupLocationName?: string;
+  pickupLocationAddress?: string;
 }): EmailNotification {
   const orderedItemsBlock = renderOrderedItemsBlock(orderData.items, orderData.total);
 
@@ -425,7 +426,10 @@ export function generatePickupConfirmationEmail(orderData: {
       <p style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#8b6a3e; text-transform:uppercase; margin-bottom:14px;">Pickup Details</p>
       ${orderData.pickupLocationName ? `
       <p style="font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:4px;">Location</p>
-      <p style="font-family:'Cormorant Garamond',serif; font-size:17px; color:#111; margin-bottom:16px;">${orderData.pickupLocationName}</p>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:17px; color:#111; margin-bottom:${orderData.pickupLocationAddress ? "6px" : "16px"};">${orderData.pickupLocationName}</p>
+      ` : ""}
+      ${orderData.pickupLocationAddress ? `
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#555; line-height:1.7; margin-bottom:16px;">${orderData.pickupLocationAddress}</p>
       ` : ""}
       <p style="font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:4px;">Contact Number</p>
       <p style="font-family:'Cormorant Garamond',serif; font-size:19px; color:#c9a96e; margin-bottom:16px;">${orderData.pickupContactNumber}</p>

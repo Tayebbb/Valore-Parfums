@@ -510,6 +510,15 @@ export async function POST(req: Request) {
     const pickupContactNumber = pickupMethod === "Pickup" ? String(globalSettings?.pickup?.contactNumber || "") : "";
     const estimatedPrepTime = pickupMethod === "Pickup" ? String(globalSettings?.pickup?.estimatedPrepTime || "") : "";
 
+    // Fetch pickup location address from DB
+    let pickupLocationAddress = "";
+    if (pickupMethod === "Pickup" && orderData.pickupLocationId) {
+      const pickupLocDoc = await db.collection(Collections.pickupLocations).doc(String(orderData.pickupLocationId)).get();
+      if (pickupLocDoc.exists) {
+        pickupLocationAddress = String(pickupLocDoc.data()?.address || "");
+      }
+    }
+
     // Create order document (replaces prisma.order.create)
     const orderId = uuid();
     const now = Timestamp.now();
@@ -524,6 +533,7 @@ export async function POST(req: Request) {
     deliveryZone: isDelivery ? deliveryZone : "",
     pickupLocationId: orderData.pickupLocationId || "",
     pickupLocationName: orderData.pickupLocationName || "",
+    pickupLocationAddress,
     pickupContactNumber,
     estimatedPrepTime,
     deliveryAddress: orderData.deliveryAddress || "",
@@ -653,7 +663,7 @@ export async function POST(req: Request) {
         ml: Number(it.ml || 0),
         unitPrice: Number(it.unitPrice || 0),
       }));
-      const emailNotification = pickupMethod === "Pickup" && pickupContactNumber
+      const emailNotification = pickupMethod === "Pickup" && pickupContactNumber && estimatedPrepTime
         ? generatePickupConfirmationEmail({
           orderId,
           customerName: String(orderData.customerName || "Customer"),
@@ -663,6 +673,7 @@ export async function POST(req: Request) {
           pickupContactNumber,
           estimatedPrepTime,
           pickupLocationName: String(orderData.pickupLocationName || ""),
+          pickupLocationAddress,
         })
         : generateOrderConfirmationEmail({
           orderId,
