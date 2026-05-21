@@ -14,8 +14,8 @@ interface PaymentMethodOption {
 
 const PAYMENT_OPTIONS: PaymentMethodOption[] = [
   { key: "Cash on Delivery", label: "COD", iconSrc: "/cod.png", iconAlt: "Cash on Delivery" },
-  { key: "Bkash Manual", label: "bKash", iconSrc: "/bkash.png?v=4", iconAlt: "bKash" },
-  { key: "Bank Manual", label: "Bank", iconSrc: "/banktransfer.svg?v=4", iconAlt: "Bank Transfer" },
+  { key: "Bkash Manual", label: "bKash", iconSrc: "/bkash.png", iconAlt: "bKash" },
+  { key: "Bank Manual", label: "Bank", iconSrc: "/banktransfer.svg", iconAlt: "Bank Transfer" },
 ];
 
 interface PaymentMethodSelectorProps {
