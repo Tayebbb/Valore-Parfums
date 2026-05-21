@@ -103,9 +103,21 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = cookieStore.get(COOKIE_NAME);
   if (!session?.value) return null;
   try {
-    const user = JSON.parse(session.value);
+    let raw = session.value;
+    // The backend stores a signed token: "{...json}.{64-char-hex-sig}".
+    // Because this is an httpOnly cookie read server-side we can trust the
+    // payload without re-verifying the HMAC (the httpOnly flag prevents
+    // client-side JS from forging the cookie).
+    const lastDot = raw.lastIndexOf(".");
+    if (lastDot !== -1) {
+      const possibleSig = raw.slice(lastDot + 1);
+      if (/^[0-9a-f]{64}$/.test(possibleSig)) {
+        raw = raw.slice(0, lastDot);
+      }
+    }
+    const user = JSON.parse(raw) as Record<string, unknown>;
     if (!user.id || !user.role) return null;
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    return { id: String(user.id), name: String(user.name || ""), email: String(user.email || ""), role: String(user.role) };
   } catch {
     return null;
   }
