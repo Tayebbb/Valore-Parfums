@@ -96,7 +96,7 @@ export async function fetchWithTimeout(
  * - Retry on network errors
  * - JSON parsing with error handling
  */
-export async function apiFetch<T = any>(
+export async function apiFetch<T = unknown>(
   url: string | URL,
   options: FetchOptions = {}
 ): Promise<T> {
@@ -107,14 +107,14 @@ export async function apiFetch<T = any>(
   });
 
   if (!response.ok) {
-    const error = new Error(`API error: ${response.status}`);
-    (error as any).status = response.status;
+    const error = new Error(`API error: ${response.status}`) as Error & { status?: number };
+    error.status = response.status;
     throw error;
   }
 
   try {
     return await response.json();
-  } catch (error) {
+  } catch {
     throw new Error("Failed to parse API response as JSON");
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   TrendingUp, DollarSign, ShoppingCart, Package, AlertTriangle, Inbox, Wallet
@@ -400,13 +400,14 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const load = () =>
+  const load = useCallback(() =>
     fetch(`/api/withdrawals?ownerName=${encodeURIComponent(ownerName)}`)
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setWithdrawals(data); })
-      .finally(() => setLoading(false));
+      .finally(() => setLoading(false)),
+  [ownerName]);
 
-  useEffect(() => { load(); }, [ownerName]);
+  useEffect(() => { load(); }, [load]);
 
   const totalWithdrawn = withdrawals.reduce((s, w) => s + w.amount, 0);
   const fmt = (n: number) => n.toLocaleString("en-BD");

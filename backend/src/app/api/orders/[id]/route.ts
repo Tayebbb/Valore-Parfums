@@ -29,6 +29,7 @@ function hasPaidLikeStatus(status?: string): boolean {
     "confirmed",
     "paid",
     "processing",
+    "ready for pickup",
     "out for delivery",
     "ready",
     "dispatched",
@@ -709,7 +710,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const isPickupOrder = String(updatedData.pickupMethod || "") === "Pickup";
 
-  if (customerEmail && newStatus === "Out for Delivery" && previousStatus !== newStatus && isPickupOrder) {
+  const isPickupReadyStatus = newStatus === "Ready for Pickup" || (newStatus === "Out for Delivery" && isPickupOrder);
+
+  if (customerEmail && isPickupReadyStatus && previousStatus !== newStatus && isPickupOrder) {
     void sendEmail(
       generatePickupReadyEmail({
         customerName: String(updatedData.customerName || "Customer"),

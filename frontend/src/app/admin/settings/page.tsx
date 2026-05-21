@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { toast } from "@/components/ui/Toaster";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -422,10 +423,12 @@ export default function SettingsPage() {
 
         {settings.bkashQrImageUrl ? (
           <div className="mt-4 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)] inline-block">
-            <img
+            <Image
               src={settings.bkashQrImageUrl}
               alt="bKash QR"
               className="w-40 h-40 object-contain rounded"
+              width={160}
+              height={160}
             />
           </div>
         ) : null}
@@ -505,7 +508,13 @@ export default function SettingsPage() {
 
         {settings.bankQrImageUrl ? (
           <div className="mt-4 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)] inline-block">
-            <img src={settings.bankQrImageUrl} alt="Bank QR" className="w-40 h-40 object-contain rounded" />
+            <Image
+              src={settings.bankQrImageUrl}
+              alt="Bank QR"
+              className="w-40 h-40 object-contain rounded"
+              width={160}
+              height={160}
+            />
           </div>
         ) : null}
       </div>

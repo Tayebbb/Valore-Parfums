@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
@@ -92,7 +92,6 @@ const statuses = [
   "Pending Bkash Verification",
   "Pending Bank Verification",
   "Processing",
-  "Ready for Pickup",
   "Out for Delivery",
   "Completed",
   "Cancelled",
@@ -112,7 +111,7 @@ const cancellationReasonOptions = [
   "Other",
 ];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
-type SortType = "newest" | "oldest" | "highest-total";
+type SortType = "newest" | "oldest" | "highest-total" | "highest-profit";
 type SourceFilter = "all" | "standard_order" | "customer_request" | "stock_request";
 type AdminTab = "orders" | "requests" | "procurement";
 type StatusChangeKind = "order" | "request" | "procurement";
@@ -157,17 +156,10 @@ const getOrderSource = (order: Order): SourceFilter => {
   return "standard_order";
 };
 
-const getPaymentLabel = (method?: string) => {
-  const value = String(method || "Cash on Delivery");
-  if (value === "Bkash Manual") return "BKASH";
-  if (value === "Bank Manual") return "BANK";
-  return "COD";
-};
-
-const getPaymentClass = (label: string) => {
-  if (label === "BKASH") return "bg-[rgba(244,114,182,0.14)] text-[rgb(244,114,182)]";
-  if (label === "BANK") return "bg-[rgba(59,130,246,0.14)] text-[rgb(96,165,250)]";
-  return "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
+const getOrderSourceLabel = (source: SourceFilter) => {
+  if (source === "customer_request") return "Request";
+  if (source === "stock_request") return "Stock Request";
+  return "Order";
 };
 
 const getEntryKind = (order: Order): StatusChangeKind => {
@@ -604,6 +596,7 @@ export default function OrdersPage() {
     const sorted = [...byDateRange];
     sorted.sort((a, b) => {
       if (sortBy === "highest-total") return (b.total ?? 0) - (a.total ?? 0);
+      if (sortBy === "highest-profit") return (b.profit ?? 0) - (a.profit ?? 0);
 
       const da = new Date(a.createdAt).getTime();
       const db2 = new Date(b.createdAt).getTime();
@@ -801,6 +794,7 @@ export default function OrdersPage() {
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
               <option value="highest-total">Highest Total</option>
+              <option value="highest-profit">Highest Profit</option>
             </select>
           </div>
         </div>
@@ -816,10 +810,15 @@ export default function OrdersPage() {
         <>
           <div className="space-y-3 md:hidden">
             {filtered.map((o) => {
+              const orderType = getOrderSizeType(o);
               const currentStatus = normalizeStatus(o.status);
               const voucherPending = hasPendingVoucherForFullBottle(o);
-              const paymentLabel = getPaymentLabel(o.paymentMethod);
-              const paymentClass = getPaymentClass(paymentLabel);
+              const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
+              const orderTypeClass = orderType === "full-bottle"
+                ? "bg-[rgba(250,204,21,0.18)] text-[var(--gold)]"
+                : orderType === "mixed"
+                  ? "bg-[rgba(96,165,250,0.14)] text-[rgb(125,176,255)]"
+                  : "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
 
               return (
                 <div
@@ -852,10 +851,13 @@ export default function OrdersPage() {
 
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Payment</p>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Type</p>
                       <div className="flex flex-col items-start gap-1">
-                        <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${paymentClass}`}>
-                          {paymentLabel}
+                        <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                          {getOrderSourceLabel(getOrderSource(o))}
+                        </span>
+                        <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${orderTypeClass}`}>
+                          {orderTypeLabel}
                         </span>
                         {voucherPending && (
                           <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[rgba(251,191,36,0.2)] text-[rgb(251,191,36)]">
@@ -865,17 +867,13 @@ export default function OrdersPage() {
                       </div>
                     </div>
                     <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Order Type</p>
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${String(o.pickupMethod || "Delivery") === "Pickup"
-                        ? "bg-[rgba(74,222,128,0.16)] text-[rgb(74,222,128)]"
-                        : "bg-[rgba(59,130,246,0.16)] text-[rgb(59,130,246)]"}`}>
-                        {String(o.pickupMethod || "Delivery")}
-                      </span>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Profit</p>
+                      <p className="font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</p>
                     </div>
                     <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] col-span-2">
                       <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Items</p>
                       <p className="text-xs text-[var(--text-secondary)]">
-                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
+                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}├ù${i.quantity}`).join(", ") || "-"}
                       </p>
                     </div>
                   </div>
@@ -924,9 +922,9 @@ export default function OrdersPage() {
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order ID</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Items</th>
-                  <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Payment</th>
+                  <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Type</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Total</th>
-                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order Type</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
                   <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
@@ -934,10 +932,15 @@ export default function OrdersPage() {
               </thead>
               <tbody>
                 {filtered.map((o) => {
+                  const orderType = getOrderSizeType(o);
                   const currentStatus = normalizeStatus(o.status);
                   const voucherPending = hasPendingVoucherForFullBottle(o);
-                  const paymentLabel = getPaymentLabel(o.paymentMethod);
-                  const paymentClass = getPaymentClass(paymentLabel);
+                  const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
+                  const orderTypeClass = orderType === "full-bottle"
+                    ? "bg-[rgba(250,204,21,0.18)] text-[var(--gold)]"
+                    : orderType === "mixed"
+                      ? "bg-[rgba(96,165,250,0.14)] text-[rgb(125,176,255)]"
+                      : "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
 
                   return (
                     <tr
@@ -959,12 +962,15 @@ export default function OrdersPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
-                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
+                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}├ù${i.quantity}`).join(", ") || "-"}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${paymentClass}`}>
-                            {paymentLabel}
+                          <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border border-[var(--border-gold)] text-[var(--gold)] bg-[var(--gold-tint)]">
+                            {getOrderSourceLabel(getOrderSource(o))}
+                          </span>
+                          <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${orderTypeClass}`}>
+                            {orderTypeLabel}
                           </span>
                           {voucherPending && (
                             <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[rgba(251,191,36,0.2)] text-[rgb(251,191,36)]">
@@ -979,13 +985,7 @@ export default function OrdersPage() {
                           <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)} via {o.voucherCode}</p>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${String(o.pickupMethod || "Delivery") === "Pickup"
-                          ? "bg-[rgba(74,222,128,0.16)] text-[rgb(74,222,128)]"
-                          : "bg-[rgba(59,130,246,0.16)] text-[rgb(59,130,246)]"}`}>
-                          {String(o.pickupMethod || "Delivery")}
-                        </span>
-                      </td>
+                      <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</td>
                       <td className="py-3 px-4 text-center">
                         <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
                           {getOrderStatusLabel(currentStatus)}
@@ -1031,7 +1031,7 @@ export default function OrdersPage() {
           <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-lg p-6 animate-fade-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-serif text-xl font-light">Order Details</h2>
-              <button onClick={() => setSelectedOrder(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+              <button onClick={() => setSelectedOrder(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">Γ£ò</button>
             </div>
 
             <div className="space-y-3 text-sm">
@@ -1286,8 +1286,8 @@ export default function OrdersPage() {
                 <span className="font-serif text-[var(--gold)]">{fmt(selectedOrder.total ?? 0)} BDT</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Order Type</span>
-                <span className="font-serif text-[var(--gold)]">{String(selectedOrder.pickupMethod || "Delivery")}</span>
+                <span className="text-[var(--text-muted)]">Profit</span>
+                <span className="font-serif text-[var(--success)]">{fmt(selectedOrder.profit ?? 0)} BDT</span>
               </div>
             </div>
           </div>
@@ -1328,7 +1328,7 @@ export default function OrdersPage() {
                         <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Customer</p>
                         <p className="text-sm">{request.userName}</p>
                         <p className="text-[10px] text-[var(--text-muted)]">{request.userEmail}</p>
-                        <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` · ${request.ml}ml` : ""}</p>
+                        <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` ┬╖ ${request.ml}ml` : ""}</p>
                       </div>
                       <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Profit</p>
@@ -1337,7 +1337,7 @@ export default function OrdersPage() {
                         ) : request.buyingPrice != null && request.sellingPrice != null ? (
                           <span className="text-[var(--text-muted)] text-[10px]">~{(request.sellingPrice ?? 0) - (request.buyingPrice ?? 0)}</span>
                         ) : (
-                          <span className="text-[var(--text-muted)]">—</span>
+                          <span className="text-[var(--text-muted)]">ΓÇö</span>
                         )}
                       </div>
                     </div>
@@ -1441,7 +1441,7 @@ export default function OrdersPage() {
                         <td className="py-3 px-4">
                           <p className="text-sm">{request.userName}</p>
                           <p className="text-[10px] text-[var(--text-muted)]">{request.userEmail}</p>
-                          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` · ${request.ml}ml` : ""}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` ┬╖ ${request.ml}ml` : ""}</p>
                         </td>
                         <td className="py-3 px-4 text-right">
                           {requestEditingId === request.id ? (
@@ -1493,7 +1493,7 @@ export default function OrdersPage() {
                           ) : request.buyingPrice != null && request.sellingPrice != null ? (
                             <span className="text-[var(--text-muted)] text-[10px]">~{(request.sellingPrice ?? 0) - (request.buyingPrice ?? 0)}</span>
                           ) : (
-                            "—"
+                            "ΓÇö"
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
@@ -1636,7 +1636,7 @@ export default function OrdersPage() {
               <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Cancellation Reason</p>
               <h3 className="font-serif text-xl font-light mt-1">Select a reason to cancel this order</h3>
               <p className="text-xs text-[var(--text-secondary)] mt-2">
-                Order {pendingCancellationChange.id.slice(0, 8)} • {pendingCancellationChange.targetName}
+                Order {pendingCancellationChange.id.slice(0, 8)} ΓÇó {pendingCancellationChange.targetName}
               </p>
             </div>
 
@@ -1647,7 +1647,7 @@ export default function OrdersPage() {
                 onChange={(e) => setSelectedCancellationReason(e.target.value)}
                 className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
               >
-                <option value="">— Select a reason —</option>
+                <option value="">ΓÇö Select a reason ΓÇö</option>
                 {cancellationReasonOptions.map((reason) => (
                   <option key={reason} value={reason}>{reason}</option>
                 ))}

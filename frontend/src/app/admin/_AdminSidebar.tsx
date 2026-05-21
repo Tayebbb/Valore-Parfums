@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -38,10 +38,6 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [pathname]);
-
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
       <header className="md:hidden fixed top-0 inset-x-0 z-30 h-14 border-b border-[var(--border)] bg-[var(--bg-base)]/95 backdrop-blur-md">
@@ -54,7 +50,11 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
           >
             {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <Link href="/admin" className="font-serif text-lg font-light tracking-wide text-[var(--gold)]">
+          <Link
+            href="/admin"
+            className="font-serif text-lg font-light tracking-wide text-[var(--gold)]"
+            onClick={() => setMobileNavOpen(false)}
+          >
             Valore Admin
           </Link>
           <div className="w-9" aria-hidden="true" />
@@ -78,7 +78,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       >
         {/* Logo */}
         <div className="px-6 py-6 border-b border-[var(--border)]">
-          <Link href="/admin" className="block">
+          <Link href="/admin" className="block" onClick={() => setMobileNavOpen(false)}>
             <h1 className="font-serif text-2xl font-light tracking-wide text-[var(--gold)]">
               Valore
             </h1>
@@ -97,6 +97,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setMobileNavOpen(false)}
                 className={`flex items-center gap-3 px-6 py-2.5 text-sm transition-colors border-l-2 ${
                   active
                     ? "border-[var(--gold)] bg-[var(--gold-tint)] text-[var(--gold)]"
@@ -114,6 +115,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
         <div className="px-6 py-4 border-t border-[var(--border)]">
           <Link
             href="/"
+            onClick={() => setMobileNavOpen(false)}
             className="text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors"
           >
             ← View Store

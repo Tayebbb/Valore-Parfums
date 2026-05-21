@@ -17,7 +17,7 @@ function checkStorageAvailable(storageType: "localStorage" | "sessionStorage"): 
     storage.setItem(testKey, "test");
     storage.removeItem(testKey);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -109,7 +109,7 @@ export function isStorageAvailable(): boolean {
 /**
  * Safely parse and get JSON from storage
  */
-export function safeStorageGetJSON<T = any>(
+export function safeStorageGetJSON<T = unknown>(
   key: string,
   storageType: "localStorage" | "sessionStorage" = "sessionStorage"
 ): T | null {
@@ -126,7 +126,7 @@ export function safeStorageGetJSON<T = any>(
 /**
  * Safely set JSON in storage
  */
-export function safeStorageSetJSON<T = any>(
+export function safeStorageSetJSON<T = unknown>(
   key: string,
   value: T,
   storageType: "localStorage" | "sessionStorage" = "sessionStorage"

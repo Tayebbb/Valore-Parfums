@@ -83,7 +83,6 @@ const DEFAULT_BRAND_SECTIONS: BrandSections = {
   designerBrands: [],
 };
 
-let activePerfumesCache: { data: SearchPerfume[]; brands: string[]; ts: number } | null = null;
 let brandSectionsCache: { data: BrandSections; ts: number } | null = null;
 const searchResultCache = new Map<string, { body: { perfumes: unknown[]; brands: string[] }; ts: number }>();
 
@@ -337,24 +336,26 @@ export async function GET(req: Request) {
       const productSlug = buildProductSlug({ name: perfume.name || "", slug, brand: perfume.brand || "", brandSlug });
       
       if (Array.isArray(perfume.keyNotes) && perfume.keyNotes.length > 0) {
-        const { description, ...result } = serializeDoc(perfume);
+        const serialized = serializeDoc(perfume) as Record<string, unknown>;
+        delete serialized.description;
         return {
-          ...result,
+          ...serialized,
           slug,
           brandSlug,
           canonicalPath: `/products/${productSlug}`,
         };
       }
       const normalized = buildStructuredNotes(perfume, library);
-      const { description, ...result } = serializeDoc({
+      const serialized = serializeDoc({
         ...perfume,
         keyNotes: normalized.keyNotes,
         fragranceNotes: normalized.fragranceNotes,
         fragranceNoteIds: normalized.fragranceNoteIds,
         noteSearchIndex: normalized.noteSearchIndex,
-      });
+      }) as Record<string, unknown>;
+      delete serialized.description;
       return {
-        ...result,
+        ...serialized,
         slug,
         brandSlug,
         canonicalPath: `/products/${productSlug}`,

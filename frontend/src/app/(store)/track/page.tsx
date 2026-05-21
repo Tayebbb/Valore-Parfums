@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Package, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
@@ -340,11 +341,12 @@ export default function TrackOrderPage() {
                     {productHref ? (
                       <Link href={productHref} className="flex items-center gap-3 min-w-0 flex-1 group">
                         <div className="w-14 h-14 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
-                          <img
+                          <Image
                             src={imageSrc}
                             alt={item.perfumeName}
                             className="w-full h-full object-cover"
-                            loading="lazy"
+                            width={56}
+                            height={56}
                             onError={(e) => {
                               const target = e.currentTarget;
                               if (target.src.endsWith(productPlaceholderImage)) return;
@@ -360,11 +362,12 @@ export default function TrackOrderPage() {
                     ) : (
                       <>
                         <div className="w-14 h-14 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
-                          <img
+                          <Image
                             src={imageSrc}
                             alt={item.perfumeName}
                             className="w-full h-full object-cover"
-                            loading="lazy"
+                            width={56}
+                            height={56}
                             onError={(e) => {
                               const target = e.currentTarget;
                               if (target.src.endsWith(productPlaceholderImage)) return;

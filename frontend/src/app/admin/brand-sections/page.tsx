@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
 
 type BrandSections = {
@@ -31,8 +31,6 @@ export default function BrandSectionsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
-  const [sections, setSections] = useState<BrandSections>(EMPTY_SECTIONS);
-
   const [uaeText, setUaeText] = useState("");
   const [nicheText, setNicheText] = useState("");
   const [designerText, setDesignerText] = useState("");
@@ -42,7 +40,6 @@ export default function BrandSectionsPage() {
       .then((r) => r.json())
       .then((data) => {
         const nextSections = (data?.brandSections || EMPTY_SECTIONS) as BrandSections;
-        setSections(nextSections);
         setUaeText(toText(nextSections.uaeBrands || []));
         setNicheText(toText(nextSections.nicheBrands || []));
         setDesignerText(toText(nextSections.designerBrands || []));
@@ -53,15 +50,6 @@ export default function BrandSectionsPage() {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const usedBrands = useMemo(() => {
-    const set = new Set([
-      ...sections.uaeBrands,
-      ...sections.nicheBrands,
-      ...sections.designerBrands,
-    ]);
-    return set;
-  }, [sections]);
 
   const save = async () => {
     const nextSections: BrandSections = {
@@ -81,7 +69,6 @@ export default function BrandSectionsPage() {
 
       const data = await res.json();
       const savedSections = (data?.brandSections || nextSections) as BrandSections;
-      setSections(savedSections);
       setUaeText(toText(savedSections.uaeBrands || []));
       setNicheText(toText(savedSections.nicheBrands || []));
       setDesignerText(toText(savedSections.designerBrands || []));
@@ -92,17 +79,6 @@ export default function BrandSectionsPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const addToSection = (section: keyof BrandSections, brand: string) => {
-    const next = {
-      ...sections,
-      [section]: Array.from(new Set([...(sections[section] || []), brand])).sort((a, b) => a.localeCompare(b)),
-    };
-    setSections(next);
-    setUaeText(toText(next.uaeBrands));
-    setNicheText(toText(next.nicheBrands));
-    setDesignerText(toText(next.designerBrands));
   };
 
   if (loading) {

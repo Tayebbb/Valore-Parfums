@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { toast } from "@/components/ui/Toaster";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
@@ -230,8 +231,6 @@ function CheckoutContent() {
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [placedPaymentMethod, setPlacedPaymentMethod] = useState<CheckoutPaymentMethod>("Cash on Delivery");
-  const [placedPickupContactNumber, setPlacedPickupContactNumber] = useState("");
-  const [placedEstimatedPrepTime, setPlacedEstimatedPrepTime] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -716,10 +715,6 @@ function CheckoutContent() {
         const order = await res.json();
         setOrderId(order.id);
         setPlacedPaymentMethod(form.paymentMethod);
-        if (form.pickupMethod === "Pickup") {
-          setPlacedPickupContactNumber(String(order.pickupContactNumber || ""));
-          setPlacedEstimatedPrepTime(String(order.estimatedPrepTime || ""));
-        }
         if (!isBuyNow) clearCart();
         toast("Order placed successfully!", "success");
         return;
@@ -1222,10 +1217,12 @@ function CheckoutContent() {
                       <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
                         Scan bKash QR (Optional)
                       </p>
-                      <img
+                      <Image
                         src={checkoutConfig.bkashQrImageUrl}
                         alt="bKash payment QR"
                         className="mt-2 h-auto w-36 rounded border border-gray-700/70"
+                        width={144}
+                        height={144}
                       />
                     </div>
                   ) : null}
@@ -1356,10 +1353,12 @@ function CheckoutContent() {
                   {checkoutConfig.bankQrImageUrl ? (
                     <div className="mt-2 rounded-lg border border-gray-700/70 bg-[var(--bg-card)] p-2.5">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Bank QR (Optional)</p>
-                      <img
+                      <Image
                         src={checkoutConfig.bankQrImageUrl}
                         alt="Bank payment QR"
                         className="mt-2 h-auto w-36 rounded border border-gray-700/70"
+                        width={144}
+                        height={144}
                       />
                     </div>
                   ) : null}

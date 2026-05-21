@@ -16,9 +16,9 @@ export interface UseFetchState<T> {
  * Hook for fetching data with timeout and error handling
  * Mobile-optimized: aborts slow requests and retries on timeout
  */
-export function useFetch<T = any>(
+export function useFetch<T = unknown>(
   url: string | null,
-  options: FetchOptions & { deps?: any[] } = {}
+  options: FetchOptions & { deps?: ReadonlyArray<unknown> } = {}
 ): UseFetchState<T> {
   const { deps = [] } = options;
   const [state, setState] = useState<UseFetchState<T>>({
@@ -31,15 +31,15 @@ export function useFetch<T = any>(
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!url) {
-      setState({ data: null, loading: false, error: null, isTimeout: false });
-      return;
-    }
+    if (!url) return;
 
     let isMounted = true;
     abortControllerRef.current = new AbortController();
 
-    setState((prev) => ({ ...prev, loading: true, error: null, isTimeout: false }));
+    queueMicrotask(() => {
+      if (!isMounted) return;
+      setState((prev) => ({ ...prev, loading: true, error: null, isTimeout: false }));
+    });
 
     fetchWithTimeout(url, {
       timeout: 10000,
@@ -75,16 +75,16 @@ export function useFetch<T = any>(
       isMounted = false;
       abortControllerRef.current?.abort();
     };
-  }, [url, ...deps]);
+  }, [url, deps, options]);
 
-  return state;
+  return url ? state : { data: null, loading: false, error: null, isTimeout: false };
 }
 
 /**
  * Hook for one-time data fetch on component mount
  * Returns a function to manually trigger the fetch
  */
-export function useLazyFetch<T = any>(
+export function useLazyFetch<T = unknown>(
   defaultUrl?: string
 ): [
   (url?: string) => Promise<T>,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
-import { calculateSellingPrice, calculateProfit, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
+import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
 import type { OwnerType, TierMargins } from "@/lib/utils";
 import { FieldPath } from "firebase-admin/firestore";
 
@@ -88,9 +88,6 @@ async function getPricingConfig() {
   };
   return configCache;
 }
-
-/** Invalidate the config cache (called when admin updates settings/sizes/bottles/bulk rules) */
-function invalidatePricingCache() { configCache = null; }
 
 // Get prices for a specific perfume across all enabled decant sizes
 export async function GET(req: Request) {
