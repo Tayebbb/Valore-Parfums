@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { parseImageList } from "@/lib/image-utils";
 import { DEFAULT_TIER_MARGINS, calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins } from "@/lib/utils";
 
@@ -269,17 +270,9 @@ const getPerfumeByBrandAndSlugCached = unstable_cache(
         };
       }
 
-      const fallbackSnap = await dataLayer.db.collection(dataLayer.Collections.perfumes).where("isActive", "==", true).get();
-      const fallbackDocs = fallbackSnap.docs.map((doc) => {
-        const raw = doc.data() as Record<string, unknown>;
-        return {
-          id: doc.id,
-          name: String(raw.name || "Perfume"),
-          brand: String(raw.brand || "Brand"),
-          ...raw,
-        } as PerfumeDocument;
-      });
-      const fallbackMatch = fallbackDocs.find((item) => resolveBrandSlug(item) === brandSlug && resolvePerfumeSlug(item) === perfumeSlug);
+      const fallbackMatch = (await getActivePerfumes()).find(
+        (item) => resolveBrandSlug(item) === brandSlug && resolvePerfumeSlug(item) === perfumeSlug
+      );
       if (!fallbackMatch) return null;
 
       return {
@@ -388,34 +381,44 @@ export async function getPerfumeReviews(perfumeId: string): Promise<PerfumeRevie
   return getPerfumeReviewsCached(perfumeId);
 }
 
-async function getPricingConfig() {
-  try {
-    const dataLayer = await getDataLayer();
-    if (!dataLayer) {
+// Persists pricing config across requests for up to 300 s (matches product-page revalidate).
+// Admin changes to decant sizes, bottle costs, or margins take effect within 5 min.
+const _pricingConfigCached = unstable_cache(
+  async () => {
+    try {
+      const dataLayer = await getDataLayer();
+      if (!dataLayer) {
+        return { sizes: [], bottles: [], packagingCost: 20, margins: DEFAULT_TIER_MARGINS };
+      }
+
+      const [sizesSnap, bottlesSnap, settingsDoc] = await Promise.all([
+        dataLayer.db.collection(dataLayer.Collections.decantSizes).get(),
+        dataLayer.db.collection(dataLayer.Collections.bottles).get(),
+        dataLayer.db.collection(dataLayer.Collections.settings).doc("default").get(),
+      ]);
+
+      const sizes = sizesSnap.docs
+        .map((doc): { id: string } & Record<string, unknown> => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }))
+        .filter((size) => Boolean(size.enabled))
+        .sort((a, b) => Number(a.ml) - Number(b.ml));
+      const bottles = bottlesSnap.docs.map((doc): { id: string } & Record<string, unknown> => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }));
+      const settings = settingsDoc.exists ? settingsDoc.data() : null;
+      const packagingCost = Number(settings?.packagingCost ?? 20);
+      const margins = parseTierMargins((settings as { tierMargins?: string } | null)?.tierMargins);
+
+      return { sizes, bottles, packagingCost, margins };
+    } catch (error) {
+      console.error("getPricingConfig failed", error);
       return { sizes: [], bottles: [], packagingCost: 20, margins: DEFAULT_TIER_MARGINS };
     }
+  },
+  ["pricing-config"],
+  { revalidate: 300, tags: ["pricing-config"] },
+);
 
-    const [sizesSnap, bottlesSnap, settingsDoc] = await Promise.all([
-      dataLayer.db.collection(dataLayer.Collections.decantSizes).get(),
-      dataLayer.db.collection(dataLayer.Collections.bottles).get(),
-      dataLayer.db.collection(dataLayer.Collections.settings).doc("default").get(),
-    ]);
-
-    const sizes = sizesSnap.docs
-      .map((doc): { id: string } & Record<string, unknown> => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }))
-      .filter((size) => Boolean(size.enabled))
-      .sort((a, b) => Number(a.ml) - Number(b.ml));
-    const bottles = bottlesSnap.docs.map((doc): { id: string } & Record<string, unknown> => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }));
-    const settings = settingsDoc.exists ? settingsDoc.data() : null;
-    const packagingCost = Number(settings?.packagingCost ?? 20);
-    const margins = parseTierMargins((settings as { tierMargins?: string } | null)?.tierMargins);
-
-    return { sizes, bottles, packagingCost, margins };
-  } catch (error) {
-    console.error("getPricingConfig failed", error);
-    return { sizes: [], bottles: [], packagingCost: 20, margins: DEFAULT_TIER_MARGINS };
-  }
-}
+// Deduplicates within a single React render pass — prevents N×3 Firestore reads
+// when getPerfumeOffers() is called for multiple products in the same page render.
+const getPricingConfig = cache(_pricingConfigCached);
 
 function computeFullBottlePrice(perfume: PerfumeDocument): number {
   if (typeof perfume.fullBottlePrice === "number" && Number.isFinite(perfume.fullBottlePrice) && perfume.fullBottlePrice > 0) {

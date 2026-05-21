@@ -1,28 +1,10 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
-import { toPublicApiUrl } from "@/lib/public-api";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { getActivePerfumes, getPerfumeOffers, parseImageList, type PerfumeDocument } from "@/lib/seo-catalog";
 
-interface Perfume {
-  id: string;
-  name: string;
-  brand: string;
-  slug: string;
-  canonicalPath?: string;
-  inspiredBy: string;
-  category: string;
-  images: string;
-  totalStockMl: number;
-  isBestSeller: boolean;
-  totalOrders?: number;
-  keyNotes?: string[];
-  isActive: boolean;
-}
+export const revalidate = 300;
 
 interface PriceInfo {
   ml: number;
@@ -30,18 +12,18 @@ interface PriceInfo {
   available: boolean;
 }
 
-function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo[] }) {
-  const images: string[] = JSON.parse(perfume.images || "[]");
+function PerfumeCard({ perfume, prices, priority }: { perfume: PerfumeDocument; prices?: PriceInfo[]; priority?: boolean }) {
+  const images = parseImageList(perfume.images);
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
-  const outOfStock = perfume.totalStockMl <= 0;
-  const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0 || perfume.isBestSeller;
+  const outOfStock = Number(perfume.totalStockMl || 0) <= 0;
+  const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0;
 
   return (
-    <Link href={perfume.canonicalPath || buildCanonicalProductPath(perfume)}>
+    <Link href={buildCanonicalProductPath(perfume)}>
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group">
         <div className="aspect-square bg-[var(--bg-surface)] relative img-zoom">
           {images[0] ? (
-            <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+            <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" priority={priority} />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
@@ -83,86 +65,31 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
   );
 }
 
-export default function HomePage() {
-  const [perfumes, setPerfumes] = useState<Perfume[]>([]);
-  const [priceMap, setPriceMap] = useState<Record<string, PriceInfo[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Use fetch with timeout for mobile stability
-    fetchWithTimeout(toPublicApiUrl("/api/perfumes?active=true"), {
-      timeout: 12000,
-      retries: 1,
-    })
-      .then((r) => {
-        if (!r.ok) {
-          throw new Error(`API returned ${r.status}`);
-        }
-        return r.json();
-      })
-      .then((data: Perfume[] | { perfumes?: Perfume[] }) => {
-        const perfumeList = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.perfumes)
-            ? data.perfumes
-            : [];
-
-        if (perfumeList.length === 0) {
-          console.warn("No perfumes returned from API");
-        }
-
-        setPerfumes(perfumeList);
-        setError(null);
-        // Batch-fetch pricing for all displayed perfumes in ONE call
-        const ids = perfumeList.slice(0, 12).map((p) => p.id);
-        if (ids.length > 0) {
-          // Use fetch with timeout for pricing API
-          fetchWithTimeout(toPublicApiUrl("/api/pricing"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ perfumeIds: ids }),
-            timeout: 10000,
-            retries: 1,
-          })
-            .then((r) => {
-              if (!r.ok) {
-                console.warn("Pricing API returned", r.status);
-                return {};
-              }
-              return r.json();
-            })
-            .then((map) => {
-              const parsed: Record<string, PriceInfo[]> = {};
-              for (const [id, val] of Object.entries((map && typeof map === "object") ? map : {})) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                parsed[id] = (val as any).prices || [];
-              }
-              setPriceMap(parsed);
-            })
-            .catch((err) => {
-              console.error("Pricing fetch failed:", err);
-            });
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load perfumes:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load perfumes. Please refresh the page."
-        );
-        setPerfumes([]);
-        setPriceMap({});
-      })
-      .finally(() => setLoading(false));
-  }, []);
+export default async function HomePage() {
+  const perfumes = await getActivePerfumes();
 
   const bestSellers = [...perfumes]
-    .filter((p) => Number(p.totalOrders || 0) > 0)
-    .sort((a, b) => Number(b.totalOrders || 0) - Number(a.totalOrders || 0))
+    .filter((p) => Number(p.totalOrders ?? 0) > 0)
+    .sort((a, b) => Number(b.totalOrders ?? 0) - Number(a.totalOrders ?? 0))
     .slice(0, 4);
   const newArrivals = perfumes.slice(0, 8);
+
+  // Deduplicated top-12 for pricing — bestSellers first, then fill from newArrivals.
+  // getPricingConfig is now cached (unstable_cache + React cache) so these parallel
+  // calls hit Firestore only once per 300 s instead of N×3 reads.
+  const top12 = [...new Map([...bestSellers, ...newArrivals].map((p) => [p.id, p])).values()].slice(0, 12);
+  const pricingEntries = await Promise.all(
+    top12.map(async (perfume) => {
+      const offers = await getPerfumeOffers(perfume);
+      const prices: PriceInfo[] = offers.decantOffers.map((o) => ({
+        ml: o.ml,
+        sellingPrice: o.price,
+        available: o.available,
+      }));
+      return [perfume.id, prices] as const;
+    }),
+  );
+  const priceMap = Object.fromEntries(pricingEntries);
 
   return (
     <div>
@@ -217,7 +144,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {bestSellers.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
+                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} priority={i === 0} />
               </div>
             ))}
           </div>
@@ -226,7 +153,7 @@ export default function HomePage() {
 
       <div className="gold-line" />
 
-      {/* New Arrivals / All Perfumes */}
+      {/* New Arrivals */}
       <section className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
         <div className="flex items-end justify-between mb-8">
           <div>
@@ -238,28 +165,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i}>
-                <div className="skeleton aspect-square rounded" />
-                <div className="skeleton h-4 mt-3 rounded w-3/4" />
-                <div className="skeleton h-3 mt-2 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        ) : error ? (
-          <div className="text-center py-20 bg-[var(--bg-surface)] border border-red-500/20 rounded p-8">
-            <p className="font-serif text-2xl text-red-500 mb-2">Failed to Load Perfumes</p>
-            <p className="text-sm text-[var(--text-secondary)] mb-6">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-[var(--gold)] text-black px-6 py-2 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-hover)] transition-colors rounded"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : newArrivals.length === 0 ? (
+        {newArrivals.length === 0 ? (
           <div className="text-center py-20">
             <p className="font-serif text-2xl text-[var(--text-muted)]">No perfumes available</p>
             <p className="text-sm text-[var(--text-muted)] mt-2">Check back soon for new arrivals</p>
@@ -268,7 +174,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {newArrivals.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
+                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} priority={i === 0 && bestSellers.length === 0} />
               </div>
             ))}
           </div>

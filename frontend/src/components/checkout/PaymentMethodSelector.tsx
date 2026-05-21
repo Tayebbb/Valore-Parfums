@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import Image from "next/image";
 
 export type CheckoutPaymentMethod = "Cash on Delivery" | "Bkash Manual" | "Bank Manual";
 
@@ -42,7 +43,7 @@ function PaymentMethodSelectorBase({ value, onChange }: PaymentMethodSelectorPro
             aria-pressed={selected}
           >
             <div className="flex flex-col items-center gap-1.5">
-              <img src={method.iconSrc} alt={method.iconAlt} className="h-4 w-auto object-contain sm:h-5" loading="lazy" />
+              <Image src={method.iconSrc} alt={method.iconAlt} width={48} height={20} className="h-4 w-auto object-contain sm:h-5" />
               <span className={selected ? "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]" : "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]"}>
                 {method.label}
               </span>

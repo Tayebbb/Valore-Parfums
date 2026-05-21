@@ -341,7 +341,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/valore-logo.png" alt="Valore Parfums" width={36} height={36} className="rounded-full object-cover" />
+            <Image src="/valore-logo.png" alt="Valore Parfums" width={36} height={36} className="rounded-full object-cover" priority />
             <h1 className="font-serif text-2xl font-light tracking-wide text-[var(--gold)]">
               Valore Parfums
             </h1>
