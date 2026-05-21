@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { setSessionCookie } from "@/lib/auth";
+import { signSessionToken, COOKIE_NAME, COOKIE_MAX_AGE } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function resolveBackendBase(): string | null {
   const raw = (
@@ -25,7 +26,6 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.text();
-
   const forwardHeaders: Record<string, string> = { "content-type": "application/json" };
   const xff = req.headers.get("x-forwarded-for");
   if (xff) forwardHeaders["x-forwarded-for"] = xff;
@@ -41,27 +41,43 @@ export async function POST(req: NextRequest) {
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
     });
-  } catch {
+  } catch (err) {
+    console.error("[auth/google] backend fetch failed", err);
     return NextResponse.json(
       { error: "Cannot reach authentication service." },
       { status: 502 },
     );
   }
 
-  const data = await upstream.json();
+  const data = await upstream.json().catch(() => null);
 
-  if (!upstream.ok) {
-    return NextResponse.json(data, { status: upstream.status });
+  if (!upstream.ok || !data) {
+    return NextResponse.json(
+      data ?? { error: "Google sign-in failed" },
+      { status: upstream.status || 500 },
+    );
   }
 
-  if (data?.id && data?.role) {
-    await setSessionCookie({
-      id: String(data.id),
-      name: String(data.name ?? ""),
-      email: String(data.email ?? ""),
-      role: String(data.role),
-    });
+  if (!data.id || !data.role) {
+    return NextResponse.json({ error: "Invalid auth payload" }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  const token = await signSessionToken({
+    id: String(data.id),
+    name: String(data.name ?? ""),
+    email: String(data.email ?? ""),
+    role: String(data.role),
+  });
+
+  const response = NextResponse.json(data);
+  response.cookies.set({
+    name: COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+  return response;
 }

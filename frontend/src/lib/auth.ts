@@ -84,14 +84,14 @@ export interface SessionUser {
   role: string;
 }
 
-const COOKIE_NAME = "vp-session";
-const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+export const COOKIE_NAME = "vp-session";
+export const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const SESSION_SIGNING_KEY =
   process.env.SESSION_SIGNING_KEY || "default-insecure-key-change-in-production";
 
 // Sign a session token with HMAC-SHA256 — same algorithm and key as the
 // backend, so tokens created here are verifiable there and vice-versa.
-async function signSessionToken(user: SessionUser): Promise<string> {
+export async function signSessionToken(user: SessionUser): Promise<string> {
   const data = JSON.stringify(user);
   const encoder = new TextEncoder();
   const keyData = encoder.encode(SESSION_SIGNING_KEY);
@@ -116,7 +116,7 @@ export async function setSessionCookie(user: SessionUser): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: MAX_AGE,
+    maxAge: COOKIE_MAX_AGE,
     path: "/",
   });
 }

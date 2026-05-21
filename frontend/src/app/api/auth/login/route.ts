@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { setSessionCookie } from "@/lib/auth";
-
-// Dedicated login handler — sets the vp-session cookie directly on the
-// frontend server instead of relying on the catch-all proxy to forward the
-// Set-Cookie header from the backend. The proxy approach breaks in Node.js
-// 20+ where Headers.forEach() silently skips set-cookie headers.
+import { signSessionToken, COOKIE_NAME, COOKIE_MAX_AGE } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function resolveBackendBase(): string | null {
   const raw = (
@@ -30,8 +26,6 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.text();
-
-  // Forward IP headers so the backend can apply rate limiting per client IP.
   const forwardHeaders: Record<string, string> = { "content-type": "application/json" };
   const xff = req.headers.get("x-forwarded-for");
   if (xff) forwardHeaders["x-forwarded-for"] = xff;
@@ -47,30 +41,52 @@ export async function POST(req: NextRequest) {
       cache: "no-store",
       signal: AbortSignal.timeout(15_000),
     });
-  } catch {
+  } catch (err) {
+    console.error("[auth/login] backend fetch failed", err);
     return NextResponse.json(
       { error: "Cannot reach authentication service." },
       { status: 502 },
     );
   }
 
-  const data = await upstream.json();
+  const data = await upstream.json().catch(() => null);
 
-  if (!upstream.ok) {
-    return NextResponse.json(data, { status: upstream.status });
+  if (!upstream.ok || !data) {
+    return NextResponse.json(
+      data ?? { error: "Login failed" },
+      { status: upstream.status || 500 },
+    );
   }
 
-  // Set the session cookie directly on the frontend (same domain as the
-  // browser). cookies().set() in a Route Handler always works regardless of
-  // Node.js version or Vercel runtime.
-  if (data?.id && data?.role) {
-    await setSessionCookie({
-      id: String(data.id),
-      name: String(data.name ?? ""),
-      email: String(data.email ?? ""),
-      role: String(data.role),
-    });
+  if (!data.id || !data.role) {
+    console.error("[auth/login] backend returned invalid user payload", data);
+    return NextResponse.json({ error: "Invalid auth payload" }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  const token = await signSessionToken({
+    id: String(data.id),
+    name: String(data.name ?? ""),
+    email: String(data.email ?? ""),
+    role: String(data.role),
+  });
+
+  console.log("[auth/login] success — setting cookie", {
+    id: data.id,
+    role: data.role,
+    tokenLen: token.length,
+  });
+
+  const response = NextResponse.json(data);
+  // Set the cookie DIRECTLY on the response. This is the canonical way in
+  // a Next.js Route Handler and is more reliable than cookies().set().
+  response.cookies.set({
+    name: COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+  return response;
 }
