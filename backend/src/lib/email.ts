@@ -466,6 +466,58 @@ export function generatePickupConfirmationEmail(orderData: {
   };
 }
 
+export function generatePickupReadyEmail(orderData: {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  items?: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  pickupContactNumber: string;
+  pickupLocationName?: string;
+  pickupLocationAddress?: string;
+}): EmailNotification {
+  const orderedItemsBlock = renderOrderedItemsBlock(orderData.items);
+
+  const pickupDetailsBlock = `
+    <div style="background:#f5f0e8; border-left:2px solid #c9a96e; padding:20px 24px; margin-bottom:28px;">
+      <p style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#8b6a3e; text-transform:uppercase; margin-bottom:14px;">Pickup Details</p>
+      ${orderData.pickupLocationName ? `
+      <p style="font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:4px;">Location</p>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:17px; color:#111; margin-bottom:${orderData.pickupLocationAddress ? "6px" : "16px"};">${orderData.pickupLocationName}</p>
+      ` : ""}
+      ${orderData.pickupLocationAddress ? `
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#555; line-height:1.7; margin-bottom:16px;">${orderData.pickupLocationAddress}</p>
+      ` : ""}
+      <p style="font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:4px;">Contact Number</p>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:19px; color:#c9a96e; margin-bottom:0;">${orderData.pickupContactNumber}</p>
+    </div>
+  `;
+
+  const html = createEmailShell(`
+      <p style="font-family:'Cormorant Garamond',serif; font-size:11px; letter-spacing:4px; color:#c9a96e; text-transform:uppercase; margin-bottom:28px;">Ready for Collection</p>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400; color:#111; margin-bottom:24px; line-height:1.3;">Your Order<br><em>Is Ready for Pickup</em></h2>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${orderData.customerName}</strong>,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">Your order <strong>#${orderData.orderId}</strong> has been carefully prepared and is now ready to be collected. We look forward to handing it to you in person.</p>
+      <div style="border-left: 2px solid #c9a96e; padding: 16px 20px; background:#fff; margin-bottom:28px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#8B7500; text-transform:uppercase; margin-bottom:10px;">Order Reference</p>
+        <p style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#8B7500; font-weight:500;">#${orderData.orderId}</p>
+      </div>
+      ${pickupDetailsBlock}
+      ${orderedItemsBlock}
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9; margin-bottom:16px;">Please contact us on the number above before arriving so we can have your order ready at the counter. Kindly present your order reference upon collection.</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">We are delighted to welcome you.</p>
+      <div style="height:1px; background:#e8e4dc; margin: 36px 0 28px;"></div>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:16px; color:#111; font-style:italic;">Until we meet,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#c9a96e; text-transform:uppercase; margin-top:6px;">Valore Parfums</p>
+  `);
+
+  return {
+    to: orderData.customerEmail,
+    subject: `Ready for Pickup — Order #${orderData.orderId}`,
+    html,
+    text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} is ready for pickup${orderData.pickupLocationName ? ` at ${orderData.pickupLocationName}` : ""}${orderData.pickupLocationAddress ? `, ${orderData.pickupLocationAddress}` : ""}. Please contact ${orderData.pickupContactNumber} before arriving.`,
+  };
+}
+
 export function generateOrderReceivedEmail(orderData: {
   orderId: string;
   customerName: string;

@@ -12,6 +12,7 @@ import {
   generateOrderDeliveredEmail,
   generateOrderDispatchedEmail,
   generatePickupConfirmationEmail,
+  generatePickupReadyEmail,
   sendEmail,
 } from "@/lib/email";
 import { validateString } from "@/lib/validation";
@@ -706,7 +707,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     });
   }
 
-  if (customerEmail && ["Shipped", "Dispatched", "Out for Delivery"].includes(String(newStatus || "")) && previousStatus !== newStatus) {
+  const isPickupOrder = String(updatedData.pickupMethod || "") === "Pickup";
+
+  if (customerEmail && newStatus === "Out for Delivery" && previousStatus !== newStatus && isPickupOrder) {
+    void sendEmail(
+      generatePickupReadyEmail({
+        customerName: String(updatedData.customerName || "Customer"),
+        customerEmail,
+        orderId: id,
+        items: emailItems,
+        pickupContactNumber: String(updatedData.pickupContactNumber || "").trim(),
+        pickupLocationName: String(updatedData.pickupLocationName || ""),
+        pickupLocationAddress: String(updatedData.pickupLocationAddress || ""),
+      }),
+    ).catch((error) => {
+      console.error("Failed to send pickup ready email:", error);
+    });
+  }
+
+  if (customerEmail && ["Shipped", "Dispatched", "Out for Delivery"].includes(String(newStatus || "")) && previousStatus !== newStatus && !isPickupOrder) {
     void sendEmail(
       generateOrderDispatchedEmail({
         customerName: String(updatedData.customerName || "Customer"),
