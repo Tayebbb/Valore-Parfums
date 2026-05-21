@@ -76,14 +76,25 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Protect admin routes — redirect to login if no session cookie
+  // Protect admin routes — redirect to login if no session cookie.
+  // NOTE: the cookie value is a SIGNED token of the form "{json}.{64-hex-hmac}".
+  // We must strip the trailing ".{hex}" suffix before JSON.parse, otherwise it
+  // throws and the catch redirects every admin request to /login.
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const session = request.cookies.get("vp-session");
     if (!session?.value) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     try {
-      const user = JSON.parse(session.value);
+      let raw = session.value;
+      const lastDot = raw.lastIndexOf(".");
+      if (lastDot !== -1) {
+        const possibleSig = raw.slice(lastDot + 1);
+        if (/^[0-9a-f]{64}$/.test(possibleSig)) {
+          raw = raw.slice(0, lastDot);
+        }
+      }
+      const user = JSON.parse(raw);
       if (user.role !== "admin") {
         return NextResponse.redirect(new URL("/", request.url));
       }
