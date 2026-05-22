@@ -654,7 +654,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Send confirmation email asynchronously (non-blocking)
+    // Send confirmation email (awaited to prevent function termination in serverless environment)
     const customerEmail = String(orderDoc.customerEmail || "").trim();
     if (customerEmail) {
       const emailItems = createdItems.map((it) => ({
@@ -686,9 +686,17 @@ export async function POST(req: Request) {
           total,
           paymentMethod: normalizedPaymentMethod,
         });
-      void sendEmail(emailNotification).catch((error) => {
-        console.error("Failed to send order confirmation email:", error);
-      });
+      
+      const templateName = pickupMethod === "Pickup" && pickupContactNumber && estimatedPrepTime
+        ? "generatePickupConfirmationEmail"
+        : "generateOrderConfirmationEmail";
+      
+      console.log(`[EMAIL] Sending ${templateName} to ${customerEmail}`);
+      try {
+        await sendEmail(emailNotification);
+      } catch (error) {
+        console.error(`[EMAIL ERROR] Failed for ${orderId}:`, error);
+      }
     }
 
     return NextResponse.json(serializeDoc({ id: orderId, ...orderDoc, items: createdItems }), { status: 201 });

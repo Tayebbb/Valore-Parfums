@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
+import {
+  ADMIN_STATUS_ORDER,
+  getStatusLabel,
+  getStatusLabelFromValue,
+  isStatusAllowedForFulfillment,
+} from "@/lib/orderStatusConfig";
 
 interface OrderItem {
   id: string;
@@ -57,25 +63,6 @@ interface Order {
   items: OrderItem[];
 }
 
-interface UserRequest {
-  id: string;
-  perfumeName: string;
-  brand: string;
-  type: "decant" | "full_bottle";
-  ml: number | null;
-  quantity: number;
-  notes: string;
-  userName: string;
-  userEmail: string;
-  status: string;
-  adminNote: string;
-  buyingPrice: number | null;
-  sellingPrice: number | null;
-  profit: number | null;
-  fulfilledAt: string | null;
-  createdAt: string;
-}
-
 interface StockRequest {
   id: string;
   perfumeName: string;
@@ -87,21 +74,20 @@ interface StockRequest {
   createdAt: string;
 }
 
-const statuses = [
-  "Pending",
-  "Pending Bkash Verification",
-  "Pending Bank Verification",
-  "Processing",
-  "Ready for Pickup",
-  "Out for Delivery",
-  "Completed",
-  "Cancelled",
-];
-const requestStatuses = ["Pending", "Confirmed", "Dispatched", "Cancelled"];
+const getAdminStatusOptions = (pickupMethod?: string): string[] => {
+  if (!pickupMethod) {
+    return ADMIN_STATUS_ORDER.map((key) => getStatusLabel(key, "admin"));
+  }
+
+  return ADMIN_STATUS_ORDER
+    .filter((key) => isStatusAllowedForFulfillment(key, pickupMethod))
+    .map((key) => getStatusLabel(key, "admin"));
+};
+
+const cancelledStatusLabel = getStatusLabel("cancelled", "admin");
+const pendingBankStatusLabel = getStatusLabel("pending_bank_verification", "admin");
 const procurementStatuses = ["Pending", "Sourcing", "Ready", "Dispatched", "Cancelled"];
 const cancellationReasonOptions = [
-  "Out of Stock",
-  "Supplier Delay",
   "Product Damaged",
   "Pricing Error",
   "Payment Verification Failed",
@@ -113,9 +99,9 @@ const cancellationReasonOptions = [
 ];
 type SizeTypeFilter = "all" | "decant" | "full-bottle" | "mixed";
 type SortType = "newest" | "oldest" | "highest-total";
-type SourceFilter = "all" | "standard_order" | "customer_request" | "stock_request";
-type AdminTab = "orders" | "requests" | "procurement";
-type StatusChangeKind = "order" | "request" | "procurement";
+type SourceFilter = "all" | "standard_order";
+type AdminTab = "orders" | "procurement";
+type StatusChangeKind = "order" | "procurement";
 
 interface PendingStatusChange {
   id: string;
@@ -127,15 +113,8 @@ interface PendingStatusChange {
   cancellationNote?: string;
 }
 
-const normalizeStatus = (status?: string) => {
-  if (!status) return "Pending";
-  if (status === "Confirmed" || status === "Ready" || status === "Approved" || status === "Sourcing") return "Processing";
-  if (status === "Dispatched" || status === "Fulfilled") return "Completed";
-  if (status === "Declined") return "Cancelled";
-  return status;
-};
-
-const getOrderStatusLabel = (status: string) => (status === "Processing" ? "Confirmed" : status);
+const getAdminStatusLabel = (status?: string, pickupMethod?: string) =>
+  getStatusLabelFromValue(status, pickupMethod, "admin");
 
 const getOrderSizeType = (order: Order): Exclude<SizeTypeFilter, "all"> => {
   const hasFullBottle = order.items?.some((i) => Boolean(i.isFullBottle)) ?? false;
@@ -151,11 +130,7 @@ const hasPendingVoucherForFullBottle = (order: Order) => {
   return (order.items || []).some((item) => Boolean(item.isFullBottle) && Number(item.unitPrice ?? 0) <= 0);
 };
 
-const getOrderSource = (order: Order): SourceFilter => {
-  const source = String(order.orderSource || "standard_order") as SourceFilter;
-  if (source === "customer_request" || source === "stock_request") return source;
-  return "standard_order";
-};
+const getOrderSource = (): SourceFilter => "standard_order";
 
 const getPaymentLabel = (method?: string) => {
   const value = String(method || "Cash on Delivery");
@@ -170,28 +145,6 @@ const getPaymentClass = (label: string) => {
   return "bg-[rgba(148,163,184,0.16)] text-[var(--text-secondary)]";
 };
 
-const getEntryKind = (order: Order): StatusChangeKind => {
-  const source = getOrderSource(order);
-  if (source === "customer_request") return "request";
-  if (source === "stock_request") return "procurement";
-  return "order";
-};
-
-const getStatusOptionsForOrder = (order: Order): string[] => {
-  const kind = getEntryKind(order);
-  if (kind === "request") return requestStatuses;
-  if (kind === "procurement") return procurementStatuses;
-  return statuses;
-};
-
-const normalizeRequestStatus = (status?: string) => {
-  if (!status) return "Pending";
-  if (status === "Approved") return "Confirmed";
-  if (status === "Fulfilled") return "Dispatched";
-  if (status === "Declined") return "Cancelled";
-  return status;
-};
-
 const normalizeProcurementStatus = (status?: string) => {
   if (!status) return "Pending";
   if (status === "Approved") return "Sourcing";
@@ -202,7 +155,6 @@ const normalizeProcurementStatus = (status?: string) => {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [requests, setRequests] = useState<UserRequest[]>([]);
   const [procurementRequests, setProcurementRequests] = useState<StockRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>("orders");
@@ -217,10 +169,6 @@ export default function OrdersPage() {
   const [manualPrices, setManualPrices] = useState<Record<string, string>>({});
   const [manualBuyingPrices, setManualBuyingPrices] = useState<Record<string, string>>({});
   const [savingPrices, setSavingPrices] = useState(false);
-  const [requestEditingId, setRequestEditingId] = useState<string | null>(null);
-  const [requestBuyingPrice, setRequestBuyingPrice] = useState("");
-  const [requestSellingPrice, setRequestSellingPrice] = useState("");
-  const [savingRequestPrices, setSavingRequestPrices] = useState(false);
   const [verifyingBkash, setVerifyingBkash] = useState(false);
   const [editingPrepTime, setEditingPrepTime] = useState("");
   const [savingPrepTime, setSavingPrepTime] = useState(false);
@@ -232,18 +180,15 @@ export default function OrdersPage() {
 
   const load = async () => {
     setLoading(true);
-    const [ordersRes, requestsRes, procurementRes] = await Promise.all([
+    const [ordersRes, procurementRes] = await Promise.all([
       fetch("/api/orders"),
-      fetch("/api/requests?all=true"),
       fetch("/api/stock-requests"),
     ]);
 
     const ordersData = await ordersRes.json().catch(() => []);
-    const requestsData = await requestsRes.json().catch(() => []);
     const procurementData = await procurementRes.json().catch(() => []);
 
     setOrders(Array.isArray(ordersData) ? ordersData : []);
-    setRequests(Array.isArray(requestsData) ? requestsData : []);
     setProcurementRequests(Array.isArray(procurementData) ? procurementData : []);
     setLoading(false);
   };
@@ -267,13 +212,13 @@ export default function OrdersPage() {
   };
 
   const showPendingBankPayments = () => {
-    setStatusFilter((prev) => (prev === "Pending Bank Verification" ? "" : "Pending Bank Verification"));
+    setStatusFilter((prev) => (prev === pendingBankStatusLabel ? "" : pendingBankStatusLabel));
     setSortBy("newest");
   };
 
   const updateStatus = async (id: string, status: string, cancelReason?: string, cancellationNoteVal?: string) => {
     const payload: { status: string; cancelReason?: string; cancellationNote?: string } = { status };
-    if (status === "Cancelled") {
+    if (status === cancelledStatusLabel) {
       const selectedReason = String(cancelReason || "").trim();
       payload.cancelReason = selectedReason.length >= 5 ? selectedReason.slice(0, 500) : "Cancelled by admin";
       const note = String(cancellationNoteVal || "").trim();
@@ -443,68 +388,6 @@ export default function OrdersPage() {
     toast("Voucher removed for this order", "success");
   };
 
-  const updateRequestStatus = async (id: string, status: string) => {
-    const request = requests.find((item) => item.id === id);
-
-    if (status === "Dispatched") {
-      if ((!request?.buyingPrice && request?.buyingPrice !== 0) || (!request?.sellingPrice && request?.sellingPrice !== 0)) {
-        toast("Set buying and selling price before dispatching", "error");
-        setRequestEditingId(id);
-        setRequestBuyingPrice(String(request?.buyingPrice ?? ""));
-        setRequestSellingPrice(String(request?.sellingPrice ?? ""));
-        return false;
-      }
-    }
-
-    const res = await fetch(`/api/requests/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      toast(err?.error || "Failed to update request", "error");
-      return false;
-    }
-
-    toast(`Request ${status.toLowerCase()}`, "success");
-    load();
-    return true;
-  };
-
-  const saveRequestPrices = async (id: string) => {
-    const buying = Number(requestBuyingPrice);
-    const selling = Number(requestSellingPrice);
-
-    if (!Number.isFinite(buying) || buying < 0) {
-      toast("Invalid buying price", "error");
-      return;
-    }
-    if (!Number.isFinite(selling) || selling < 0) {
-      toast("Invalid selling price", "error");
-      return;
-    }
-
-    setSavingRequestPrices(true);
-    const res = await fetch(`/api/requests/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ buyingPrice: buying, sellingPrice: selling }),
-    });
-    setSavingRequestPrices(false);
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      toast(err?.error || "Failed to save prices", "error");
-      return;
-    }
-
-    toast("Prices saved", "success");
-    setRequestEditingId(null);
-    load();
-  };
-
   const updateProcurementStatus = async (id: string, status: string) => {
     const res = await fetch(`/api/stock-requests/${id}`, {
       method: "PUT",
@@ -526,7 +409,7 @@ export default function OrdersPage() {
   const queueStatusChange = async (change: PendingStatusChange) => {
     if (change.fromStatus === change.toStatus) return false;
     if (change.kind === "order") {
-      if (change.toStatus === "Cancelled" && !change.cancelReason) {
+      if (change.toStatus === cancelledStatusLabel && !change.cancelReason) {
         setPendingCancellationChange(change);
         setSelectedCancellationReason("");
         setCustomCancellationReason("");
@@ -534,8 +417,6 @@ export default function OrdersPage() {
         return false;
       }
       return updateStatus(change.id, change.toStatus, change.cancelReason, change.cancellationNote);
-    } else if (change.kind === "request") {
-      return updateRequestStatus(change.id, change.toStatus);
     } else {
       return updateProcurementStatus(change.id, change.toStatus);
     }
@@ -579,7 +460,9 @@ export default function OrdersPage() {
   };
 
   const filtered = useMemo(() => {
-    const byStatus = statusFilter ? orders.filter((o) => normalizeStatus(o.status) === statusFilter) : orders;
+    const byStatus = statusFilter
+      ? orders.filter((o) => getAdminStatusLabel(o.status, o.pickupMethod) === statusFilter)
+      : orders;
     const bySize = sizeTypeFilter === "all"
       ? byStatus
       : byStatus.filter((o) => getOrderSizeType(o) === sizeTypeFilter);
@@ -588,7 +471,7 @@ export default function OrdersPage() {
       : bySize.filter((o) => (o.paymentMethod || "Cash on Delivery") === paymentMethodFilter);
     const bySource = sourceFilter === "all"
       ? byPaymentMethod
-      : byPaymentMethod.filter((o) => getOrderSource(o) === sourceFilter);
+      : byPaymentMethod.filter(() => getOrderSource() === sourceFilter);
 
     const byDateRange = bySource.filter((o) => {
       if (!dateFrom && !dateTo) return true;
@@ -655,6 +538,7 @@ export default function OrdersPage() {
       <div className="flex items-center gap-2 flex-wrap">
         {[
           { key: "orders", label: "Orders" },
+          { key: "procurement", label: "Procurement" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -675,12 +559,12 @@ export default function OrdersPage() {
           <button
             onClick={showPendingBankPayments}
             className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded transition-colors ${
-              statusFilter === "Pending Bank Verification"
+              statusFilter === pendingBankStatusLabel
                 ? "bg-[rgb(59,130,246)] text-white"
                 : "border border-[rgba(59,130,246,0.45)] text-[rgb(96,165,250)] hover:bg-[rgba(59,130,246,0.12)]"
             }`}
           >
-            Pending Bank Payments ({orders.filter((o) => o.status === "Pending Bank Verification").length})
+            Pending Bank Payments ({orders.filter((o) => getAdminStatusLabel(o.status, o.pickupMethod) === pendingBankStatusLabel).length})
           </button>
         </div>
 
@@ -695,8 +579,8 @@ export default function OrdersPage() {
           >
             All ({orders.length})
           </button>
-          {statuses.map((s) => {
-            const count = orders.filter((o) => normalizeStatus(o.status) === s).length;
+          {getAdminStatusOptions().map((s) => {
+            const count = orders.filter((o) => getAdminStatusLabel(o.status, o.pickupMethod) === s).length;
             return (
               <button
                 key={s}
@@ -707,7 +591,7 @@ export default function OrdersPage() {
                     : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
                 }`}
               >
-                {getOrderStatusLabel(s)} ({count})
+                {s} ({count})
               </button>
             );
           })}
@@ -748,11 +632,9 @@ export default function OrdersPage() {
           {[
             { key: "all", label: "All Sources" },
             { key: "standard_order", label: "Orders" },
-            { key: "customer_request", label: "Requests" },
-            { key: "stock_request", label: "Stock Requests" },
           ].map((entry) => {
             const key = entry.key as SourceFilter;
-            const count = key === "all" ? orders.length : orders.filter((o) => getOrderSource(o) === key).length;
+            const count = key === "all" ? orders.length : orders.filter(() => getOrderSource() === key).length;
             return (
               <button
                 key={key}
@@ -816,7 +698,7 @@ export default function OrdersPage() {
         <>
           <div className="space-y-3 md:hidden">
             {filtered.map((o) => {
-              const currentStatus = normalizeStatus(o.status);
+              const currentStatus = getAdminStatusLabel(o.status, o.pickupMethod);
               const voucherPending = hasPendingVoucherForFullBottle(o);
               const paymentLabel = getPaymentLabel(o.paymentMethod);
               const paymentClass = getPaymentClass(paymentLabel);
@@ -886,7 +768,7 @@ export default function OrdersPage() {
                       <p className="text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
-                      {getOrderStatusLabel(currentStatus)}
+                      {currentStatus}
                     </span>
                   </div>
 
@@ -901,14 +783,14 @@ export default function OrdersPage() {
                       value={currentStatus}
                       onChange={(e) => queueStatusChange({
                         id: o.id,
-                        kind: getEntryKind(o),
+                        kind: "order",
                         targetName: o.customerName,
                         fromStatus: currentStatus,
                         toStatus: e.target.value,
                       })}
                       className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-2 text-xs focus:border-[var(--gold)] outline-none"
                     >
-                      {getStatusOptionsForOrder(o).map((s) => (
+                      {getAdminStatusOptions(o.pickupMethod).map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
@@ -934,7 +816,7 @@ export default function OrdersPage() {
               </thead>
               <tbody>
                 {filtered.map((o) => {
-                  const currentStatus = normalizeStatus(o.status);
+                  const currentStatus = getAdminStatusLabel(o.status, o.pickupMethod);
                   const voucherPending = hasPendingVoucherForFullBottle(o);
                   const paymentLabel = getPaymentLabel(o.paymentMethod);
                   const paymentClass = getPaymentClass(paymentLabel);
@@ -988,7 +870,7 @@ export default function OrdersPage() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
-                          {getOrderStatusLabel(currentStatus)}
+                          {currentStatus}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</td>
@@ -997,14 +879,14 @@ export default function OrdersPage() {
                           value={currentStatus}
                           onChange={(e) => queueStatusChange({
                             id: o.id,
-                            kind: getEntryKind(o),
+                            kind: "order",
                             targetName: o.customerName,
                             fromStatus: currentStatus,
                             toStatus: e.target.value,
                           })}
                           className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
                         >
-                          {getStatusOptionsForOrder(o).map((s) => (
+                          {getAdminStatusOptions(o.pickupMethod).map((s) => (
                             <option key={s} value={s}>{s}</option>
                           ))}
                         </select>
@@ -1176,7 +1058,7 @@ export default function OrdersPage() {
                     <span className="text-[var(--text-muted)]">Notes</span>
                     <span className="text-right">{selectedOrder.bankPayment.notes || "-"}</span>
                   </div>
-                  {selectedOrder.status === "Pending Bank Verification" && (
+                  {getAdminStatusLabel(selectedOrder.status, selectedOrder.pickupMethod) === pendingBankStatusLabel && (
                     <div className="pt-2">
                       <button
                         onClick={verifyBankAndMarkPaid}
@@ -1293,236 +1175,6 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
-
-      <div className={activeTab === "requests" ? "space-y-4" : "hidden"}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-2xl font-light">Customer Requests</h2>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">Unified request queue with pricing and fulfillment control</p>
-          </div>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{requests.length} requests</span>
-        </div>
-
-        {requests.length === 0 ? (
-          <div className="text-center py-12 text-[var(--text-secondary)]">No customer requests yet</div>
-        ) : (
-          <>
-            <div className="space-y-3 md:hidden">
-              {requests.map((request) => {
-                const currentStatus = normalizeRequestStatus(request.status);
-                return (
-                  <div key={request.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-serif">{request.perfumeName}</p>
-                        {request.brand && <p className="text-[10px] text-[var(--text-muted)]">{request.brand}</p>}
-                        {request.notes && <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 italic">{request.notes}</p>}
-                      </div>
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${request.type === "full_bottle" ? "bg-[rgba(139,92,246,0.1)] text-purple-400" : "bg-[var(--gold-tint)] text-[var(--gold)]"}`}>
-                        {request.type === "full_bottle" ? "Full Bottle" : "Decant"}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Customer</p>
-                        <p className="text-sm">{request.userName}</p>
-                        <p className="text-[10px] text-[var(--text-muted)]">{request.userEmail}</p>
-                        <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` · ${request.ml}ml` : ""}</p>
-                      </div>
-                      <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] text-right">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Profit</p>
-                        {request.profit != null ? (
-                          <span className={request.profit >= 0 ? "text-green-400" : "text-red-400"}>{request.profit >= 0 ? "+" : ""}{request.profit}</span>
-                        ) : request.buyingPrice != null && request.sellingPrice != null ? (
-                          <span className="text-[var(--text-muted)] text-[10px]">~{(request.sellingPrice ?? 0) - (request.buyingPrice ?? 0)}</span>
-                        ) : (
-                          <span className="text-[var(--text-muted)]">—</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] space-y-2">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Buy / Sell</p>
-                      {requestEditingId === request.id ? (
-                        <div className="flex flex-col gap-1.5 items-end">
-                          <input
-                            type="number"
-                            min="0"
-                            value={requestBuyingPrice}
-                            onChange={(e) => setRequestBuyingPrice(e.target.value)}
-                            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
-                            placeholder="Buy"
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            value={requestSellingPrice}
-                            onChange={(e) => setRequestSellingPrice(e.target.value)}
-                            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
-                            placeholder="Sell"
-                          />
-                          <div className="flex gap-1">
-                            <button onClick={() => saveRequestPrices(request.id)} disabled={savingRequestPrices} className="px-2 py-0.5 text-[9px] uppercase bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] disabled:opacity-50">Save</button>
-                            <button onClick={() => setRequestEditingId(null)} className="px-2 py-0.5 text-[9px] uppercase border border-[var(--border)] rounded hover:border-[var(--gold)]">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-mono text-xs">
-                            <span className="text-[var(--text-muted)]">{request.buyingPrice ?? 0}</span>
-                            <span className="text-[var(--text-muted)] mx-1">/</span>
-                            <span>{request.sellingPrice ?? 0}</span>
-                          </div>
-                          {(currentStatus === "Pending" || currentStatus === "Confirmed") && (
-                            <button
-                              onClick={() => {
-                                setRequestEditingId(request.id);
-                                setRequestBuyingPrice(String(request.buyingPrice ?? ""));
-                                setRequestSellingPrice(String(request.sellingPrice ?? ""));
-                              }}
-                              className="text-[9px] text-[var(--gold)] uppercase tracking-wider hover:underline"
-                            >
-                              edit
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>{currentStatus}</span>
-                      <select
-                        value={currentStatus}
-                        onChange={(e) => queueStatusChange({
-                          id: request.id,
-                          kind: "request",
-                          targetName: request.userName,
-                          fromStatus: currentStatus,
-                          toStatus: e.target.value,
-                        })}
-                        className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
-                      >
-                        {requestStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Perfume</th>
-                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Type</th>
-                    <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
-                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Buy / Sell</th>
-                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
-                    <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
-                    <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((request) => {
-                    const currentStatus = normalizeRequestStatus(request.status);
-                    return (
-                      <tr key={request.id} className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors">
-                        <td className="py-3 px-4">
-                          <p className="font-serif">{request.perfumeName}</p>
-                          {request.brand && <p className="text-[10px] text-[var(--text-muted)]">{request.brand}</p>}
-                          {request.notes && <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 italic">{request.notes}</p>}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${request.type === "full_bottle" ? "bg-[rgba(139,92,246,0.1)] text-purple-400" : "bg-[var(--gold-tint)] text-[var(--gold)]"}`}>
-                            {request.type === "full_bottle" ? "Full Bottle" : "Decant"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="text-sm">{request.userName}</p>
-                          <p className="text-[10px] text-[var(--text-muted)]">{request.userEmail}</p>
-                          <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Qty: {request.quantity}{request.ml ? ` · ${request.ml}ml` : ""}</p>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {requestEditingId === request.id ? (
-                            <div className="flex flex-col gap-1.5 items-end">
-                              <input
-                                type="number"
-                                min="0"
-                                value={requestBuyingPrice}
-                                onChange={(e) => setRequestBuyingPrice(e.target.value)}
-                                className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
-                                placeholder="Buy"
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                value={requestSellingPrice}
-                                onChange={(e) => setRequestSellingPrice(e.target.value)}
-                                className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
-                                placeholder="Sell"
-                              />
-                              <div className="flex gap-1">
-                                <button onClick={() => saveRequestPrices(request.id)} disabled={savingRequestPrices} className="px-2 py-0.5 text-[9px] uppercase bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-hover)] disabled:opacity-50">Save</button>
-                                <button onClick={() => setRequestEditingId(null)} className="px-2 py-0.5 text-[9px] uppercase border border-[var(--border)] rounded hover:border-[var(--gold)]">Cancel</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="font-mono text-xs">
-                              <span className="text-[var(--text-muted)]">{request.buyingPrice ?? 0}</span>
-                              <span className="text-[var(--text-muted)] mx-1">/</span>
-                              <span>{request.sellingPrice ?? 0}</span>
-                              {(currentStatus === "Pending" || currentStatus === "Confirmed") && (
-                                <button
-                                  onClick={() => {
-                                    setRequestEditingId(request.id);
-                                    setRequestBuyingPrice(String(request.buyingPrice ?? ""));
-                                    setRequestSellingPrice(String(request.sellingPrice ?? ""));
-                                  }}
-                                  className="ml-1.5 text-[9px] text-[var(--gold)] hover:underline"
-                                >
-                                  edit
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono">
-                          {request.profit != null ? (
-                            <span className={request.profit >= 0 ? "text-green-400" : "text-red-400"}>{request.profit >= 0 ? "+" : ""}{request.profit}</span>
-                          ) : request.buyingPrice != null && request.sellingPrice != null ? (
-                            <span className="text-[var(--text-muted)] text-[10px]">~{(request.sellingPrice ?? 0) - (request.buyingPrice ?? 0)}</span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>{currentStatus}</span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <select
-                            value={currentStatus}
-                            onChange={(e) => queueStatusChange({
-                              id: request.id,
-                              kind: "request",
-                              targetName: request.userName,
-                              fromStatus: currentStatus,
-                              toStatus: e.target.value,
-                            })}
-                            className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
-                          >
-                            {requestStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
 
       <div className={activeTab === "procurement" ? "space-y-4" : "hidden"}>
         <div className="flex items-center justify-between">

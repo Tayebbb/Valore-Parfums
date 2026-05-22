@@ -8,6 +8,7 @@ import type { OwnerType } from "@/lib/utils";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, toMinorUnits } from "@/lib/finance";
 import {
   generateOrderCancelledEmail,
+  generateOrderConfirmationEmail,
   generateOrderConfirmedEmail,
   generateOrderDeliveredEmail,
   generateOrderDispatchedEmail,
@@ -16,12 +17,16 @@ import {
   sendEmail,
 } from "@/lib/email";
 import { validateString } from "@/lib/validation";
-
-function normalizeOrderStatus(status?: string): string {
-  if (!status) return "Pending";
-  if (status === "Completed") return "Dispatched";
-  return status;
-}
+import {
+  STATUS_CONFIG,
+  getDbValueForStatusKey,
+  isStatusAllowedForFulfillment,
+  isValidTransition,
+  normalizePickupMethod,
+  normalizeOrderStatus,
+  normalizeOrderStatusKey,
+  resolveStatusKey,
+} from "@/lib/orderStatusConfig";
 
 function hasPaidLikeStatus(status?: string): boolean {
   const normalized = String(status || "").trim().toLowerCase();
@@ -49,6 +54,22 @@ function isOrderPaymentReceived(orderData: Record<string, unknown>, statusHint?:
   const hasBankTxn = Boolean(String(bankPayment?.transactionNumber || "").trim());
 
   return hasBkashTxn || hasBankTxn || hasPaidLikeStatus(String(orderData.status || "")) || hasPaidLikeStatus(statusHint);
+}
+
+type EmailPayload = Parameters<typeof sendEmail>[0];
+
+async function sendEmailOrThrow(
+  orderId: string,
+  templateName: string,
+  customerEmail: string,
+  emailPayload: EmailPayload,
+): Promise<void> {
+  console.log(`[EMAIL] Sending ${templateName} to ${customerEmail}`);
+  const result = await sendEmail(emailPayload);
+  if (!result.success) {
+    console.error(`[EMAIL ERROR] Failed for ${orderId}:`, result.error || "Unknown error");
+    throw new Error(result.error || "Email send failed");
+  }
 }
 
 // GET single order by ID (replaces prisma.order.findUnique with include: items)
@@ -107,19 +128,54 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const order = orderDoc.exists ? (orderDoc.data() as any) : null;
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const previousStatus = normalizeOrderStatus(order.status || "Pending");
+  const previousStatusDb = normalizeOrderStatus(order.status || "Pending", order.pickupMethod);
+  const previousStatusKey = normalizeOrderStatusKey(order.status || "Pending", order.pickupMethod);
   const requestedStatus = typeof orderPatch.status === "string" ? String(orderPatch.status).trim() : undefined;
-  const mappedStatus = requestedStatus === "Processing"
-    ? "Confirmed"
-    : requestedStatus === "Ready"
-      ? "Out for Delivery"
-      : requestedStatus;
-  const newStatus = mappedStatus ? normalizeOrderStatus(mappedStatus) : undefined;
-  if (newStatus && newStatus !== requestedStatus) {
-    orderPatch.status = newStatus;
+  const pickupMethod = normalizePickupMethod(
+    typeof orderPatch.pickupMethod === "string"
+      ? String(orderPatch.pickupMethod).trim()
+      : String(order.pickupMethod || "Delivery").trim(),
+  );
+
+  let newStatusKey: ReturnType<typeof resolveStatusKey> = null;
+  let newStatusDb: string | undefined;
+  let statusChanged = false;
+
+  if (requestedStatus) {
+    newStatusKey = resolveStatusKey(requestedStatus, pickupMethod);
+    if (!newStatusKey) {
+      console.log(`[ORDER] ${id} invalid status: ${requestedStatus}`);
+      return NextResponse.json({ error: `Invalid status: ${requestedStatus}` }, { status: 400 });
+    }
+
+    if (!isStatusAllowedForFulfillment(newStatusKey, pickupMethod)) {
+      console.log(`[ORDER] ${id} invalid status for fulfillment ${pickupMethod}: ${requestedStatus}`);
+      return NextResponse.json(
+        { error: `Status ${requestedStatus} is invalid for ${pickupMethod} orders` },
+        { status: 400 },
+      );
+    }
+
+    newStatusDb = getDbValueForStatusKey(newStatusKey);
+
+    if (previousStatusKey === newStatusKey) {
+      console.log(`[ORDER] ${id} status unchanged (${previousStatusDb}); skipping status update`);
+      delete orderPatch.status;
+    } else {
+      if (!isValidTransition(previousStatusDb, newStatusDb, pickupMethod)) {
+        console.log(`[ORDER] ${id} invalid transition: ${previousStatusDb} → ${newStatusDb}`);
+        return NextResponse.json(
+          { error: `Invalid status transition from ${previousStatusDb} to ${newStatusDb}` },
+          { status: 400 },
+        );
+      }
+      orderPatch.status = newStatusDb;
+      statusChanged = true;
+      console.log(`[ORDER] ${id} status: ${previousStatusDb} → ${newStatusDb}`);
+    }
   }
 
-  if (newStatus === "Cancelled") {
+  if (statusChanged && newStatusKey === "cancelled") {
     const reasonValidation = validateString(orderPatch.cancelReason, "cancelReason", {
       minLength: 5,
       maxLength: 500,
@@ -146,8 +202,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
   const immutableFinancialStatuses = new Set(["Dispatched", "Delivered", "Cancelled"]);
 
-  if (immutableFinancialStatuses.has(previousStatus) && (Boolean(removeVoucher) || (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0))) {
-    return NextResponse.json({ error: `Financial fields are locked for ${previousStatus} orders` }, { status: 409 });
+  if (immutableFinancialStatuses.has(previousStatusDb) && (Boolean(removeVoucher) || (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0))) {
+    return NextResponse.json({ error: `Financial fields are locked for ${previousStatusDb} orders` }, { status: 409 });
   }
   const now = Timestamp.now();
 
@@ -412,7 +468,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   // ── Credit profit when status changes to "Dispatched" (only if not already dispatched) ──
-  if (newStatus === "Dispatched" && previousStatus !== "Dispatched") {
+  if (newStatusDb === "Dispatched" && previousStatusDb !== "Dispatched") {
     const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
 
     const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
@@ -513,7 +569,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   // ── Reverse profit & restore stock when cancelling a Completed order ──
-  if (newStatus === "Cancelled" && previousStatus !== "Cancelled") {
+  if (newStatusDb === "Cancelled" && previousStatusDb !== "Cancelled") {
     const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
 
     // Restore stock regardless of previous status
@@ -533,7 +589,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // Only reverse profit if profit was previously credited (order was Dispatched)
-    if (previousStatus === "Dispatched") {
+    if (previousStatusDb === "Dispatched") {
       const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -636,7 +692,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   delete orderPatchWithoutComputed.removeVoucher;
 
   if (Object.keys(orderPatchWithoutComputed).length > 0) {
-    if (immutableFinancialStatuses.has(previousStatus)) {
+    if (immutableFinancialStatuses.has(previousStatusDb)) {
       delete orderPatchWithoutComputed.discount;
       delete orderPatchWithoutComputed.subtotal;
       delete orderPatchWithoutComputed.total;
@@ -647,7 +703,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     await db.collection(Collections.orders).doc(id).update({
       ...orderPatchWithoutComputed,
-      financialsLocked: immutableFinancialStatuses.has(String(orderPatchWithoutComputed.status || previousStatus)),
+      financialsLocked: immutableFinancialStatuses.has(String(orderPatchWithoutComputed.status || previousStatusDb)),
       updatedAt: Timestamp.now(),
     });
   }
@@ -669,120 +725,190 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   });
 
   const customerEmail = String(updatedData.customerEmail || "").trim();
+  const isPickupOrder = normalizePickupMethod(updatedData.pickupMethod) === "Pickup";
+  const pickupLocationId = String(updatedData.pickupLocationId || "").trim();
+  let pickupLocationName = String(updatedData.pickupLocationName || "").trim();
+  let pickupLocationAddress = String(updatedData.pickupLocationAddress || "").trim();
 
-  // Send updated pickup confirmation email when admin sets/updates estimatedPrepTime on a pickup order
-  const prepTimeUpdated = typeof orderPatch.estimatedPrepTime === "string" && String(orderPatch.estimatedPrepTime).trim().length > 0;
-  if (customerEmail && prepTimeUpdated && String(updatedData.pickupMethod || "") === "Pickup") {
-    const pickupContactNumber = String(updatedData.pickupContactNumber || "").trim();
-    const estimatedPrepTime = String(updatedData.estimatedPrepTime || "").trim();
-    if (pickupContactNumber && estimatedPrepTime) {
-      void sendEmail(
-        generatePickupConfirmationEmail({
-          orderId: id,
-          customerName: String(updatedData.customerName || "Customer"),
-          customerEmail,
-          items: emailItems,
-          total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
-          pickupContactNumber,
-          estimatedPrepTime,
-          pickupLocationName: String(updatedData.pickupLocationName || ""),
-          pickupLocationAddress: String(updatedData.pickupLocationAddress || ""),
-        }),
-      ).catch((error) => {
-        console.error("Failed to send pickup confirmation email:", error);
-      });
+  if (isPickupOrder && pickupLocationId && (!pickupLocationName || !pickupLocationAddress)) {
+    const pickupLocDoc = await db.collection(Collections.pickupLocations).doc(pickupLocationId).get();
+    if (pickupLocDoc.exists) {
+      const pickupData = pickupLocDoc.data() || {};
+      pickupLocationName = pickupLocationName || String(pickupData.name || "").trim();
+      pickupLocationAddress = pickupLocationAddress || String(pickupData.address || "").trim();
     }
   }
 
-  if (customerEmail && (newStatus === "Confirmed" || newStatus === "Paid") && previousStatus !== newStatus) {
-    void sendEmail(
-      generateOrderConfirmedEmail({
-        customerName: String(updatedData.customerName || "Customer"),
-        customerEmail,
-        orderId: id,
-        items: emailItems,
-        total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
-      }),
-    ).catch((error) => {
-      console.error("Failed to send confirmation email:", error);
-    });
+  // Send updated pickup confirmation email when admin sets/updates estimatedPrepTime on a pickup order
+  const prepTimeUpdated = typeof orderPatch.estimatedPrepTime === "string" && String(orderPatch.estimatedPrepTime).trim().length > 0;
+  if (prepTimeUpdated && isPickupOrder) {
+    const pickupContactNumber = String(updatedData.pickupContactNumber || "").trim();
+    const estimatedPrepTime = String(updatedData.estimatedPrepTime || "").trim();
+    if (!customerEmail) {
+      console.log(`[EMAIL] Skipping pickup confirmation for ${id}: missing customer email`);
+    } else if (!pickupContactNumber || !estimatedPrepTime) {
+      console.log(`[EMAIL] Skipping pickup confirmation for ${id}: missing pickup details`);
+    } else {
+      try {
+        await sendEmailOrThrow(
+          id,
+          "generatePickupConfirmationEmail",
+          customerEmail,
+          generatePickupConfirmationEmail({
+            orderId: id,
+            customerName: String(updatedData.customerName || "Customer"),
+            customerEmail,
+            items: emailItems,
+            total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+            pickupContactNumber,
+            estimatedPrepTime,
+            pickupLocationName,
+            pickupLocationAddress,
+          }),
+        );
+      } catch (error) {
+        console.error(`[EMAIL ERROR] Failed for ${id}:`, error);
+        return NextResponse.json(
+          { error: "Failed to send pickup confirmation email" },
+          { status: 500 },
+        );
+      }
+    }
   }
 
-  const isPickupOrder = String(updatedData.pickupMethod || "") === "Pickup";
-
-  const isPickupReadyStatus = newStatus === "Ready for Pickup" || (newStatus === "Out for Delivery" && isPickupOrder);
-
-  if (customerEmail && isPickupReadyStatus && previousStatus !== newStatus && isPickupOrder) {
-    void sendEmail(
-      generatePickupReadyEmail({
-        customerName: String(updatedData.customerName || "Customer"),
-        customerEmail,
-        orderId: id,
-        items: emailItems,
-        pickupContactNumber: String(updatedData.pickupContactNumber || "").trim(),
-        pickupLocationName: String(updatedData.pickupLocationName || ""),
-        pickupLocationAddress: String(updatedData.pickupLocationAddress || ""),
-      }),
-    ).catch((error) => {
-      console.error("Failed to send pickup ready email:", error);
-    });
-  }
-
-  if (customerEmail && ["Shipped", "Dispatched", "Out for Delivery"].includes(String(newStatus || "")) && previousStatus !== newStatus && !isPickupOrder) {
-    void sendEmail(
-      generateOrderDispatchedEmail({
-        customerName: String(updatedData.customerName || "Customer"),
-        customerEmail,
-        orderId: id,
-        items: emailItems,
-        trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
-        estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
-      }),
-    ).catch((error) => {
-      console.error("Failed to send shipment email:", error);
-    });
-  }
-
-  if (customerEmail && newStatus === "Delivered" && previousStatus !== newStatus) {
-    void sendEmail(
-      generateOrderDeliveredEmail({
-        customerName: String(updatedData.customerName || "Customer"),
-        customerEmail,
-        orderId: id,
-        items: emailItems,
-      }),
-    ).catch((error) => {
-      console.error("Failed to send delivered email:", error);
-    });
-  }
-
-  if (customerEmail && newStatus === "Cancelled" && previousStatus !== newStatus) {
-    const wasPaid = isOrderPaymentReceived(updatedData as Record<string, unknown>, previousStatus);
-    const cancelledItems = items.map((item) => {
-      const row = item as Record<string, unknown>;
-      const quantity = Number(row.quantity || 0);
-      const unitPrice = Number(row.unitPrice || 0);
-      return {
-        perfumeName: String(row.perfumeName || "Perfume"),
-        quantity,
-        ml: Number(row.ml || 0),
-        totalPrice: Number(row.totalPrice || quantity * unitPrice),
-      };
-    });
-
-    void sendEmail(
-      generateOrderCancelledEmail({
-        customerName: String(updatedData.customerName || "Customer"),
-        customerEmail,
-        orderId: id,
-        cancelReason: String(updatedData.cancelReason || "Order cancelled by admin").trim(),
-        refundAmount: wasPaid ? Number(updatedData.refundAmount || updatedData.total || 0) : 0,
-        isPaid: wasPaid,
-        items: cancelledItems,
-      }),
-    ).catch((error) => {
-      console.error("Failed to send cancellation email:", error);
-    });
+  if (statusChanged && newStatusKey) {
+    const templateKey = STATUS_CONFIG[newStatusKey]?.emailTemplate;
+    if (!templateKey) {
+      console.log(`[EMAIL] Missing template mapping for status ${newStatusKey}`);
+    } else if (!customerEmail) {
+      console.log(`[EMAIL] Skipping ${templateKey} for ${id}: missing customer email`);
+    } else {
+      try {
+        switch (templateKey) {
+          case "orderPlaced":
+            await sendEmailOrThrow(
+              id,
+              "generateOrderConfirmationEmail",
+              customerEmail,
+              generateOrderConfirmationEmail({
+                orderId: id,
+                customerName: String(updatedData.customerName || "Customer"),
+                customerEmail,
+                items: emailItems,
+                subtotal: Number(updatedData.subtotal ?? 0),
+                discount: Number(updatedData.discount ?? 0),
+                deliveryFee: Number(updatedData.deliveryFee ?? 0),
+                total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+                paymentMethod: String(updatedData.paymentMethod || "Cash on Delivery"),
+              }),
+            );
+            break;
+          case "orderConfirmed":
+            await sendEmailOrThrow(
+              id,
+              "generateOrderConfirmedEmail",
+              customerEmail,
+              generateOrderConfirmedEmail({
+                customerName: String(updatedData.customerName || "Customer"),
+                customerEmail,
+                orderId: id,
+                items: emailItems,
+                total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+              }),
+            );
+            break;
+          case "readyForPickup":
+            if (!isPickupOrder) {
+              console.log(`[EMAIL] Skipping ready-for-pickup email for ${id}: delivery order`);
+              break;
+            }
+            await sendEmailOrThrow(
+              id,
+              "generatePickupReadyEmail",
+              customerEmail,
+              generatePickupReadyEmail({
+                customerName: String(updatedData.customerName || "Customer"),
+                customerEmail,
+                orderId: id,
+                items: emailItems,
+                pickupContactNumber: String(updatedData.pickupContactNumber || "").trim(),
+                pickupLocationName,
+                pickupLocationAddress,
+              }),
+            );
+            break;
+          case "outForDelivery":
+            if (isPickupOrder) {
+              console.log(`[EMAIL] Skipping out-for-delivery email for ${id}: pickup order`);
+              break;
+            }
+            await sendEmailOrThrow(
+              id,
+              "generateOrderDispatchedEmail",
+              customerEmail,
+              generateOrderDispatchedEmail({
+                customerName: String(updatedData.customerName || "Customer"),
+                customerEmail,
+                orderId: id,
+                items: emailItems,
+                trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
+                estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
+              }),
+            );
+            break;
+          case "completed":
+            await sendEmailOrThrow(
+              id,
+              "generateOrderDeliveredEmail",
+              customerEmail,
+              generateOrderDeliveredEmail({
+                customerName: String(updatedData.customerName || "Customer"),
+                customerEmail,
+                orderId: id,
+                items: emailItems,
+              }),
+            );
+            break;
+          case "cancelled": {
+            const wasPaid = isOrderPaymentReceived(updatedData as Record<string, unknown>, previousStatusDb);
+            const cancelledItems = items.map((item) => {
+              const row = item as Record<string, unknown>;
+              const quantity = Number(row.quantity || 0);
+              const unitPrice = Number(row.unitPrice || 0);
+              return {
+                perfumeName: String(row.perfumeName || "Perfume"),
+                quantity,
+                ml: Number(row.ml || 0),
+                totalPrice: Number(row.totalPrice || quantity * unitPrice),
+              };
+            });
+            await sendEmailOrThrow(
+              id,
+              "generateOrderCancelledEmail",
+              customerEmail,
+              generateOrderCancelledEmail({
+                customerName: String(updatedData.customerName || "Customer"),
+                customerEmail,
+                orderId: id,
+                cancelReason: String(updatedData.cancelReason || "Order cancelled by admin").trim(),
+                refundAmount: wasPaid ? Number(updatedData.refundAmount || updatedData.total || 0) : 0,
+                isPaid: wasPaid,
+                items: cancelledItems,
+              }),
+            );
+            break;
+          }
+          default:
+            console.log(`[EMAIL] Missing template mapping for status ${newStatusKey}`);
+        }
+      } catch (error) {
+        console.error(`[EMAIL ERROR] Failed for ${id}:`, error);
+        return NextResponse.json(
+          { error: `Failed to send ${templateKey} email` },
+          { status: 500 },
+        );
+      }
+    }
   }
 
   return NextResponse.json(serializeDoc({

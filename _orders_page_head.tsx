@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/Toaster";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
+import {
+  ADMIN_STATUS_ORDER,
+  getStatusLabel,
+  getStatusLabelFromValue,
+  isStatusAllowedForFulfillment,
+} from "@/lib/orderStatusConfig";
 
 interface OrderItem {
   id: string;
@@ -87,15 +93,18 @@ interface StockRequest {
   createdAt: string;
 }
 
-const statuses = [
-  "Pending",
-  "Pending Bkash Verification",
-  "Pending Bank Verification",
-  "Processing",
-  "Out for Delivery",
-  "Completed",
-  "Cancelled",
-];
+const getAdminStatusOptions = (pickupMethod?: string): string[] => {
+  if (!pickupMethod) {
+    return ADMIN_STATUS_ORDER.map((key) => getStatusLabel(key, "admin"));
+  }
+
+  return ADMIN_STATUS_ORDER
+    .filter((key) => isStatusAllowedForFulfillment(key, pickupMethod))
+    .map((key) => getStatusLabel(key, "admin"));
+};
+
+const cancelledStatusLabel = getStatusLabel("cancelled", "admin");
+const pendingBankStatusLabel = getStatusLabel("pending_bank_verification", "admin");
 const requestStatuses = ["Pending", "Confirmed", "Dispatched", "Cancelled"];
 const procurementStatuses = ["Pending", "Sourcing", "Ready", "Dispatched", "Cancelled"];
 const cancellationReasonOptions = [
@@ -126,15 +135,8 @@ interface PendingStatusChange {
   cancellationNote?: string;
 }
 
-const normalizeStatus = (status?: string) => {
-  if (!status) return "Pending";
-  if (status === "Confirmed" || status === "Ready" || status === "Approved" || status === "Sourcing") return "Processing";
-  if (status === "Dispatched" || status === "Fulfilled") return "Completed";
-  if (status === "Declined") return "Cancelled";
-  return status;
-};
-
-const getOrderStatusLabel = (status: string) => (status === "Processing" ? "Confirmed" : status);
+const getAdminStatusLabel = (status?: string, pickupMethod?: string) =>
+  getStatusLabelFromValue(status, pickupMethod, "admin");
 
 const getOrderSizeType = (order: Order): Exclude<SizeTypeFilter, "all"> => {
   const hasFullBottle = order.items?.some((i) => Boolean(i.isFullBottle)) ?? false;
@@ -173,7 +175,7 @@ const getStatusOptionsForOrder = (order: Order): string[] => {
   const kind = getEntryKind(order);
   if (kind === "request") return requestStatuses;
   if (kind === "procurement") return procurementStatuses;
-  return statuses;
+  return getAdminStatusOptions(order.pickupMethod);
 };
 
 const normalizeRequestStatus = (status?: string) => {
@@ -259,13 +261,13 @@ export default function OrdersPage() {
   };
 
   const showPendingBankPayments = () => {
-    setStatusFilter((prev) => (prev === "Pending Bank Verification" ? "" : "Pending Bank Verification"));
+    setStatusFilter((prev) => (prev === pendingBankStatusLabel ? "" : pendingBankStatusLabel));
     setSortBy("newest");
   };
 
   const updateStatus = async (id: string, status: string, cancelReason?: string, cancellationNoteVal?: string) => {
     const payload: { status: string; cancelReason?: string; cancellationNote?: string } = { status };
-    if (status === "Cancelled") {
+    if (status === cancelledStatusLabel) {
       const selectedReason = String(cancelReason || "").trim();
       payload.cancelReason = selectedReason.length >= 5 ? selectedReason.slice(0, 500) : "Cancelled by admin";
       const note = String(cancellationNoteVal || "").trim();
@@ -518,7 +520,7 @@ export default function OrdersPage() {
   const queueStatusChange = async (change: PendingStatusChange) => {
     if (change.fromStatus === change.toStatus) return false;
     if (change.kind === "order") {
-      if (change.toStatus === "Cancelled" && !change.cancelReason) {
+      if (change.toStatus === cancelledStatusLabel && !change.cancelReason) {
         setPendingCancellationChange(change);
         setSelectedCancellationReason("");
         setCustomCancellationReason("");
@@ -571,7 +573,9 @@ export default function OrdersPage() {
   };
 
   const filtered = useMemo(() => {
-    const byStatus = statusFilter ? orders.filter((o) => normalizeStatus(o.status) === statusFilter) : orders;
+    const byStatus = statusFilter
+      ? orders.filter((o) => getAdminStatusLabel(o.status, o.pickupMethod) === statusFilter)
+      : orders;
     const bySize = sizeTypeFilter === "all"
       ? byStatus
       : byStatus.filter((o) => getOrderSizeType(o) === sizeTypeFilter);
@@ -668,12 +672,12 @@ export default function OrdersPage() {
           <button
             onClick={showPendingBankPayments}
             className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded transition-colors ${
-              statusFilter === "Pending Bank Verification"
+              statusFilter === pendingBankStatusLabel
                 ? "bg-[rgb(59,130,246)] text-white"
                 : "border border-[rgba(59,130,246,0.45)] text-[rgb(96,165,250)] hover:bg-[rgba(59,130,246,0.12)]"
             }`}
           >
-            Pending Bank Payments ({orders.filter((o) => o.status === "Pending Bank Verification").length})
+            Pending Bank Payments ({orders.filter((o) => getAdminStatusLabel(o.status, o.pickupMethod) === pendingBankStatusLabel).length})
           </button>
         </div>
 
@@ -688,8 +692,8 @@ export default function OrdersPage() {
           >
             All ({orders.length})
           </button>
-          {statuses.map((s) => {
-            const count = orders.filter((o) => normalizeStatus(o.status) === s).length;
+          {getAdminStatusOptions().map((s) => {
+            const count = orders.filter((o) => getAdminStatusLabel(o.status, o.pickupMethod) === s).length;
             return (
               <button
                 key={s}
@@ -700,7 +704,7 @@ export default function OrdersPage() {
                     : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
                 }`}
               >
-                {getOrderStatusLabel(s)} ({count})
+                {s} ({count})
               </button>
             );
           })}
@@ -811,7 +815,7 @@ export default function OrdersPage() {
           <div className="space-y-3 md:hidden">
             {filtered.map((o) => {
               const orderType = getOrderSizeType(o);
-              const currentStatus = normalizeStatus(o.status);
+              const currentStatus = getAdminStatusLabel(o.status, o.pickupMethod);
               const voucherPending = hasPendingVoucherForFullBottle(o);
               const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
               const orderTypeClass = orderType === "full-bottle"
@@ -884,7 +888,7 @@ export default function OrdersPage() {
                       <p className="text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</p>
                     </div>
                     <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
-                      {getOrderStatusLabel(currentStatus)}
+                      {currentStatus}
                     </span>
                   </div>
 
@@ -933,7 +937,7 @@ export default function OrdersPage() {
               <tbody>
                 {filtered.map((o) => {
                   const orderType = getOrderSizeType(o);
-                  const currentStatus = normalizeStatus(o.status);
+                  const currentStatus = getAdminStatusLabel(o.status, o.pickupMethod);
                   const voucherPending = hasPendingVoucherForFullBottle(o);
                   const orderTypeLabel = orderType === "full-bottle" ? "Full Bottle" : orderType === "mixed" ? "Mixed" : "Decant";
                   const orderTypeClass = orderType === "full-bottle"
@@ -988,7 +992,7 @@ export default function OrdersPage() {
                       <td className="py-3 px-4 text-right font-serif text-[var(--success)]">{fmt(o.profit ?? 0)}</td>
                       <td className="py-3 px-4 text-center">
                         <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${statusClass(currentStatus)}`}>
-                          {getOrderStatusLabel(currentStatus)}
+                          {currentStatus}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">{new Date(o.createdAt).toLocaleDateString()}</td>
@@ -1176,7 +1180,7 @@ export default function OrdersPage() {
                     <span className="text-[var(--text-muted)]">Notes</span>
                     <span className="text-right">{selectedOrder.bankPayment.notes || "-"}</span>
                   </div>
-                  {selectedOrder.status === "Pending Bank Verification" && (
+                  {getAdminStatusLabel(selectedOrder.status, selectedOrder.pickupMethod) === pendingBankStatusLabel && (
                     <div className="pt-2">
                       <button
                         onClick={verifyBankAndMarkPaid}

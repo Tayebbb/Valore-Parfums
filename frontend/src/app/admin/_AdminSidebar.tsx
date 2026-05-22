@@ -15,6 +15,7 @@ import {
   BarChart3,
   Bell,
   MapPin,
+  Inbox,
   Menu,
   X,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/admin/decant-sizes", label: "Decant Sizes", icon: FlaskConical },
   { href: "/admin/bottles", label: "Bottles", icon: Wine },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/requests", label: "Requests", icon: Inbox },
   { href: "/admin/vouchers", label: "Vouchers", icon: Tag },
   { href: "/admin/pickup-locations", label: "Pickup Locations", icon: MapPin },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },

@@ -6,6 +6,13 @@ import Image from "next/image";
 import { Package, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
+import {
+  getProgressSteps,
+  getStatusLabelFromValue,
+  isTerminalStatus,
+  mapDbStatusToTrackStep,
+  normalizeOrderStatusKey,
+} from "@/lib/orderStatusConfig";
 
 interface OrderResult {
   id: string;
@@ -44,29 +51,6 @@ interface OrderResult {
   }[];
 }
 
-const standardStatusSteps = ["Pending", "Processing", "Out for Delivery", "Completed"];
-const bkashStatusSteps = ["Pending Bkash Verification", "Processing", "Out for Delivery", "Completed"];
-const bankStatusSteps = ["Pending Bank Verification", "Paid", "Out for Delivery", "Completed"];
-const activeStatuses = new Set(["pending", "processing", "out for delivery", "pending bkash verification", "pending bank verification", "paid"]);
-const pastStatuses = new Set(["completed", "delivered", "cancelled"]);
-
-const normalizeTrackStatus = (status?: string) => {
-  if (!status) return "Pending";
-
-  const normalized = status.trim().toLowerCase();
-  if (normalized === "approved") return "Processing";
-  if (normalized === "confirmed" || normalized === "ready" || normalized === "dispatched" || normalized === "bkash paid") {
-    return "Processing";
-  }
-  if (normalized === "fulfilled" || normalized === "completed" || normalized === "delivered") return "Completed";
-  if (normalized === "declined") return "Cancelled";
-  if (normalized === "cancelled") return "Cancelled";
-  if (normalized === "pending bkash verification") return "Pending Bkash Verification";
-  if (normalized === "pending bank verification") return "Pending Bank Verification";
-  if (normalized === "out for delivery") return "Out for Delivery";
-  if (normalized === "paid") return "Paid";
-  return status;
-};
 
 const statusClass = (status: string) => {
   const normalized = (status ?? "").toLowerCase().replace(/\s+/g, "");
@@ -84,11 +68,9 @@ const resolveImageSrc = (value?: string) => {
   return `/${raw}`;
 };
 
-const statusIcon = (status: string) => {
-  const normalized = status.toLowerCase();
-  switch (normalized) {
+const statusIcon = (statusKey: string) => {
+  switch (statusKey) {
     case "completed":
-    case "delivered":
       return <CheckCircle size={18} />;
     case "cancelled":
       return <XCircle size={18} />;
@@ -179,24 +161,21 @@ export default function TrackOrderPage() {
   }, [user?.id]);
 
   const activeOrders = useMemo(
-    () => orders.filter((o) => activeStatuses.has(normalizeTrackStatus(o.status).toLowerCase())),
+    () => orders.filter((o) => !isTerminalStatus(o.status, o.pickupMethod)),
     [orders],
   );
 
   const pastOrders = useMemo(
-    () => orders.filter((o) => pastStatuses.has(normalizeTrackStatus(o.status).toLowerCase())),
+    () => orders.filter((o) => isTerminalStatus(o.status, o.pickupMethod)),
     [orders],
   );
 
   const renderOrderCard = (order: OrderResult, emphasize = false) => {
-    const displayStatus = normalizeTrackStatus(order.status);
-    const normalized = displayStatus.toLowerCase();
-    const statusSteps = order.paymentMethod === "Bkash Manual"
-      ? bkashStatusSteps
-      : order.paymentMethod === "Bank Manual"
-        ? bankStatusSteps
-        : standardStatusSteps;
-    const currentStep = statusSteps.findIndex((step) => step.toLowerCase() === normalized);
+    const statusKey = normalizeOrderStatusKey(order.status, order.pickupMethod);
+    const displayStatus = getStatusLabelFromValue(order.status, order.pickupMethod, "ui");
+    const statusSteps = getProgressSteps(order.pickupMethod, order.paymentMethod);
+    const currentStepLabel = mapDbStatusToTrackStep(order.status, order.pickupMethod, order.paymentMethod);
+    const currentStep = statusSteps.findIndex((step) => step.toLowerCase() === currentStepLabel.toLowerCase());
 
     return (
       <div
@@ -214,11 +193,11 @@ export default function TrackOrderPage() {
             </div>
           </div>
           <span className={`w-fit px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider inline-flex items-center gap-1.5 sm:self-auto self-start ${statusClass(displayStatus)}`}>
-            {statusIcon(displayStatus)} {displayStatus}
+            {statusIcon(statusKey)} {displayStatus}
           </span>
         </div>
 
-        {normalized !== "cancelled" && normalized !== "delivered" && (
+        {statusKey !== "cancelled" && statusKey !== "completed" && (
           <>
             <div className="hidden sm:flex items-center mt-2 mb-1">
               {statusSteps.map((step, i) => (
@@ -392,7 +371,7 @@ export default function TrackOrderPage() {
           <div className="rounded border border-[rgba(227,35,132,0.35)] bg-[rgba(227,35,132,0.08)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Payment</p>
             <p className="text-sm text-[var(--text-primary)] mt-1">bKash Manual</p>
-            {normalized === "pending bkash verification" ? (
+            {statusKey === "pending_bkash_verification" ? (
               <p className="text-xs text-[var(--warning)] mt-1">Pending payment confirmation by admin. Your order will be confirmed once your payment is verified.</p>
             ) : null}
             {order.bkashPayment?.transactionNumber ? (
@@ -405,7 +384,7 @@ export default function TrackOrderPage() {
           <div className="rounded border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.08)] px-3 py-2.5">
             <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Payment</p>
             <p className="text-sm text-[var(--text-primary)] mt-1">Bank Manual</p>
-            {normalized === "pending bank verification" ? (
+            {statusKey === "pending_bank_verification" ? (
               <p className="text-xs text-[var(--warning)] mt-1">Our team will verify your payment manually within 24-48 hours.</p>
             ) : null}
             {order.bankPayment?.transactionNumber ? (

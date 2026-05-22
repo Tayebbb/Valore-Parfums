@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 import { generateOrderCancelledEmail, sendEmail } from "@/lib/email";
 import { validateString } from "@/lib/validation";
+import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
 
 function hasPaidLikeStatus(status?: string): boolean {
   const normalized = String(status || "").trim().toLowerCase();
@@ -62,16 +63,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const order = orderDoc.data();
     const currentStatus = order?.status || "Pending";
+    const normalizedCurrentStatus = normalizeOrderStatus(currentStatus, order?.pickupMethod);
 
-    // Cannot cancel already shipped or delivered orders
-    if (["Shipped", "Delivered", "Cancelled"].includes(currentStatus)) {
+    // Enforce transition validation using centralized config
+    if (!isValidTransition(normalizedCurrentStatus, "Cancelled")) {
       return NextResponse.json(
         {
-          error: `Cannot cancel order with status: ${currentStatus}`,
+          error: `Cannot cancel order with status: ${normalizedCurrentStatus}`,
         },
         { status: 400 },
       );
     }
+
+    console.log(`[ORDER] ${id} status: ${normalizedCurrentStatus} → Cancelled`);
 
     const now = Timestamp.now();
     const itemsSnap = await db
@@ -183,11 +187,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Send cancellation email
     let emailSent = false;
-    try {
-      const customerEmail = String(order?.customerEmail || "").trim();
-      if (customerEmail) {
-        const wasPaid = isOrderPaymentReceived((order || {}) as Record<string, unknown>);
-        await sendEmail(
+    let emailError: string | null = null;
+    const customerEmail = String(order?.customerEmail || "").trim();
+    if (!customerEmail) {
+      console.log(`[EMAIL] Skipping cancellation email for ${id}: missing customer email`);
+    } else {
+      const wasPaid = isOrderPaymentReceived((order || {}) as Record<string, unknown>);
+      console.log(`[EMAIL] Sending generateOrderCancelledEmail to ${customerEmail}`);
+      try {
+        const result = await sendEmail(
           generateOrderCancelledEmail({
             orderId: id,
             customerName: String(order?.customerName || "Customer"),
@@ -198,10 +206,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             items: cancelledItems,
           }),
         );
-        emailSent = true;
+        if (!result.success) {
+          emailError = result.error || "Unknown error";
+          console.error(`[EMAIL ERROR] Failed for ${id}:`, emailError);
+        } else {
+          emailSent = true;
+        }
+      } catch (error) {
+        emailError = error instanceof Error ? error.message : "Unknown error";
+        console.error(`[EMAIL ERROR] Failed for ${id}:`, error);
       }
-    } catch (error) {
-      console.error("Failed to send cancellation email:", error);
     }
 
     // Create admin notification
@@ -212,6 +226,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       sortOrder: Date.now(),
       createdAt: now,
     });
+
+    if (emailError) {
+      return NextResponse.json(
+        { error: "Failed to send cancellation email", details: emailError },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json(
       serializeDoc({

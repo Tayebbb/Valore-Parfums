@@ -3,6 +3,7 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 import { generateOrderConfirmedEmail, sendEmail } from "@/lib/email";
+import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
@@ -19,6 +20,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const orderData = orderDoc.data() || {};
   const paymentMethod = String(orderData.paymentMethod || "Cash on Delivery");
   const currentStatus = String(orderData.status || "Pending");
+  const previousStatus = normalizeOrderStatus(currentStatus, orderData.pickupMethod);
 
   const now = Timestamp.now();
   const auditEntry = {
@@ -29,7 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     previousStatus: currentStatus,
   };
 
-  let nextStatus = currentStatus;
+  let nextStatus = previousStatus;
   const updatePayload: Record<string, unknown> = {
     updatedAt: now,
     paymentAudit: [...(Array.isArray(orderData.paymentAudit) ? orderData.paymentAudit : []), auditEntry],
@@ -65,6 +67,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "Order does not use manual payment" }, { status: 400 });
   }
 
+  if (previousStatus !== nextStatus) {
+    if (!isValidTransition(previousStatus, nextStatus)) {
+      return NextResponse.json(
+        { error: `Invalid status transition from ${previousStatus} to ${nextStatus}` },
+        { status: 400 }
+      );
+    }
+    console.log(`[ORDER] ${id} status: ${previousStatus} → ${nextStatus}`);
+  }
+
   await orderRef.update(updatePayload);
 
   const [updatedOrderDoc, itemsSnap] = await Promise.all([
@@ -84,18 +96,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const updatedData = updatedOrderDoc.data() || {};
 
   const customerEmail = String(updatedData.customerEmail || "").trim();
-  if (customerEmail) {
-    void sendEmail(
-      generateOrderConfirmedEmail({
-        customerName: String(updatedData.customerName || "Customer"),
-        customerEmail,
-        orderId: id,
-        items: emailItems,
-        total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
-      }),
-    ).catch((error) => {
-      console.error("Failed to send payment verification email:", error);
-    });
+  if (!customerEmail) {
+    console.log(`[EMAIL] Skipping order confirmed email for ${id}: missing customer email`);
+  } else {
+    console.log(`[EMAIL] Sending generateOrderConfirmedEmail to ${customerEmail}`);
+    try {
+      const result = await sendEmail(
+        generateOrderConfirmedEmail({
+          customerName: String(updatedData.customerName || "Customer"),
+          customerEmail,
+          orderId: id,
+          items: emailItems,
+          total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+        }),
+      );
+      if (!result.success) {
+        console.error(`[EMAIL ERROR] Failed for ${id}:`, result.error || "Unknown error");
+        return NextResponse.json({ error: "Failed to send order confirmed email" }, { status: 500 });
+      }
+    } catch (error) {
+      console.error(`[EMAIL ERROR] Failed for ${id}:`, error);
+      return NextResponse.json({ error: "Failed to send order confirmed email" }, { status: 500 });
+    }
   }
 
   return NextResponse.json(serializeDoc({

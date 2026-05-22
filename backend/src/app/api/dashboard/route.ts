@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
+import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
 
 // Helper: convert Firestore Timestamp to Date
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,17 +64,8 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
 
-  const normalizeOrderStatus = (status?: string) => {
-    if (!status) return "Pending";
-    if (status === "Completed") return "Dispatched";
-    if (status === "Approved") return "Confirmed";
-    if (status === "Fulfilled") return "Dispatched";
-    if (status === "Declined") return "Cancelled";
-    return status;
-  };
-
   // Aggregates (replaces prisma.order.count, prisma.order.aggregate)
-  const normalizedOrders = allOrders.map((order) => ({ ...order, normalizedStatus: normalizeOrderStatus(order.status) }));
+  const normalizedOrders = allOrders.map((order) => ({ ...order, normalizedStatus: normalizeOrderStatus(order.status, order.pickupMethod) }));
   const totalOrders = normalizedOrders.length;
   const completedOrders = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched").length;
   const pendingOrders = normalizedOrders.filter((o) => ["Pending", "Confirmed", "Sourcing", "Ready"].includes(o.normalizedStatus)).length;
