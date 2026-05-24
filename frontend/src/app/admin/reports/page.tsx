@@ -38,7 +38,7 @@ export default function ReportsPage() {
   const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard").then((r) => r.json()).then(setData);
+    fetch("/api/dashboard", { cache: "no-store" }).then((r) => r.json()).then(setData);
   }, []);
 
   const fmt = (n: number) => n.toLocaleString("en-BD");

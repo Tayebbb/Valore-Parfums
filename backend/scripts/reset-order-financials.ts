@@ -5,11 +5,36 @@
 //        npx tsx scripts/reset-order-financials.ts --apply  (save)
 // ────────────────────────────────────────────────────────
 
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { initializeApp, cert, getApps, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { config } from "dotenv";
 
-config({ path: ".env.local" });
+function loadEnvFile(filePath: string) {
+  if (!existsSync(filePath)) return;
+
+  const content = readFileSync(filePath, "utf8");
+  for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const equalsIndex = trimmed.indexOf("=");
+    if (equalsIndex <= 0) continue;
+
+    const key = trimmed.slice(0, equalsIndex).trim();
+    let value = trimmed.slice(equalsIndex + 1).trim();
+
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+
+    if (!(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile(resolve(process.cwd(), ".env.local"));
 
 const serviceAccount: ServiceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID!,

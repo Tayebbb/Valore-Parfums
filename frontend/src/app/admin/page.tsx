@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   const { user, loading: authLoading, fetchUser } = useAuth();
 
   const loadDashboard = () =>
-    fetch("/api/dashboard")
+    fetch("/api/dashboard", { cache: "no-store" })
       .then((r) => r.json())
       .then(setData);
 

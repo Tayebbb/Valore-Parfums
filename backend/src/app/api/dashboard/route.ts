@@ -280,5 +280,11 @@ export async function GET() {
       const e2 = settings?.owner2Email ?? "";
       return [buildBalance(o1, e1), buildBalance(o2, e2)];
     })(),
+  }, {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+    },
   });
 }
