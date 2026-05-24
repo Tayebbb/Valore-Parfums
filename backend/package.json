@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint",
-    "reset:order-financials": "tsx scripts/reset-order-financials.ts"
+    "reset:order-financials": "tsx scripts/reset-order-financials.ts",
+    "purge:orders": "tsx scripts/purge-orders.ts"
   },
   "dependencies": {
     "cloudinary": "^2.9.0",
