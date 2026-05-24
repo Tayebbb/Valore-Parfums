@@ -729,20 +729,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const pickupLocationId = String(updatedData.pickupLocationId || "").trim();
   let pickupLocationName = String(updatedData.pickupLocationName || "").trim();
   let pickupLocationAddress = String(updatedData.pickupLocationAddress || "").trim();
+  let pickupContactNumber = String(updatedData.pickupContactNumber || "").trim();
 
-  if (isPickupOrder && pickupLocationId && (!pickupLocationName || !pickupLocationAddress)) {
+  if (isPickupOrder && pickupLocationId && (!pickupLocationName || !pickupLocationAddress || !pickupContactNumber)) {
     const pickupLocDoc = await db.collection(Collections.pickupLocations).doc(pickupLocationId).get();
     if (pickupLocDoc.exists) {
       const pickupData = pickupLocDoc.data() || {};
       pickupLocationName = pickupLocationName || String(pickupData.name || "").trim();
       pickupLocationAddress = pickupLocationAddress || String(pickupData.address || "").trim();
+      pickupContactNumber = pickupContactNumber || String(pickupData.phone || pickupData.contactNumber || "").trim();
     }
   }
 
   // Send updated pickup confirmation email when admin sets/updates estimatedPrepTime on a pickup order
   const prepTimeUpdated = typeof orderPatch.estimatedPrepTime === "string" && String(orderPatch.estimatedPrepTime).trim().length > 0;
   if (prepTimeUpdated && isPickupOrder) {
-    const pickupContactNumber = String(updatedData.pickupContactNumber || "").trim();
     const estimatedPrepTime = String(updatedData.estimatedPrepTime || "").trim();
     if (!customerEmail) {
       console.log(`[EMAIL] Skipping pickup confirmation for ${id}: missing customer email`);
