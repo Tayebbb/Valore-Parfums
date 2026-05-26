@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db, Collections } from "@/lib/prisma";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
@@ -108,6 +109,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     await db.collection(Collections.perfumes).doc(id).update(updatePayload);
+    revalidateTag("perfumes");
+    revalidatePath("/shop");
     const doc = await db.collection(Collections.perfumes).doc(id).get();
     return NextResponse.json(serializePerfumeForApi({ id, ...(doc.data() || {}) }));
   } catch (error: unknown) {
@@ -122,5 +125,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   await db.collection(Collections.perfumes).doc(id).delete();
+  revalidateTag("perfumes");
+  revalidatePath("/shop");
   return NextResponse.json({ success: true });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
@@ -179,6 +180,8 @@ export async function POST(req: Request) {
     };
     await db.collection(Collections.perfumes).doc(id).set(data);
     perfumesCache.clear();
+    revalidateTag("perfumes");
+    revalidatePath("/shop");
     return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create perfume";

@@ -67,13 +67,31 @@ html.light {
 }
 
 /* ── Light Mode Sticky Bar Override ── */
-html.light .fixed.inset-x-0.bottom-0 {
+html.light .checkout-shell .fixed.inset-x-0.bottom-0 {
   background: rgba(255, 255, 255, 0.96) !important;
   border-color: rgba(95, 116, 137, 0.12) !important;
 }
 
 /* ── Checkout Light Mode Enhancements ── */
 html.light .checkout-shell {
+  --bg-base: #faf5ea;
+  --bg-surface: #f5eee2;
+  --bg-elevated: #f0e5d4;
+  --bg-card: #fcf8f0;
+  --bg-input: #fffdf8;
+
+  --foreground: #1f1b16;
+  --text-primary: #1f1b16;
+  --text-secondary: #4b4238;
+  --text-muted: #6c6054;
+
+  --border: rgba(95, 116, 137, 0.16);
+  --border-hover: rgba(95, 116, 137, 0.32);
+  --border-gold: rgba(95, 116, 137, 0.44);
+
+  --background: var(--bg-base);
+  --shadow-color: rgba(95, 116, 137, 0.08);
+
   background:
     radial-gradient(900px 420px at 5% -10%, rgba(95, 116, 137, 0.1), transparent 55%),
     radial-gradient(700px 340px at 95% 10%, rgba(124, 146, 168, 0.12), transparent 58%),
@@ -82,7 +100,7 @@ html.light .checkout-shell {
 
 html.light .checkout-shell .checkout-panel {
   border-color: rgba(95, 116, 137, 0.22) !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fffaf2 100%) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 240, 227, 0.96) 100%) !important;
   box-shadow:
     0 10px 22px rgba(95, 116, 137, 0.09),
     0 2px 6px rgba(0, 0, 0, 0.04);
@@ -90,13 +108,13 @@ html.light .checkout-shell .checkout-panel {
 
 html.light .checkout-shell .checkout-tab {
   border-color: rgba(95, 116, 137, 0.24) !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fff9ef 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 240, 227, 0.9) 100%);
   color: #5a4a2a;
 }
 
 html.light .checkout-shell .checkout-tab:hover {
   border-color: rgba(95, 116, 137, 0.48) !important;
-  background: #fff5e6;
+  background: #f6ead7;
 }
 
 @theme inline {

@@ -8,7 +8,7 @@ function ShopSkeleton() {
   return (
     <div className="px-4 sm:px-6 md:px-[5%] py-6 sm:py-8">
       <div className="flex gap-8">
-        <aside className="hidden lg:block w-64 flex-shrink-0">
+        <aside className="hidden lg:block w-64 shrink-0">
           <div className="skeleton h-96 rounded" />
         </aside>
         <div className="flex-1">
@@ -16,7 +16,7 @@ function ShopSkeleton() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             {[...Array(9)].map((_, i) => (
               <div key={i}>
-                <div className="skeleton aspect-[3/4] rounded" />
+                <div className="skeleton aspect-3/4 rounded" />
                 <div className="skeleton h-4 mt-3 rounded w-3/4" />
               </div>
             ))}
