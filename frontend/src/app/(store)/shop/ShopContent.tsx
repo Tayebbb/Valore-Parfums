@@ -9,6 +9,7 @@ import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin } from "@/lib/utils";
+import { PaginationNav } from "@/components/ui/PaginationNav";
 
 export interface Perfume {
   id: string;
@@ -74,13 +75,13 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
 
   return (
     <Link href={perfume.canonicalPath || buildCanonicalProductPath(perfume)}>
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group">
-        <div className="aspect-square bg-[var(--bg-surface)] relative img-zoom">
+      <div className="bg-card border border-border rounded overflow-hidden card-hover group">
+        <div className="aspect-square bg-surface relative img-zoom">
           {images[0] ? (
             <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="font-serif text-4xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
+              <span className="font-serif text-4xl text-text-muted">{perfume.name?.[0] || "P"}</span>
             </div>
           )}
           <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5 max-w-[calc(100%-1.5rem)]">
@@ -102,14 +103,14 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
         {/* Keep card text compact so product browsing feels lighter. */}
         <div className="p-3.5">
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
-          <p className="text-sm md:text-base leading-relaxed font-medium text-[var(--text-muted)] mt-0.5">{perfume.brand}</p>
+          <p className="text-sm md:text-base leading-relaxed font-medium text-text-muted mt-0.5">{perfume.brand}</p>
           <div className="mt-2.5">
             {displayStartingPrice > 0 ? (
-              <p className="font-serif text-base md:text-xl leading-snug font-medium text-[var(--gold-light)]">
+              <p className="font-serif text-base md:text-xl leading-snug font-medium text-gold-light">
                 From {displayStartingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
-              <p className="text-base md:text-lg leading-snug font-medium text-[var(--text-secondary)]">
+              <p className="text-base md:text-lg leading-snug font-medium text-text-secondary">
                 Unavailable
               </p>
             )}
@@ -124,15 +125,15 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
 function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-[var(--border)] pb-3 mb-3 last:border-b-0 last:mb-0 last:pb-0">
+    <div className="border-b border-border pb-3 mb-3 last:border-b-0 last:mb-0 last:pb-0">
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full text-left group"
       >
-        <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-secondary)] font-medium group-hover:text-[var(--gold)] transition-colors">
+        <span className="text-[10px] uppercase tracking-[0.2em] text-text-secondary font-medium group-hover:text-gold transition-colors">
           {title}
         </span>
-        {open ? <ChevronUp size={14} className="text-[var(--text-muted)]" /> : <ChevronDown size={14} className="text-[var(--text-muted)]" />}
+        {open ? <ChevronUp size={14} className="text-text-muted" /> : <ChevronDown size={14} className="text-text-muted" />}
       </button>
       {open && <div className="mt-2.5">{children}</div>}
     </div>
@@ -140,6 +141,7 @@ function FilterSection({ title, children, defaultOpen = true }: { title: string;
 }
 
 const MAX_PRICE = 20000;
+const PAGE_SIZE = 24;
 
 /* ── Price Range Slider ── */
 function PriceRangeSlider({ min, max, value, onChange }: {
@@ -185,7 +187,7 @@ function PriceRangeSlider({ min, max, value, onChange }: {
       {/* Manual inputs */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <label className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Min</label>
+          <label className="text-[9px] uppercase tracking-wider text-text-muted mb-1 block">Min</label>
           <input
             type="text"
             inputMode="numeric"
@@ -197,12 +199,12 @@ function PriceRangeSlider({ min, max, value, onChange }: {
             onChange={(e) => setLocalMin(e.target.value)}
             onBlur={applyMin}
             onKeyDown={(e) => handleKeyDown(e, applyMin)}
-            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--gold)] transition-colors text-center"
+            className="w-full bg-input border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-gold transition-colors text-center"
           />
         </div>
-        <span className="text-[var(--text-muted)] text-xs mt-4">–</span>
+        <span className="text-text-muted text-xs mt-4">–</span>
         <div className="flex-1">
-          <label className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Max</label>
+          <label className="text-[9px] uppercase tracking-wider text-text-muted mb-1 block">Max</label>
           <input
             type="text"
             inputMode="numeric"
@@ -214,18 +216,18 @@ function PriceRangeSlider({ min, max, value, onChange }: {
             onChange={(e) => setLocalMax(e.target.value)}
             onBlur={applyMax}
             onKeyDown={(e) => handleKeyDown(e, applyMax)}
-            className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--gold)] transition-colors text-center"
+            className="w-full bg-input border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-gold transition-colors text-center"
           />
         </div>
-        <span className="text-[9px] text-[var(--text-muted)] mt-4">BDT</span>
+        <span className="text-[9px] text-text-muted mt-4">BDT</span>
       </div>
       {/* Slider track + thumbs */}
       <div className="relative h-6 flex items-center">
         {/* Background track */}
-        <div className="absolute left-0 right-0 h-1.5 bg-[var(--bg-surface)] rounded-full" />
+        <div className="absolute left-0 right-0 h-1.5 bg-surface rounded-full" />
         {/* Active range highlight */}
         <div
-          className="absolute h-1.5 bg-[var(--gold)] rounded-full"
+          className="absolute h-1.5 bg-gold rounded-full"
           style={{ left: `${pct(value[0])}%`, right: `${100 - pct(value[1])}%` }}
         />
         {/* Min range input — pointer events only on left half */}
@@ -252,11 +254,11 @@ function PriceRangeSlider({ min, max, value, onChange }: {
         />
         {/* Visual thumb indicators */}
         <div
-          className="absolute w-4 h-4 rounded-full bg-[var(--gold)] border-2 border-[var(--bg-card)] shadow-md -translate-x-1/2 pointer-events-none z-20"
+          className="absolute w-4 h-4 rounded-full bg-gold border-2 border-card shadow-md -translate-x-1/2 pointer-events-none z-20"
           style={{ left: `${pct(value[0])}%` }}
         />
         <div
-          className="absolute w-4 h-4 rounded-full bg-[var(--gold)] border-2 border-[var(--bg-card)] shadow-md -translate-x-1/2 pointer-events-none z-20"
+          className="absolute w-4 h-4 rounded-full bg-gold border-2 border-card shadow-md -translate-x-1/2 pointer-events-none z-20"
           style={{ left: `${pct(value[1])}%` }}
         />
       </div>
@@ -483,7 +485,9 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
     } else {
       params.delete(key);
     }
-    router.push(`/shop?${params.toString()}`);
+    params.delete("page");
+    const nextQuery = params.toString();
+    router.push(nextQuery ? `/shop?${nextQuery}` : "/shop");
   };
 
   const toggleNote = (note: string) => {
@@ -517,6 +521,9 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
     setPriceRange([0, MAX_PRICE]);
   };
 
+  const pageParam = Number(searchParams.get("page") || "1");
+  const requestedPage = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+
   const hasFilters = qParam || categoryParam || seasonParam || bestSellerParam || brandParam || dealParam || notesParam;
 
   // Price-filter client side (API handles the rest)
@@ -524,6 +531,24 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
     const priceEstimate = p.marketPricePerMl * 10; // estimate for 10ml
     return priceEstimate >= priceRange[0] && priceEstimate <= priceRange[1];
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredPerfumes.length / PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const paginatedPerfumes = filteredPerfumes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    if (requestedPage <= totalPages) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (totalPages > 1) {
+      params.set("page", String(totalPages));
+    } else {
+      params.delete("page");
+    }
+
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `/shop?${nextQuery}` : "/shop");
+  }, [requestedPage, router, searchParams, totalPages]);
 
   // Build title
   let title = "All Fragrances";
@@ -540,18 +565,18 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
   const filtersContent = (
     <div className="space-y-0">
       {/* Search in sidebar */}
-      <div className="pb-4 mb-4 border-b border-[var(--border)]">
-        <form onSubmit={handleSearch} className="flex items-center bg-[var(--bg-input)] border border-[var(--border)] rounded overflow-hidden">
-          <Search size={14} className="text-[var(--text-muted)] ml-3 flex-shrink-0" />
+      <div className="pb-4 mb-4 border-b border-border">
+        <form onSubmit={handleSearch} className="flex items-center bg-input border border-border rounded overflow-hidden">
+          <Search size={14} className="text-text-muted ml-3 shrink-0" />
           <input
             type="text"
             placeholder="Search..."
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex-1 bg-transparent px-2 py-2.5 text-sm outline-none placeholder:text-[var(--text-muted)]"
+            className="flex-1 bg-transparent px-2 py-2.5 text-sm outline-none placeholder:text-text-muted"
           />
           {searchInput && (
-            <button type="button" onClick={() => { handleSearchChange(""); }} className="pr-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <button type="button" onClick={() => { handleSearchChange(""); }} className="pr-2 text-text-muted hover:text-text-primary">
               <X size={14} />
             </button>
           )}
@@ -574,7 +599,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           <button
             onClick={() => updateFilter("category", "")}
             className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
-              !categoryParam ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+              !categoryParam ? "bg-gold-tint text-gold font-medium" : "text-text-secondary hover:text-text-primary hover:bg-surface"
             }`}
           >
             All Categories
@@ -584,7 +609,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
               key={c}
               onClick={() => updateFilter("category", c)}
               className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
-                categoryParam === c ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                categoryParam === c ? "bg-gold-tint text-gold font-medium" : "text-text-secondary hover:text-text-primary hover:bg-surface"
               }`}
             >
               {c === "Men" ? "For Him" : c === "Women" ? "For Her" : c}
@@ -599,7 +624,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           <button
             onClick={() => updateFilter("season", "")}
             className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
-              !seasonParam ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+              !seasonParam ? "bg-gold-tint text-gold font-medium" : "text-text-secondary hover:text-text-primary hover:bg-surface"
             }`}
           >
             All Seasons
@@ -609,7 +634,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
               key={s}
               onClick={() => updateFilter("season", s)}
               className={`text-left text-sm px-2.5 py-1 rounded transition-colors ${
-                seasonParam === s ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                seasonParam === s ? "bg-gold-tint text-gold font-medium" : "text-text-secondary hover:text-text-primary hover:bg-surface"
               }`}
             >
               {s}
@@ -624,7 +649,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           <button
             onClick={() => updateFilter("brand", "")}
             className={`flex items-center w-full text-left text-sm px-2.5 py-1 rounded transition-colors ${
-              !brandParam ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+              !brandParam ? "bg-gold-tint text-gold font-medium" : "text-text-secondary hover:text-text-primary hover:bg-surface"
             }`}
           >
             All Brands
@@ -634,14 +659,14 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
               key={b}
               onClick={() => updateFilter("brand", b)}
               className={`flex items-center w-full text-left text-sm px-2.5 py-1 rounded transition-colors ${
-                brandParam === b ? "bg-[var(--gold-tint)] text-[var(--gold)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]"
+                brandParam === b ? "bg-gold-tint text-gold font-medium" : "text-text-secondary hover:text-text-primary hover:bg-surface"
               }`}
             >
               <span className="truncate">{b}</span>
             </button>
           ))}
           {allBrands.length === 0 && (
-            <p className="text-xs text-[var(--text-muted)] px-3 py-1">No brands yet</p>
+            <p className="text-xs text-text-muted px-3 py-1">No brands yet</p>
           )}
         </div>
       </FilterSection>
@@ -656,10 +681,10 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
               onChange={() => updateFilter("bestSeller", bestSellerParam ? "" : "true")}
               className="sr-only peer"
             />
-            <div className="w-8 h-4.5 bg-[var(--bg-surface)] border border-[var(--border)] rounded-full peer-checked:bg-[var(--gold)] transition-colors" />
-            <div className="absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-[var(--text-muted)] rounded-full transition-all peer-checked:translate-x-3.5 peer-checked:bg-black" />
+            <div className="w-8 h-4.5 bg-surface border border-border rounded-full peer-checked:bg-gold transition-colors" />
+            <div className="absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-text-muted rounded-full transition-all peer-checked:translate-x-3.5 peer-checked:bg-black" />
           </div>
-          <span className="text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+          <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">
             Best Sellers Only
           </span>
         </label>
@@ -677,7 +702,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
 
             return (
               <div key={category.id} className={`rounded border p-2 ${style}`}>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-secondary)] mb-2">{category.label}</p>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-text-secondary mb-2">{category.label}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {category.notes.map((note) => {
                     const active = selectedNotes.includes(note);
@@ -687,8 +712,8 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
                         onClick={() => toggleNote(note)}
                         className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border transition-colors ${
                           active
-                            ? "border-[var(--gold)] text-black bg-[var(--gold)]"
-                            : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold)]"
+                            ? "border-gold text-black bg-gold"
+                            : "border-border text-text-secondary hover:text-text-primary hover:border-gold"
                         }`}
                       >
                         {note}
@@ -709,8 +734,8 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
                     onClick={() => toggleNote(note)}
                     className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded border transition-colors ${
                       active
-                        ? "border-[var(--gold)] text-black bg-[var(--gold)]"
-                        : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold)]"
+                        ? "border-gold text-black bg-gold"
+                        : "border-border text-text-secondary hover:text-text-primary hover:border-gold"
                     }`}
                   >
                     {note}
@@ -720,17 +745,17 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
             </div>
           )}
           {noteCategories.length === 0 && allNotes.length === 0 && (
-            <p className="text-xs text-[var(--text-muted)]">No fragrance notes available</p>
+            <p className="text-xs text-text-muted">No fragrance notes available</p>
           )}
         </div>
       </FilterSection>
 
       {/* Clear Filters */}
       {hasFilters && (
-        <div className="pt-4 mt-2 border-t border-[var(--border)]">
+        <div className="pt-4 mt-2 border-t border-border">
           <button
             onClick={clearAll}
-            className="w-full text-center text-sm text-[var(--error)] hover:underline py-2"
+            className="w-full text-center text-sm text-error hover:underline py-2"
           >
             Clear All Filters
           </button>
@@ -744,11 +769,13 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
       {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-2">Our Collection</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-gold mb-2">Our Collection</p>
           <h1 className="font-serif text-4xl font-light italic">{title}</h1>
           {!loading && (
-            <p className="text-sm text-[var(--text-muted)] mt-1">
-              {filteredPerfumes.length} fragrance{filteredPerfumes.length !== 1 ? "s" : ""}
+            <p className="text-sm text-text-muted mt-1">
+              {filteredPerfumes.length === 0
+                ? "No fragrances"
+                : `${Math.min(filteredPerfumes.length, (currentPage - 1) * PAGE_SIZE + 1)}-${Math.min(currentPage * PAGE_SIZE, filteredPerfumes.length)} of ${filteredPerfumes.length} fragrances`}
             </p>
           )}
         </div>
@@ -758,7 +785,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           <select
             value={sortParam}
             onChange={(e) => updateFilter("sort", e.target.value)}
-            className="bg-[var(--bg-card)] border border-[var(--border)] rounded px-3 py-2 text-sm text-[var(--text-secondary)] outline-none cursor-pointer hover:border-[var(--gold)] transition-colors"
+            className="bg-card border border-border rounded px-3 py-2 text-sm text-text-secondary outline-none cursor-pointer hover:border-gold transition-colors"
           >
             {sortOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -769,13 +796,13 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           <button
             onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
             className={`lg:hidden flex items-center gap-2 px-4 py-2 text-sm border rounded transition-colors ${
-              mobileFiltersOpen ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
+              mobileFiltersOpen ? "bg-gold text-black border-gold" : "border-border text-text-secondary hover:border-gold"
             }`}
           >
             <SlidersHorizontal size={15} />
             Filters
             {activeFilterCount > 0 && (
-              <span className="bg-[var(--gold)] text-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-medium">
+              <span className="bg-gold text-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-medium">
                 {activeFilterCount}
               </span>
             )}
@@ -833,7 +860,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
 
       {/* Mobile Filters Panel */}
       {mobileFiltersOpen && (
-        <div className="lg:hidden mb-8 p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded animate-fade-up">
+        <div className="lg:hidden mb-8 p-4 bg-card border border-border rounded animate-fade-up">
           {filtersContent}
         </div>
       )}
@@ -841,9 +868,9 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
       {/* Main Layout: Sidebar + Grid */}
       <div className="flex gap-6 lg:gap-8">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
-          <div className="sticky top-24 bg-[var(--bg-card)] border border-[var(--border)] rounded p-4">
-            <h2 className="text-xs uppercase tracking-[0.2em] text-[var(--gold)] mb-4 font-medium">Filters</h2>
+        <aside className="hidden lg:block w-64 shrink-0">
+          <div className="sticky top-24 bg-card border border-border rounded p-4">
+            <h2 className="text-xs uppercase tracking-[0.2em] text-gold mb-4 font-medium">Filters</h2>
             {filtersContent}
           </div>
         </aside>
@@ -851,12 +878,12 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
         {/* Product Grid */}
         <div className="flex-1 min-w-0">
           {error ? (
-            <div className="text-center py-20 bg-[var(--bg-surface)] border border-red-500/20 rounded p-8">
+            <div className="text-center py-20 bg-surface border border-red-500/20 rounded p-8">
               <p className="font-serif text-2xl text-red-500 mb-2">Failed to Load Perfumes</p>
-              <p className="text-sm text-[var(--text-secondary)] mb-6">{error}</p>
+              <p className="text-sm text-text-secondary mb-6">{error}</p>
               <button
                 onClick={() => router.refresh()}
-                className="bg-[var(--gold)] text-black px-6 py-2 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-hover)] transition-colors rounded"
+                className="bg-gold text-black px-6 py-2 text-xs uppercase tracking-wider font-medium hover:bg-(--gold-hover) transition-colors rounded"
               >
                 Try Again
               </button>
@@ -873,19 +900,37 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
             </div>
           ) : filteredPerfumes.length === 0 ? (
             <div className="text-center py-20">
-              <p className="font-serif text-2xl text-[var(--text-muted)]">No perfumes found</p>
-              <p className="text-sm text-[var(--text-muted)] mt-2 mb-6">Try adjusting your search or filters</p>
+              <p className="font-serif text-2xl text-text-muted">No perfumes found</p>
+              <p className="text-sm text-text-muted mt-2 mb-6">Try adjusting your search or filters</p>
               {hasFilters && (
-                <button onClick={clearAll} className="text-sm text-[var(--gold)] hover:underline">Clear all filters</button>
+                <button onClick={clearAll} className="text-sm text-gold hover:underline">Clear all filters</button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {filteredPerfumes.map((perfume, i) => (
-                <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
-                  <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
-                </div>
-              ))}
+            <div className="space-y-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {paginatedPerfumes.map((perfume, i) => (
+                  <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
+                    <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
+                  </div>
+                ))}
+              </div>
+
+              <PaginationNav
+                basePath="/shop"
+                currentPage={currentPage}
+                totalPages={totalPages}
+                query={{
+                  q: qParam || undefined,
+                  category: categoryParam || undefined,
+                  season: seasonParam || undefined,
+                  bestSeller: bestSellerParam || undefined,
+                  brand: brandParam || undefined,
+                  deal: dealParam || undefined,
+                  notes: notesParam || undefined,
+                  sort: sortParam || undefined,
+                }}
+              />
             </div>
           )}
         </div>
