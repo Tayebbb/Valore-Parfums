@@ -109,7 +109,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     await db.collection(Collections.perfumes).doc(id).update(updatePayload);
-    revalidateTag("perfumes");
+    revalidateTag("perfumes", "max");
     revalidatePath("/shop");
     const doc = await db.collection(Collections.perfumes).doc(id).get();
     return NextResponse.json(serializePerfumeForApi({ id, ...(doc.data() || {}) }));
@@ -125,7 +125,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   await db.collection(Collections.perfumes).doc(id).delete();
-  revalidateTag("perfumes");
+  revalidateTag("perfumes", "max");
   revalidatePath("/shop");
   return NextResponse.json({ success: true });
 }

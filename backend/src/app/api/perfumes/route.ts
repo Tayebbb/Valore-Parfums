@@ -180,7 +180,7 @@ export async function POST(req: Request) {
     };
     await db.collection(Collections.perfumes).doc(id).set(data);
     perfumesCache.clear();
-    revalidateTag("perfumes");
+    revalidateTag("perfumes", "max");
     revalidatePath("/shop");
     return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   } catch (error: unknown) {

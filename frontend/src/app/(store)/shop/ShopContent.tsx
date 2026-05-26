@@ -8,6 +8,7 @@ import { Search, X, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-rea
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { calculateSellingPrice, getBrandTier, getTierProfitMargin } from "@/lib/utils";
 
 export interface Perfume {
   id: string;
@@ -51,9 +52,23 @@ interface PriceInfo {
   available: boolean;
 }
 
+const DEFAULT_CARD_SIZE_ML = 5;
+const DEFAULT_PACKAGING_COST = 20;
+
+function getStartingPriceEstimate(perfume: Perfume): number {
+  const marketPricePerMl = Number(perfume.marketPricePerMl || 0);
+  if (marketPricePerMl <= 0) return 0;
+
+  const tier = getBrandTier(Math.max(1, marketPricePerMl * 100));
+  const margin = getTierProfitMargin(tier, DEFAULT_CARD_SIZE_ML);
+  return calculateSellingPrice(marketPricePerMl, DEFAULT_CARD_SIZE_ML, 0, DEFAULT_PACKAGING_COST, margin);
+}
+
 function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo[] }) {
   const images: string[] = JSON.parse(perfume.images || "[]");
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
+  const estimatedStartingPrice = getStartingPriceEstimate(perfume);
+  const displayStartingPrice = lowestPrice?.sellingPrice || estimatedStartingPrice;
   const outOfStock = perfume.totalStockMl <= 0;
   const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0 || perfume.isBestSeller;
 
@@ -89,13 +104,13 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
           <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
           <p className="text-sm md:text-base leading-relaxed font-medium text-[var(--text-muted)] mt-0.5">{perfume.brand}</p>
           <div className="mt-2.5">
-            {lowestPrice ? (
+            {displayStartingPrice > 0 ? (
               <p className="font-serif text-base md:text-xl leading-snug font-medium text-[var(--gold-light)]">
-                From {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
+                From {displayStartingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
               <p className="text-base md:text-lg leading-snug font-medium text-[var(--text-secondary)]">
-                {prices ? "Unavailable" : "..."}
+                Unavailable
               </p>
             )}
           </div>
@@ -421,6 +436,45 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
       fetchControllerRef.current?.abort();
     };
   }, [fetchPerfumes]);
+
+  useEffect(() => {
+    if (perfumes.length === 0 || Object.keys(priceMap).length > 0) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const ids = perfumes.map((perfume) => perfume.id);
+        const pricingRes = await fetchWithTimeout(toPublicApiUrl("/api/pricing"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ perfumeIds: ids }),
+          timeout: 10000,
+          retries: 1,
+          signal: controller.signal,
+        });
+
+        if (!pricingRes.ok) return;
+        const map = await pricingRes.json();
+        const parsed: Record<string, PriceInfo[]> = {};
+
+        for (const [id, val] of Object.entries((map && typeof map === "object") ? map : {})) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          parsed[id] = (val as any).prices || [];
+        }
+
+        if (!controller.signal.aborted) {
+          setPriceMap(parsed);
+        }
+      } catch {
+        // Keep the estimated starting price if pricing lookup fails.
+      }
+    }, 0);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [perfumes, priceMap]);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
