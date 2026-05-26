@@ -125,7 +125,7 @@ async function tryReadJson<T>(res: Response): Promise<T | null> {
 const OrderSummaryPanel = dynamic(() => import("@/components/checkout/OrderSummaryPanel"), {
   ssr: false,
   loading: () => (
-    <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3">
+    <div className="space-y-2 rounded-xl border border-border bg-card p-3">
       <div className="skeleton h-4 w-2/3" />
       <div className="skeleton h-4 w-full" />
       <div className="skeleton h-4 w-5/6" />
@@ -796,9 +796,9 @@ function CheckoutContent() {
   if (orderId) {
     return (
       <div className="mx-auto max-w-md px-4 py-12 text-center sm:py-16">
-        <CheckCircle size={54} className="mx-auto mb-4 text-[var(--success)]" />
-        <h1 className="font-serif text-3xl font-semibold text-[var(--text-primary)]">Order Submitted</h1>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+        <CheckCircle size={54} className="mx-auto mb-4 text-success" />
+        <h1 className="font-serif text-3xl font-semibold text-text-primary">Order Submitted</h1>
+        <p className="mt-2 text-sm text-text-secondary">
           {placedPaymentMethod === "Bkash Manual"
             ? "Payment details received. We will confirm once your bKash transfer is verified."
             : placedPaymentMethod === "Bank Manual"
@@ -806,27 +806,27 @@ function CheckoutContent() {
               : "Your order has been placed successfully."}
         </p>
 
-        <div className="mt-5 rounded-2xl border border-gray-700/80 bg-[var(--bg-card)] p-4">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Order ID</p>
+        <div className="mt-5 rounded-2xl border border-border bg-card p-4">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-text-muted">Order ID</p>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <p className="break-all font-mono text-sm text-[var(--text-primary)]">{orderId}</p>
+            <p className="break-all font-mono text-sm text-text-primary">{orderId}</p>
             <CopyOrderIdButton orderId={orderId} />
           </div>
         </div>
 
         {!user ? (
-          <div className="mt-4 rounded-2xl border border-[var(--warning)]/50 bg-[rgba(251,191,36,0.09)] p-3 text-left">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--warning)]">Guest Reminder</p>
-            <p className="mt-1.5 text-sm text-[var(--text-primary)]">
+          <div className="mt-4 rounded-2xl border border-warning/50 bg-[rgba(251,191,36,0.09)] p-3 text-left">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-warning">Guest Reminder</p>
+            <p className="mt-1.5 text-sm text-text-primary">
               Save this Order ID. It is required for tracking if you checked out without an account.
             </p>
           </div>
         ) : null}
 
         {form.pickupMethod === "Pickup" ? (
-          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-left">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Pickup Order</p>
-            <p className="mt-1.5 text-sm text-[var(--text-primary)]">
+          <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-left">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-text-muted">Pickup Order</p>
+            <p className="mt-1.5 text-sm text-text-primary">
               Once your order is confirmed, you will receive the pickup time and contact details via email.
             </p>
           </div>
@@ -844,7 +844,7 @@ function CheckoutContent() {
 
   if (loadingDirect && isBuyNow) {
     return (
-      <div className="flex h-[55vh] items-center justify-center text-sm uppercase tracking-[0.2em] text-[var(--text-muted)] animate-pulse">
+      <div className="flex h-[55vh] items-center justify-center text-sm uppercase tracking-[0.2em] text-text-muted animate-pulse">
         Loading Product...
       </div>
     );
@@ -859,16 +859,16 @@ function CheckoutContent() {
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-5 sm:px-6 sm:pt-8">
         <Link
           href={isBuyNow ? (directProductPath || (productSlug ? `/products/${productSlug}` : `/perfume/${productId}`)) : "/cart"}
-          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] transition-colors hover:text-[#C9A96E]"
+          className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-text-muted transition-colors hover:text-gold"
         >
           <ArrowLeft size={13} /> Back to {isBuyNow ? "Product" : "Cart"}
         </Link>
 
         <header className="mt-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">
             Checkout
           </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-[var(--text-secondary)]">
+          <p className="mt-1.5 max-w-2xl text-sm text-text-secondary">
             Fast and compact checkout designed for mobile. Fill details, choose payment, and place order.
           </p>
         </header>
@@ -884,7 +884,7 @@ function CheckoutContent() {
               key={tab.key}
               type="button"
               onClick={() => scrollToSection(tab.key)}
-              className="checkout-tab w-full min-w-0 rounded-lg border border-gray-700/80 bg-[var(--bg-surface)] px-2 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:border-[#C9A96E]/60 hover:text-[#C9A96E]"
+              className="checkout-tab w-full min-w-0 rounded-lg border border-border bg-card px-2 py-1.5 text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-hover hover:text-gold"
             >
               {tab.label}
             </button>
@@ -897,10 +897,10 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.customer = el as HTMLDivElement | null;
               }}
-              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#eadfc8] bg-[#fdf9f1] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] sm:p-5"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#b1894c] dark:text-[#C9A96E]">Section 1</p>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Customer Info</h2>
+              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary">Customer Info</h2>
 
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div
@@ -908,7 +908,7 @@ function CheckoutContent() {
                     fieldRefs.current.customerName = el;
                   }}
                 >
-                  <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                     Name
                   </label>
                   <input
@@ -921,7 +921,7 @@ function CheckoutContent() {
                     placeholder="Your full name"
                   />
                   {errors.customerName ? (
-                    <p className="mt-1 text-[11px] text-[var(--error)]">{errors.customerName}</p>
+                    <p className="mt-1 text-[11px] text-error">{errors.customerName}</p>
                   ) : null}
                 </div>
 
@@ -930,7 +930,7 @@ function CheckoutContent() {
                     fieldRefs.current.customerPhone = el;
                   }}
                 >
-                  <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                     Phone
                   </label>
                   <input
@@ -941,7 +941,7 @@ function CheckoutContent() {
                     placeholder="01XXXXXXXXX"
                   />
                   {errors.customerPhone ? (
-                    <p className="mt-1 text-[11px] text-[var(--error)]">{errors.customerPhone}</p>
+                    <p className="mt-1 text-[11px] text-error">{errors.customerPhone}</p>
                   ) : null}
                 </div>
 
@@ -951,7 +951,7 @@ function CheckoutContent() {
                     fieldRefs.current.customerEmail = el;
                   }}
                 >
-                  <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                     Email
                   </label>
                   <input
@@ -962,7 +962,7 @@ function CheckoutContent() {
                     placeholder="you@email.com"
                   />
                   {errors.customerEmail ? (
-                    <p className="mt-1 text-[11px] text-[var(--error)]">{errors.customerEmail}</p>
+                    <p className="mt-1 text-[11px] text-error">{errors.customerEmail}</p>
                   ) : null}
                 </div>
               </div>
@@ -972,12 +972,12 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.address = el as HTMLDivElement | null;
               }}
-              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#d7e4f2] bg-[#f2f8fd] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] sm:p-5"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#4d7fa6] dark:text-[#C9A96E]">Section 2</p>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Delivery Address</h2>
+              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary">Delivery Address</h2>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-gray-700/70 bg-[var(--bg-surface)] p-1">
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-border bg-surface p-1">
                 {(["Pickup", "Delivery"] as const).map((method) => {
                   const isPickupDisabled = method === "Pickup" && !globalPickup.enabled;
                   const isActive = form.pickupMethod === method;
@@ -990,10 +990,10 @@ function CheckoutContent() {
                       title={isPickupDisabled ? "Pickup is currently unavailable" : undefined}
                       className={
                         isPickupDisabled
-                          ? "relative rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] opacity-50 cursor-not-allowed select-none"
+                          ? "relative rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted opacity-50 cursor-not-allowed select-none"
                           : isActive
-                            ? "rounded-lg bg-[#C9A96E] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-black shadow-[0_10px_20px_rgba(201,169,110,0.2)]"
-                            : "rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]"
+                            ? "rounded-lg bg-gold px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-black shadow-[0_10px_20px_var(--gold-glow)]"
+                            : "rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary"
                       }
                     >
                       {method}
@@ -1012,7 +1012,7 @@ function CheckoutContent() {
               {form.pickupMethod === "Pickup" ? (
                 <div className="mt-3 space-y-3">
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                       Pickup Location
                     </label>
                     <div className="relative">
@@ -1020,7 +1020,7 @@ function CheckoutContent() {
                         value={form.pickupLocationId}
                         onChange={(e) => setField("pickupLocationId", e.target.value)}
                         disabled={loadingCheckoutConfig || checkoutConfig.pickupLocations.length === 0}
-                        className="w-full appearance-none rounded-xl border border-gray-700/70 bg-[var(--bg-input)] px-3 py-2.5 pr-10 text-sm text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[#C9A96E] focus:ring-2 focus:ring-[rgba(201,169,110,0.2)] disabled:opacity-60"
+                        className="w-full appearance-none rounded-xl border border-border bg-input px-3 py-2.5 pr-10 text-sm text-text-primary outline-none transition-all duration-200 focus:border-gold focus:ring-2 focus:ring-[rgba(201,169,110,0.2)] disabled:opacity-60"
                       >
                         {checkoutConfig.pickupLocations.length === 0 ? (
                           <option value="">No locations available</option>
@@ -1031,13 +1031,13 @@ function CheckoutContent() {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                      <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" />
                     </div>
                   </div>
 
                   {selectedPickupLocation ? (
-                    <div className="rounded-xl border border-gray-700/70 bg-[var(--bg-surface)] px-3 py-2.5 text-sm text-[var(--text-secondary)]">
-                      <p className="font-medium text-[var(--text-primary)]">{selectedPickupLocation.name}</p>
+                    <div className="rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text-secondary">
+                      <p className="font-medium text-text-primary">{selectedPickupLocation.name}</p>
                       <p className="mt-1">{selectedPickupLocation.address}</p>
                       {selectedPickupLocation.phone ? <p className="mt-1">{selectedPickupLocation.phone}</p> : null}
                     </div>
@@ -1050,12 +1050,12 @@ function CheckoutContent() {
                       fieldRefs.current.deliveryZone = el;
                     }}
                   >
-                    <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Delivery Zone</p>
+                    <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-text-muted">Delivery Zone</p>
                     <div
                       className={`grid grid-cols-2 gap-2 rounded-xl border p-1 ${
                         errors.deliveryZone
-                          ? "border-[var(--error)] shadow-[0_0_0_1px_rgba(248,113,113,0.2)]"
-                          : "border-gray-700/70"
+                          ? "border-error shadow-[0_0_0_1px_rgba(248,113,113,0.2)]"
+                          : "border-border"
                       }`}
                     >
                       {(["Inside Dhaka", "Outside Dhaka"] as const).map((zone) => (
@@ -1065,17 +1065,15 @@ function CheckoutContent() {
                           onClick={() => setField("deliveryZone", zone)}
                           className={
                             form.deliveryZone === zone
-                              ? "rounded-lg bg-[#C9A96E] px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-black"
-                              : "rounded-lg px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--text-secondary)]"
+                              ? "rounded-lg bg-gold px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-black"
+                              : "rounded-lg px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-text-secondary"
                           }
                         >
                           {zone}
                         </button>
                       ))}
                     </div>
-                    {errors.deliveryZone ? (
-                      <p className="mt-1 text-[11px] text-[var(--error)]">{errors.deliveryZone}</p>
-                    ) : null}
+                    {errors.deliveryZone ? <p className="mt-1 text-[11px] text-error">{errors.deliveryZone}</p> : null}
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1084,7 +1082,7 @@ function CheckoutContent() {
                         fieldRefs.current.area = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Area
                       </label>
                       <input
@@ -1094,7 +1092,7 @@ function CheckoutContent() {
                         className={getInputClass(Boolean(errors.area))}
                         placeholder="e.g. Dhanmondi"
                       />
-                      {errors.area ? <p className="mt-1 text-[11px] text-[var(--error)]">{errors.area}</p> : null}
+                      {errors.area ? <p className="mt-1 text-[11px] text-error">{errors.area}</p> : null}
                     </div>
 
                     <div
@@ -1102,7 +1100,7 @@ function CheckoutContent() {
                         fieldRefs.current.city = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         City
                       </label>
                       <input
@@ -1114,9 +1112,9 @@ function CheckoutContent() {
                         placeholder={form.deliveryZone === "Inside Dhaka" ? "Dhaka" : "e.g. Chattogram"}
                       />
                       {form.deliveryZone === "Inside Dhaka" ? (
-                        <p className="mt-1 text-[11px] text-[var(--text-muted)]">City is auto-set to Dhaka for inside-zone delivery.</p>
+                        <p className="mt-1 text-[11px] text-text-muted">City is auto-set to Dhaka for inside-zone delivery.</p>
                       ) : null}
-                      {errors.city ? <p className="mt-1 text-[11px] text-[var(--error)]">{errors.city}</p> : null}
+                      {errors.city ? <p className="mt-1 text-[11px] text-error">{errors.city}</p> : null}
                     </div>
 
                     <div
@@ -1125,7 +1123,7 @@ function CheckoutContent() {
                         fieldRefs.current.fullAddress = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Address
                       </label>
                       <textarea
@@ -1135,13 +1133,11 @@ function CheckoutContent() {
                         className={getTextareaClass(Boolean(errors.fullAddress))}
                         placeholder="House, road, landmark"
                       />
-                      {errors.fullAddress ? (
-                        <p className="mt-1 text-[11px] text-[var(--error)]">{errors.fullAddress}</p>
-                      ) : null}
+                      {errors.fullAddress ? <p className="mt-1 text-[11px] text-error">{errors.fullAddress}</p> : null}
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Delivery Note (Optional)
                       </label>
                       <textarea
@@ -1154,14 +1150,14 @@ function CheckoutContent() {
                     </div>
                   </div>
 
-                  <p className="rounded-xl border border-gray-700/70 bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                    Delivery Fee: <span className="font-semibold text-[#C9A96E]">{deliveryFee.toLocaleString("en-BD")} BDT</span>
+                  <p className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
+                    Delivery Fee: <span className="font-semibold text-gold">{deliveryFee.toLocaleString("en-BD")} BDT</span>
                   </p>
                 </div>
               )}
 
               {hasFullBottle ? (
-                <p className="mt-3 text-[11px] text-[var(--text-muted)]">
+                <p className="mt-3 text-[11px] text-text-muted">
                   Full-bottle request prices are reviewed by admin before final confirmation.
                 </p>
               ) : null}
@@ -1171,41 +1167,41 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.payment = el as HTMLDivElement | null;
               }}
-              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#e4d9f1] bg-[#f8f3fc] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] sm:p-5"
             >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[#8663b2] dark:text-[#C9A96E]">Section 3</p>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Payment Method</h2>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-gold dark:text-gold">Section 3</p>
+              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-text-primary">Payment Method</h2>
 
               <div className="mt-3">
                 <PaymentMethodSelector value={form.paymentMethod} onChange={(method) => setField("paymentMethod", method)} />
               </div>
 
               {form.paymentMethod === "Bkash Manual" ? (
-                <div className="mt-3 rounded-xl border border-[#C9A96E]/35 bg-[rgba(201,169,110,0.07)] p-3">
+                <div className="mt-3 rounded-xl border border-gold/35 bg-[rgba(201,169,110,0.07)] p-3">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Account Name</p>
-                      <p className="mt-1 text-sm text-[var(--text-primary)]">{checkoutConfig.bkashAccountName || "Not set"}</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Name</p>
+                      <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bkashAccountName || "Not set"}</p>
                     </div>
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Account Number</p>
-                      <p className="mt-1 text-sm text-[var(--text-primary)]">{checkoutConfig.bkashAccountNumber || "Not set"}</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Number</p>
+                      <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bkashAccountNumber || "Not set"}</p>
                     </div>
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Account Type</p>
-                      <p className="mt-1 text-sm text-[var(--text-primary)]">{checkoutConfig.bkashAccountType || "Not set"}</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Type</p>
+                      <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bkashAccountType || "Not set"}</p>
                     </div>
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Amount to Pay</p>
-                      <p className="mt-1 text-sm font-semibold text-[#C9A96E]">{total.toLocaleString("en-BD")} BDT</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Amount to Pay</p>
+                      <p className="mt-1 text-sm font-semibold text-gold">{total.toLocaleString("en-BD")} BDT</p>
                     </div>
                   </div>
 
-                  <details className="mt-2 rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-3 py-2">
-                    <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  <details className="mt-2 rounded-lg border border-border bg-surface px-3 py-2">
+                    <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary">
                       How to pay via bKash
                     </summary>
-                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
                       <li>Send the total amount to the bKash account above.</li>
                       <li>Copy TXN ID from your receipt.</li>
                       <li>Fill the verification fields below.</li>
@@ -1213,14 +1209,14 @@ function CheckoutContent() {
                   </details>
 
                   {checkoutConfig.bkashQrImageUrl ? (
-                    <div className="mt-2 rounded-lg border border-gray-700/70 bg-[var(--bg-card)] p-2.5">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    <div className="mt-2 rounded-lg border border-border bg-surface p-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Scan bKash QR (Optional)
                       </p>
                       <Image
                         src={checkoutConfig.bkashQrImageUrl}
                         alt="bKash payment QR"
-                        className="mt-2 h-auto w-36 rounded border border-gray-700/70"
+                        className="mt-2 h-auto w-36 rounded border border-border"
                         width={144}
                         height={144}
                       />
@@ -1233,7 +1229,7 @@ function CheckoutContent() {
                         fieldRefs.current.bkashCustomerName = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         bKash Name
                       </label>
                       <input
@@ -1247,9 +1243,7 @@ function CheckoutContent() {
                         }}
                         className={getInputClass(Boolean(errors.bkashCustomerName))}
                       />
-                      {errors.bkashCustomerName ? (
-                        <p className="mt-1 text-[11px] text-[var(--error)]">{errors.bkashCustomerName}</p>
-                      ) : null}
+                      {errors.bkashCustomerName ? <p className="mt-1 text-[11px] text-error">{errors.bkashCustomerName}</p> : null}
                     </div>
 
                     <div
@@ -1257,7 +1251,7 @@ function CheckoutContent() {
                         fieldRefs.current.bkashPaidFromNumber = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Paid From Number
                       </label>
                       <input
@@ -1272,9 +1266,7 @@ function CheckoutContent() {
                         className={getInputClass(Boolean(errors.bkashPaidFromNumber))}
                         placeholder="01XXXXXXXXX"
                       />
-                      {errors.bkashPaidFromNumber ? (
-                        <p className="mt-1 text-[11px] text-[var(--error)]">{errors.bkashPaidFromNumber}</p>
-                      ) : null}
+                      {errors.bkashPaidFromNumber ? <p className="mt-1 text-[11px] text-error">{errors.bkashPaidFromNumber}</p> : null}
                     </div>
 
                     <div
@@ -1283,7 +1275,7 @@ function CheckoutContent() {
                         fieldRefs.current.bkashTransactionNumber = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         TXN ID
                       </label>
                       <input
@@ -1297,13 +1289,11 @@ function CheckoutContent() {
                         }}
                         className={getInputClass(Boolean(errors.bkashTransactionNumber))}
                       />
-                      {errors.bkashTransactionNumber ? (
-                        <p className="mt-1 text-[11px] text-[var(--error)]">{errors.bkashTransactionNumber}</p>
-                      ) : null}
+                      {errors.bkashTransactionNumber ? <p className="mt-1 text-[11px] text-error">{errors.bkashTransactionNumber}</p> : null}
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Notes (Optional)
                       </label>
                       <textarea
@@ -1319,31 +1309,31 @@ function CheckoutContent() {
               ) : null}
 
               {form.paymentMethod === "Bank Manual" ? (
-                <div className="mt-3 rounded-xl border border-[#C9A96E]/35 bg-[rgba(201,169,110,0.07)] p-3">
+                <div className="mt-3 rounded-xl border border-gold/35 bg-[rgba(201,169,110,0.07)] p-3">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Bank Name</p>
-                      <p className="mt-1 text-sm text-[var(--text-primary)]">{checkoutConfig.bankName || "Not set"}</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Bank Name</p>
+                      <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankName || "Not set"}</p>
                     </div>
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Account Name</p>
-                      <p className="mt-1 text-sm text-[var(--text-primary)]">{checkoutConfig.bankAccountName || "Not set"}</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Name</p>
+                      <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankAccountName || "Not set"}</p>
                     </div>
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Account Number</p>
-                      <p className="mt-1 text-sm text-[var(--text-primary)]">{checkoutConfig.bankAccountNumber || "Not set"}</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Number</p>
+                      <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankAccountNumber || "Not set"}</p>
                     </div>
-                    <div className="rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-2.5 py-2">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Amount to Pay</p>
-                      <p className="mt-1 text-sm font-semibold text-[#C9A96E]">{total.toLocaleString("en-BD")} BDT</p>
+                    <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Amount to Pay</p>
+                      <p className="mt-1 text-sm font-semibold text-gold">{total.toLocaleString("en-BD")} BDT</p>
                     </div>
                   </div>
 
-                  <details className="mt-2 rounded-lg border border-gray-700/70 bg-[var(--bg-card)] px-3 py-2">
-                    <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                  <details className="mt-2 rounded-lg border border-border bg-surface px-3 py-2">
+                    <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary">
                       Bank transfer instructions
                     </summary>
-                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--text-secondary)]">
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
                       <li>Transfer the total to the account above (NPSB only).</li>
                       <li>Keep transaction reference if available.</li>
                       <li>Submit the details below for manual verification.</li>
@@ -1351,12 +1341,12 @@ function CheckoutContent() {
                   </details>
 
                   {checkoutConfig.bankQrImageUrl ? (
-                    <div className="mt-2 rounded-lg border border-gray-700/70 bg-[var(--bg-card)] p-2.5">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Bank QR (Optional)</p>
+                    <div className="mt-2 rounded-lg border border-border bg-surface p-2.5">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Bank QR (Optional)</p>
                       <Image
                         src={checkoutConfig.bankQrImageUrl}
                         alt="Bank payment QR"
-                        className="mt-2 h-auto w-36 rounded border border-gray-700/70"
+                        className="mt-2 h-auto w-36 rounded border border-border"
                         width={144}
                         height={144}
                       />
@@ -1369,7 +1359,7 @@ function CheckoutContent() {
                         fieldRefs.current.bankAccountName = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Account/Card Name
                       </label>
                       <input
@@ -1383,9 +1373,7 @@ function CheckoutContent() {
                         }}
                         className={getInputClass(Boolean(errors.bankAccountName))}
                       />
-                      {errors.bankAccountName ? (
-                        <p className="mt-1 text-[11px] text-[var(--error)]">{errors.bankAccountName}</p>
-                      ) : null}
+                      {errors.bankAccountName ? <p className="mt-1 text-[11px] text-error">{errors.bankAccountName}</p> : null}
                     </div>
 
                     <div
@@ -1393,7 +1381,7 @@ function CheckoutContent() {
                         fieldRefs.current.bankAccountNumber = el;
                       }}
                     >
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Account/Card Number
                       </label>
                       <input
@@ -1407,13 +1395,11 @@ function CheckoutContent() {
                         }}
                         className={getInputClass(Boolean(errors.bankAccountNumber))}
                       />
-                      {errors.bankAccountNumber ? (
-                        <p className="mt-1 text-[11px] text-[var(--error)]">{errors.bankAccountNumber}</p>
-                      ) : null}
+                      {errors.bankAccountNumber ? <p className="mt-1 text-[11px] text-error">{errors.bankAccountNumber}</p> : null}
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Transaction Reference (Optional)
                       </label>
                       <input
@@ -1425,7 +1411,7 @@ function CheckoutContent() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
                         Notes (Optional)
                       </label>
                       <textarea
@@ -1440,7 +1426,7 @@ function CheckoutContent() {
               ) : null}
             </section>
 
-            <section className="checkout-panel rounded-2xl border border-[#dce5c8] bg-[#f7fbee] p-4 sm:p-5 dark:border-gray-700/80 dark:bg-[var(--bg-card)]">
+            <section className="checkout-panel rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] sm:p-5">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#6e8a3c] dark:text-[#C9A96E]">Voucher</p>
               <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                 <input
@@ -1449,7 +1435,7 @@ function CheckoutContent() {
                   value={voucherCode}
                   onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
                   disabled={Boolean(appliedVoucher)}
-                  className="flex-1 rounded-xl border border-gray-700/70 bg-[var(--bg-input)] px-3 py-2.5 text-sm font-mono text-[var(--text-primary)] outline-none transition-all duration-200 focus:border-[#C9A96E] focus:ring-2 focus:ring-[rgba(201,169,110,0.2)] disabled:opacity-60"
+                  className="flex-1 rounded-xl border border-border bg-input px-3 py-2.5 text-sm font-mono text-text-primary outline-none transition-all duration-200 focus:border-gold focus:ring-2 focus:ring-[rgba(201,169,110,0.2)] disabled:opacity-60"
                 />
                 {appliedVoucher ? (
                   <button
@@ -1459,7 +1445,7 @@ function CheckoutContent() {
                       setDiscount(0);
                       setVoucherCode("");
                     }}
-                    className="rounded-xl border border-gray-700/80 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:border-[#C9A96E]/60 hover:text-[#C9A96E]"
+                    className="rounded-xl border border-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-hover hover:text-gold"
                   >
                     Remove
                   </button>
@@ -1467,7 +1453,7 @@ function CheckoutContent() {
                   <button
                     type="button"
                     onClick={applyVoucher}
-                    className="rounded-xl bg-[#C9A96E] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-black transition-colors hover:bg-[#d4b67d]"
+                    className="rounded-xl bg-gold px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-black transition-colors hover:bg-gold-light"
                   >
                     Apply
                   </button>
@@ -1483,10 +1469,10 @@ function CheckoutContent() {
               ref={(el) => {
                 sectionRefs.current.summary = el as HTMLDivElement | null;
               }}
-              className="checkout-panel scroll-mt-24 rounded-2xl border border-[#d7dde8] bg-[#f4f6fa] p-4 dark:border-gray-700/80 dark:bg-[var(--bg-card)] lg:hidden"
+              className="checkout-panel scroll-mt-24 rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] lg:hidden"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#5f7897] dark:text-[#C9A96E]">Section 4</p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Order Summary</h2>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-text-primary">Order Summary</h2>
 
               <div className="mt-3">
                 <OrderSummaryPanel
@@ -1509,9 +1495,9 @@ function CheckoutContent() {
             }}
             className="hidden lg:col-span-2 lg:block lg:self-start"
           >
-            <div className="checkout-panel sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-[#d7dde8] bg-[#f4f6fa] p-4 shadow-xl dark:border-gray-700/80 dark:bg-[var(--bg-card)]">
+            <div className="checkout-panel sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-[0_12px_28px_rgba(0,0,0,0.05)]">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#5f7897] dark:text-[#C9A96E]">Section 4</p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Order Summary</h2>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-text-primary">Order Summary</h2>
 
               <div className="mt-3">
                 <OrderSummaryPanel
@@ -1528,7 +1514,7 @@ function CheckoutContent() {
                 type="button"
                 onClick={placeOrder}
                 disabled={placing}
-                className="mt-4 w-full rounded-xl bg-[#C9A96E] py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-black shadow-[0_14px_24px_rgba(201,169,110,0.2)] transition-all hover:bg-[#d4b67d] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 w-full rounded-xl bg-gold py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-black shadow-[0_14px_24px_var(--gold-glow)] transition-all hover:bg-gold-light disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {getDesktopPlaceOrderLabel(form.paymentMethod, placing)}
               </button>
@@ -1551,7 +1537,7 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center text-sm uppercase tracking-widest text-[var(--text-muted)] animate-pulse">
+        <div className="flex h-screen items-center justify-center text-sm uppercase tracking-widest text-text-muted animate-pulse">
           Loading checkout...
         </div>
       }
