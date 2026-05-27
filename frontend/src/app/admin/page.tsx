@@ -197,6 +197,9 @@ export default function AdminDashboard() {
         <StatCard icon={TrendingUp} label="Monthly Profit" value={`${fmt(data.monthProfit)} BDT`} />
         <StatCard icon={Package} label="bKash Verification" value={`${data.pendingBkashVerifications || 0}`} sub="Awaiting admin verification" />
         <StatCard icon={Package} label="Bank Verification" value={`${data.pendingBankVerifications || 0}`} sub="Awaiting admin verification" />
+        <StatCard icon={Wallet} label="Bkash Balance" value={`${fmt(data.storeRevenue.bkashBalance || 0)} BDT`} sub="Completed orders only" />
+        <StatCard icon={Wallet} label="Bank Balance" value={`${fmt(data.storeRevenue.bankBalance || 0)} BDT`} sub="Completed orders only" />
+        <StatCard icon={Wallet} label="COD Balance" value={`${fmt(data.codBalance.balance || 0)} BDT`} sub="Completed orders only" />
         <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={`${data.lowStockPerfumes.length}`} sub="Perfumes below threshold" />
         <StatCard icon={Inbox} label="Stock Requests" value={`${data.stockRequests}`} sub="Pending requests" />
       </div>
@@ -296,11 +299,6 @@ export default function AdminDashboard() {
             <WithdrawalsSection key={myAccount.name} account={myAccount} canWithdraw onWithdraw={loadDashboard} />
             <StoreRevenueWithdrawalSection
               storeRevenue={data.storeRevenue}
-              currentAdmin={myAccount}
-              canAct
-              onChange={loadDashboard}
-            />
-            <CodWithdrawalSection
               codBalance={data.codBalance}
               currentAdmin={myAccount}
               canAct
@@ -480,7 +478,6 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [withdrawFrom, setWithdrawFrom] = useState("Owner's Profit");
   const [paymentSource, setPaymentSource] = useState("Bkash");
   const [submitting, setSubmitting] = useState(false);
   const ownerName = account.name;
@@ -508,7 +505,7 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
     const res = await fetch("/api/withdrawals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: amt, note, ownerName, withdrawFrom, paymentSource, withdrawalType: "profit" }),
+      body: JSON.stringify({ amount: amt, note, ownerName, withdrawFrom: "Owner's Profit", paymentSource, withdrawalType: "profit" }),
     });
     if (res.ok) {
       toast(`Withdrawal for ${ownerName} recorded`, "success");
@@ -557,7 +554,7 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
             />
           </div>
           <div className="w-full sm:w-48">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Comment / reason (optional)</label>
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Notes (optional)</label>
             <input
               type="text"
               value={note}
@@ -566,16 +563,6 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
               className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
               placeholder="e.g. Cash withdrawal for expenses"
             />
-          </div>
-          <div className="w-full sm:w-48">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdraw From</label>
-            <select
-              value={withdrawFrom}
-              onChange={(e) => setWithdrawFrom(e.target.value)}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-            >
-              <option value="Owner's Profit">Owner&apos;s Profit</option>
-            </select>
           </div>
           <div className="w-full sm:w-40">
             <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Payment Source</label>
@@ -586,6 +573,7 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
             >
               <option value="Bkash">Bkash</option>
               <option value="Bank">Bank</option>
+              <option value="COD">COD</option>
             </select>
           </div>
           <button
@@ -663,15 +651,15 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
 
 interface StoreRevenueWithdrawalProps {
   storeRevenue: DashboardData["storeRevenue"];
+  codBalance: DashboardData["codBalance"];
   currentAdmin: OwnerAccount;
   canAct: boolean;
   onChange?: () => void;
 }
 
-function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onChange }: StoreRevenueWithdrawalProps) {
+function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin, canAct, onChange }: StoreRevenueWithdrawalProps) {
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("");
-  const [withdrawFrom, setWithdrawFrom] = useState("Store Revenue");
   const [paymentSource, setPaymentSource] = useState("Bkash");
   const [submitting, setSubmitting] = useState(false);
 
@@ -684,7 +672,9 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
   const fmt = (n: number) => n.toLocaleString("en-BD");
   const selectedBalance = paymentSource === "Bank"
     ? (storeRevenue.bankBalance ?? storeRevenue.balance)
-    : (storeRevenue.bkashBalance ?? storeRevenue.balance);
+    : paymentSource === "COD"
+      ? (codBalance.balance ?? storeRevenue.balance)
+      : (storeRevenue.bkashBalance ?? storeRevenue.balance);
 
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -778,9 +768,8 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
           <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bankBalance || 0)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Last Updated</p>
-          <p className="font-serif text-lg text-[var(--success)]">{fmt(storeRevenue.lastUpdatedAmount || 0)} BDT</p>
-          <p className="text-[10px] text-[var(--text-muted)] mt-1">{storeRevenue.lastUpdatedSource || "No updates yet"}</p>
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(codBalance.balance || 0)} BDT</p>
         </div>
       </div>
 
@@ -798,7 +787,7 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
             />
           </div>
           <div className="flex-1 w-full">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Purpose / notes</label>
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Notes (optional)</label>
             <input
               type="text"
               value={purpose}
@@ -807,16 +796,6 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
               className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
               placeholder="e.g. Stock Purchase"
             />
-          </div>
-          <div className="w-full sm:w-48">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdraw From</label>
-            <select
-              value={withdrawFrom}
-              onChange={(e) => setWithdrawFrom(e.target.value)}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-            >
-              <option value="Store Revenue">Store Revenue</option>
-            </select>
           </div>
           <div className="w-full sm:w-40">
             <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Payment Source</label>
@@ -827,6 +806,7 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
             >
               <option value="Bkash">Bkash</option>
               <option value="Bank">Bank</option>
+              <option value="COD">COD</option>
             </select>
           </div>
           <button
@@ -906,211 +886,3 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
   );
 }
 
-interface CodWithdrawalProps {
-  codBalance: DashboardData["codBalance"];
-  currentAdmin: OwnerAccount;
-  canAct: boolean;
-  onChange?: () => void;
-}
-
-function CodWithdrawalSection({ codBalance, currentAdmin, canAct, onChange }: CodWithdrawalProps) {
-  const [amount, setAmount] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const history = codBalance.history || [];
-  const pendingRequest = history.find((item) => (item.status ?? "Pending Approval") === "Pending Approval");
-  const currentAlreadyApproved = Boolean(
-    pendingRequest?.approvals?.some((approval) => String(approval.email || "").toLowerCase() === currentAdmin.email.toLowerCase())
-  );
-
-  const fmt = (n: number) => n.toLocaleString("en-BD");
-
-  const submitRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const amt = Number(amount);
-    if (!amt || amt <= 0) { toast("Enter a valid COD withdrawal amount", "error"); return; }
-    if (amt > codBalance.balance) { toast(`Amount exceeds available COD balance`, "error"); return; }
-
-    setSubmitting(true);
-    const res = await fetch("/api/withdrawals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ownerName: "Store",
-        withdrawFrom: "COD Balance",
-        withdrawalType: "cod",
-        paymentSource: "COD",
-        amount: amt,
-        note: purpose,
-      }),
-    });
-
-    if (res.ok) {
-      toast("COD withdrawal requested", "success");
-      setAmount("");
-      setPurpose("");
-      onChange?.();
-    } else {
-      const err = await res.json().catch(() => ({}));
-      toast(err.error || "Failed to request COD withdrawal", "error");
-    }
-    setSubmitting(false);
-  };
-
-  const approveRequest = async () => {
-    if (!pendingRequest) return;
-    setSubmitting(true);
-    const res = await fetch("/api/withdrawals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ownerName: "Store",
-        withdrawFrom: "COD Balance",
-        withdrawalType: "cod",
-        paymentSource: "COD",
-        action: "approve",
-        withdrawalId: pendingRequest.id,
-        amount: pendingRequest.amount,
-        note: pendingRequest.note || "",
-      }),
-    });
-
-    if (res.ok) {
-      toast("COD withdrawal approved", "success");
-      onChange?.();
-    } else {
-      const err = await res.json().catch(() => ({}));
-      toast(err.error || "Failed to approve COD withdrawal", "error");
-    }
-    setSubmitting(false);
-  };
-
-  return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
-      <div className="flex items-center gap-3 mb-5">
-        <Wallet size={18} className="text-[var(--gold)]" />
-        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">COD Balance Withdrawal</h3>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Total</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(codBalance.total)} BDT</p>
-        </div>
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Withdrawn</p>
-          <p className="font-serif text-lg text-[var(--error)]">{fmt(codBalance.withdrawn)} BDT</p>
-        </div>
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
-          <p className="font-serif text-lg text-[var(--success)]">{fmt(codBalance.balance)} BDT</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Last Updated</p>
-          <p className="font-serif text-lg text-[var(--success)]">{fmt(codBalance.lastUpdatedAmount || 0)} BDT</p>
-          <p className="text-[10px] text-[var(--text-muted)] mt-1">{codBalance.lastUpdatedSource || "COD"}</p>
-        </div>
-      </div>
-
-      {canAct && !pendingRequest && (
-        <form onSubmit={submitRequest} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 mb-6">
-          <div className="flex-1 w-full">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Amount (BDT)</label>
-            <input
-              type="number"
-              min="1"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-              placeholder="Enter amount"
-            />
-          </div>
-          <div className="flex-1 w-full">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Purpose / notes</label>
-            <input
-              type="text"
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              maxLength={500}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-              placeholder="e.g. Cash handling"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-5 py-2 bg-[var(--gold)] text-black text-[10px] uppercase tracking-wider rounded hover:bg-[var(--gold-hover)] transition-colors disabled:opacity-50 whitespace-nowrap"
-          >
-            {submitting ? "Processing..." : "Withdraw COD"}
-          </button>
-        </form>
-      )}
-
-      {pendingRequest && (
-        <div className="mb-6 bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <p className="text-sm font-serif text-[var(--gold)]">Pending COD Withdrawal</p>
-              <p className="text-xs text-[var(--text-secondary)]">{pendingRequest.note || "No purpose provided"}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-serif text-lg text-[var(--gold)]">{fmt(pendingRequest.amount)} BDT</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Amount</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-            <span>Status: {pendingRequest.status || "Pending Approval"}</span>
-            <span>From: {pendingRequest.withdrawFrom || "COD Balance"}</span>
-            <span>Approved by: {pendingRequest.approvedBy?.join(", ") || "None yet"}</span>
-          </div>
-          {canAct && !currentAlreadyApproved ? (
-            <button
-              type="button"
-              onClick={approveRequest}
-              disabled={submitting}
-              className="px-5 py-2 bg-[var(--success)] text-black text-[10px] uppercase tracking-wider rounded hover:opacity-90 transition-colors disabled:opacity-50"
-            >
-              {submitting ? "Processing..." : "Approve COD Withdrawal"}
-            </button>
-          ) : (
-            <p className="text-xs text-[var(--text-muted)]">Waiting for the second admin approval.</p>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <h4 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">COD Withdrawal History</h4>
-        {history.length === 0 ? (
-          <p className="text-sm text-[var(--text-secondary)]">No COD withdrawals yet</p>
-        ) : (
-          <div className="space-y-3">
-            {history.map((item) => (
-              <div key={item.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-2">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-serif text-sm text-[var(--gold)]">{fmt(item.amount)} BDT</p>
-                    <p className="text-xs text-[var(--text-secondary)]">{item.note || "No purpose provided"}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{item.status || "Pending Approval"}</p>
-                    <p className="text-xs text-[var(--text-secondary)]">{new Date(item.createdAt).toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-3 text-xs text-[var(--text-secondary)] border-t border-[var(--border)] pt-2">
-                  <span>Requested by: {item.requestedBy || "—"}</span>
-                  <span>Source: {item.paymentSource || "COD"}</span>
-                  <span>Approved by: {item.approvedBy?.join(", ") || "—"}</span>
-                  <span>Completed: {item.completedAt ? new Date(item.completedAt).toLocaleString() : "Pending"}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

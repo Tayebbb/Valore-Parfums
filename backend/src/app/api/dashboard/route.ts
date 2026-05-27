@@ -257,7 +257,7 @@ export async function GET() {
 
   const revenueWithdrawalDocs = withdrawalsSnap.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
-    .filter((w) => w.withdrawFrom === "Store Revenue" || w.withdrawalType === "revenue" || w.ownerName === "Store");
+    .filter((w) => w.withdrawFrom === "Store Revenue" || w.withdrawalType === "revenue" || w.withdrawFrom === "COD Balance" || w.withdrawalType === "cod" || w.ownerName === "Store");
   const completedRevenueWithdrawals = revenueWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
 
   const bkashWithdrawnMinor = completedRevenueWithdrawals
@@ -272,7 +272,9 @@ export async function GET() {
     .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
     .filter((w) => w.withdrawFrom === "COD Balance" || w.withdrawalType === "cod");
   const completedCodWithdrawals = codWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
-  const codWithdrawnMinor = completedCodWithdrawals.reduce((sum, w) => sum + toMinorUnits(Number(w.amount || 0)), 0);
+  const codWithdrawnMinor = completedRevenueWithdrawals
+    .filter((w) => String(w.paymentSource || "") === "COD")
+    .reduce((sum, w) => sum + toMinorUnits(Number(w.amount || 0)), 0);
   const latestCodWithdrawal = [...completedCodWithdrawals].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime())[0] || null;
 
   const revenueEvents: RevenueEvent[] = [
@@ -280,6 +282,12 @@ export async function GET() {
       createdAt: toDate(o.createdAt),
       amount: fromMinorUnits(Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0))),
       source: String(o.paymentMethod || "") === "Bkash Manual" ? "Bkash" : "Bank",
+      kind: "payment" as const,
+    })),
+    ...completedCodOrders.map((o) => ({
+      createdAt: toDate(o.createdAt),
+      amount: fromMinorUnits(Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0))),
+      source: "COD",
       kind: "payment" as const,
     })),
     ...completedRevenueWithdrawals.map((w) => ({
@@ -292,8 +300,8 @@ export async function GET() {
   const latestRevenueEvent = revenueEvents[0] || null;
   const bkashBalance = fromMinorUnits(Math.max(0, bkashPaymentsMinor - bkashWithdrawnMinor));
   const bankBalance = fromMinorUnits(Math.max(0, bankPaymentsMinor - bankWithdrawnMinor));
-  const storeRevenueTotal = fromMinorUnits(Math.max(0, bkashPaymentsMinor + bankPaymentsMinor));
-  const storeRevenueBalance = Math.max(0, bkashBalance + bankBalance);
+  const storeRevenueTotal = fromMinorUnits(Math.max(0, totalRevenueMinor));
+  const storeRevenueBalance = fromMinorUnits(Math.max(0, totalRevenueMinor - totalRevenueWithdrawnMinor));
   const codBalance = {
     total: fromMinorUnits(Math.max(0, codPaymentsMinor)),
     withdrawn: fromMinorUnits(codWithdrawnMinor),
