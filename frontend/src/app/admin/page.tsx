@@ -118,6 +118,10 @@ export default function AdminDashboard() {
   if (!data) return <p>Failed to load dashboard</p>;
 
   const fmt = (n: number) => n.toLocaleString("en-BD");
+  const owner1Account = data.ownerAccounts?.find((acct) => acct.name === data.owners.owner1Name);
+  const owner2Account = data.ownerAccounts?.find((acct) => acct.name === data.owners.owner2Name);
+  const owner1Total = owner1Account ? owner1Account.totalEarned + owner1Account.storeShareEarned : data.owners.totalProfit.owner1;
+  const owner2Total = owner2Account ? owner2Account.totalEarned + owner2Account.storeShareEarned : data.owners.totalProfit.owner2;
 
   return (
     <div className="space-y-8">
@@ -153,7 +157,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total</p>
-                <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.owners.totalProfit.owner1)} BDT</p>
+                <p className="font-serif text-lg text-[var(--gold)]">{fmt(owner1Total)} BDT</p>
               </div>
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Month</p>
@@ -171,7 +175,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total</p>
-                <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.owners.totalProfit.owner2)} BDT</p>
+                <p className="font-serif text-lg text-[var(--gold)]">{fmt(owner2Total)} BDT</p>
               </div>
               <div className="bg-[var(--bg-surface)] rounded p-3">
                 <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Month</p>
@@ -217,7 +221,7 @@ export default function AdminDashboard() {
                     <p className="font-serif text-lg text-[var(--error)]">{fmt(acct.totalWithdrawn)} BDT</p>
                   </div>
                   <div className="bg-[var(--bg-surface)] rounded p-3">
-                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Available</p>
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Remaining Revenue</p>
                     <p className={`font-serif text-lg ${acct.availableBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(acct.availableBalance)} BDT</p>
                   </div>
                 </div>
@@ -227,16 +231,26 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Withdrawal — only for the logged-in owner (matched by email, fallback to name) */}
-      {data.ownerAccounts && (() => {
-        const myAccount = data.ownerAccounts.find((acct) =>
-          (acct.email && user?.email && acct.email.toLowerCase() === user.email.toLowerCase()) ||
-          (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()))
-        );
-        return myAccount ? (
-          <WithdrawalsSection key={myAccount.name} ownerName={myAccount.name} availableBalance={myAccount.availableBalance} canWithdraw onWithdraw={loadDashboard} />
-        ) : null;
-      })()}
+      {/* Withdrawal — shown for both owners */}
+      {data.ownerAccounts && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {data.ownerAccounts.map((acct) => {
+            const canWithdraw =
+              (acct.email && user?.email && acct.email.toLowerCase() === user.email.toLowerCase()) ||
+              (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()));
+
+            return (
+              <WithdrawalsSection
+                key={acct.name}
+                ownerName={acct.name}
+                availableBalance={acct.availableBalance}
+                canWithdraw={canWithdraw}
+                onWithdraw={loadDashboard}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -451,7 +465,7 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
           <p className="font-serif text-lg text-[var(--error)]">{fmt(totalWithdrawn)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Available Balance</p>
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Remaining Revenue</p>
           <p className={`font-serif text-lg ${availableBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(availableBalance)} BDT</p>
         </div>
       </div>
@@ -471,14 +485,14 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
             />
           </div>
           <div className="flex-1 w-full">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Note (optional)</label>
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Comment / reason (optional)</label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={500}
               className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-              placeholder="e.g. Cash withdrawal"
+              placeholder="e.g. Cash withdrawal for expenses"
             />
           </div>
           <button
@@ -519,7 +533,7 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
                     <p>{w.withdrawnBy}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Note</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Reason</p>
                     <p className="text-[var(--text-secondary)]">{w.note || "—"}</p>
                   </div>
                 </div>
@@ -533,7 +547,7 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
                   <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
                   <th className="text-right py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Amount</th>
                   <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">By</th>
-                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Note</th>
+                  <th className="text-left py-2 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Reason</th>
                 </tr>
               </thead>
               <tbody>
