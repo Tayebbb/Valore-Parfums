@@ -222,6 +222,90 @@ export async function GET() {
     if (fulfilledAt && fulfilledAt >= startOfMonth) requestProfitMonth += profit;
   }
 
+  const completedPaymentOrders = normalizedOrders.filter(
+    (o) => o.normalizedStatus !== "Cancelled" && ["Bkash Manual", "Bank Manual"].includes(String(o.paymentMethod || "")),
+  );
+  const completedCodOrders = completedOrderList.filter((o) => String(o.paymentMethod || "") === "Cash on Delivery");
+  const bkashPaymentsMinor = completedPaymentOrders
+    .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
+    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+  const bankPaymentsMinor = completedPaymentOrders
+    .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
+    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+  const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+
+  type RevenueWithdrawalDoc = {
+    id: string;
+    amount?: number;
+    status?: string;
+    paymentSource?: string;
+    withdrawFrom?: string;
+    withdrawalType?: string;
+    ownerName?: string;
+    createdAt?: unknown;
+    updatedAt?: unknown;
+    completedAt?: unknown;
+    note?: string;
+  };
+
+  type RevenueEvent = {
+    createdAt: Date;
+    amount: number;
+    source: string;
+    kind: "payment" | "withdrawal";
+  };
+
+  const revenueWithdrawalDocs = withdrawalsSnap.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
+    .filter((w) => w.withdrawFrom === "Store Revenue" || w.withdrawalType === "revenue" || w.ownerName === "Store");
+  const completedRevenueWithdrawals = revenueWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
+
+  const bkashWithdrawnMinor = completedRevenueWithdrawals
+    .filter((w) => w.paymentSource === "Bkash")
+    .reduce((sum, w) => sum + toMinorUnits(Number(w.amount || 0)), 0);
+  const bankWithdrawnMinor = completedRevenueWithdrawals
+    .filter((w) => w.paymentSource === "Bank")
+    .reduce((sum, w) => sum + toMinorUnits(Number(w.amount || 0)), 0);
+  const totalRevenueWithdrawnMinor = completedRevenueWithdrawals.reduce((sum, w) => sum + toMinorUnits(Number(w.amount || 0)), 0);
+
+  const codWithdrawalDocs = withdrawalsSnap.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
+    .filter((w) => w.withdrawFrom === "COD Balance" || w.withdrawalType === "cod");
+  const completedCodWithdrawals = codWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
+  const codWithdrawnMinor = completedCodWithdrawals.reduce((sum, w) => sum + toMinorUnits(Number(w.amount || 0)), 0);
+  const latestCodWithdrawal = [...completedCodWithdrawals].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime())[0] || null;
+
+  const revenueEvents: RevenueEvent[] = [
+    ...completedPaymentOrders.map((o) => ({
+      createdAt: toDate(o.createdAt),
+      amount: fromMinorUnits(Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0))),
+      source: String(o.paymentMethod || "") === "Bkash Manual" ? "Bkash" : "Bank",
+      kind: "payment" as const,
+    })),
+    ...completedRevenueWithdrawals.map((w) => ({
+      createdAt: toDate(w.completedAt || w.updatedAt || w.createdAt),
+      amount: -Number(w.amount || 0),
+      source: String(w.paymentSource || ""),
+      kind: "withdrawal" as const,
+    })),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const latestRevenueEvent = revenueEvents[0] || null;
+  const bkashBalance = fromMinorUnits(Math.max(0, bkashPaymentsMinor - bkashWithdrawnMinor));
+  const bankBalance = fromMinorUnits(Math.max(0, bankPaymentsMinor - bankWithdrawnMinor));
+  const storeRevenueTotal = fromMinorUnits(Math.max(0, bkashPaymentsMinor + bankPaymentsMinor));
+  const storeRevenueBalance = Math.max(0, bkashBalance + bankBalance);
+  const codBalance = {
+    total: fromMinorUnits(Math.max(0, codPaymentsMinor)),
+    withdrawn: fromMinorUnits(codWithdrawnMinor),
+    balance: fromMinorUnits(Math.max(0, codPaymentsMinor - codWithdrawnMinor)),
+    lastUpdatedAmount: latestCodWithdrawal ? Number(latestCodWithdrawal.amount || 0) : 0,
+    lastUpdatedAt: latestCodWithdrawal ? toDate(latestCodWithdrawal.completedAt || latestCodWithdrawal.updatedAt || latestCodWithdrawal.createdAt).toISOString() : null,
+    lastUpdatedSource: "COD",
+    history: codWithdrawalDocs
+      .sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime())
+      .map((w) => serializeDoc(w)),
+  };
+
   return NextResponse.json({
     totalOrders,
     completedOrders,
@@ -270,12 +354,11 @@ export async function GET() {
     },
     // Owner account balances (from ownerAccounts + withdrawals collections)
     ownerAccounts: (() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const accountsMap: Record<string, any> = {};
+      type OwnerAccountDoc = { totalEarned?: number; storeShareEarned?: number };
+      const accountsMap: Record<string, OwnerAccountDoc> = {};
       for (const doc of ownerAccountsSnap.docs) {
-        accountsMap[doc.id] = doc.data();
+        accountsMap[doc.id] = doc.data() as OwnerAccountDoc;
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const profitTotalsByOwner: Record<string, { totalEarned: number; storeShareEarned: number }> = {};
       for (const tx of profitTransactions) {
         const ownerName = tx.ownerName || "Unknown";
@@ -287,37 +370,29 @@ export async function GET() {
           profitTotalsByOwner[ownerName].storeShareEarned += amount;
         }
       }
-      const withdrawalsByOwner: Record<string, { profit: number; revenue: number }> = {};
+        const withdrawalsByOwner: Record<string, number> = {};
       for (const doc of withdrawalsSnap.docs) {
-        const w = doc.data();
+        const w = doc.data() as { ownerName?: string; amount?: number; withdrawalType?: string; withdrawFrom?: string };
         const owner = w.ownerName || "Unknown";
-        if (!withdrawalsByOwner[owner]) withdrawalsByOwner[owner] = { profit: 0, revenue: 0 };
-        const amount = Number(w.amount || 0);
-        if ((w as any).withdrawalType === "revenue") {
-          withdrawalsByOwner[owner].revenue += amount;
-        } else {
-          withdrawalsByOwner[owner].profit += amount;
-        }
+        if (w.withdrawFrom !== undefined && w.withdrawFrom !== "Owner's Profit") continue;
+        if (w.withdrawalType !== "profit" && w.withdrawalType !== undefined) continue;
+        withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + Number(w.amount || 0);
       }
       const buildBalance = (name: string, email: string) => {
         const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
         const ledger = profitTotalsByOwner[name] || { totalEarned: 0, storeShareEarned: 0 };
         const totalEarned = Math.round(ledger.totalEarned || acct.totalEarned || 0);
         const storeShareEarned = Math.round(ledger.storeShareEarned || acct.storeShareEarned || 0);
-        const withdrawn = withdrawalsByOwner[name] || { profit: 0, revenue: 0 };
-        const profitAvailable = Math.round(totalEarned - withdrawn.profit);
-        const revenueAvailable = Math.round(storeShareEarned - withdrawn.revenue);
+        const withdrawn = withdrawalsByOwner[name] || 0;
+        const profitAvailable = Math.round(totalEarned - withdrawn);
         return {
           name,
           email,
           totalEarned,
           storeShareEarned,
-          profitWithdrawn: Math.round(withdrawn.profit),
-          revenueWithdrawn: Math.round(withdrawn.revenue),
-          totalWithdrawn: Math.round(withdrawn.profit + withdrawn.revenue),
+          totalWithdrawn: Math.round(withdrawn),
           profitAvailable,
-          revenueAvailable,
-          availableBalance: Math.round(profitAvailable + revenueAvailable),
+          availableBalance: profitAvailable,
         };
       };
       const o1 = settings?.owner1Name ?? "Tayeb";
@@ -326,6 +401,20 @@ export async function GET() {
       const e2 = settings?.owner2Email ?? "";
       return [buildBalance(o1, e1), buildBalance(o2, e2)];
     })(),
+    storeRevenue: {
+      total: storeRevenueTotal,
+      withdrawn: fromMinorUnits(totalRevenueWithdrawnMinor),
+      balance: storeRevenueBalance,
+      bkashBalance,
+      bankBalance,
+      lastUpdatedAmount: latestRevenueEvent ? Math.abs(latestRevenueEvent.amount) : 0,
+      lastUpdatedAt: latestRevenueEvent ? latestRevenueEvent.createdAt.toISOString() : null,
+      lastUpdatedSource: latestRevenueEvent?.source || null,
+      history: revenueWithdrawalDocs
+        .sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime())
+        .map((w) => serializeDoc(w)),
+    },
+    codBalance,
   }, {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",

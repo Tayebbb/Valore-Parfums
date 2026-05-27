@@ -27,11 +27,32 @@ interface OwnerAccount {
   totalEarned: number;
   storeShareEarned: number;
   totalWithdrawn: number;
-  profitWithdrawn?: number;
-  revenueWithdrawn?: number;
-  profitAvailable?: number;
-  revenueAvailable?: number;
   availableBalance: number;
+}
+
+interface StoreRevenueApproval {
+  name: string;
+  email: string;
+  approvedAt: string;
+}
+
+interface StoreRevenueWithdrawal {
+  id: string;
+  amount: number;
+  note?: string;
+  withdrawFrom?: string;
+  paymentSource?: string;
+  requestedBy?: string;
+  requestedByEmail?: string;
+  withdrawnBy?: string;
+  approvedBy?: string[];
+  approvals?: StoreRevenueApproval[];
+  status?: string;
+  createdAt: string;
+  updatedAt?: string;
+  completedAt?: string;
+  balanceBefore?: number;
+  balanceAfter?: number;
 }
 
 interface DashboardData {
@@ -65,6 +86,26 @@ interface DashboardData {
     monthProfit: { owner1: number; owner2: number };
   };
   ownerAccounts: OwnerAccount[];
+  storeRevenue: {
+    total: number;
+    withdrawn: number;
+    balance: number;
+    bkashBalance: number;
+    bankBalance: number;
+    lastUpdatedAmount?: number;
+    lastUpdatedAt?: string | null;
+    lastUpdatedSource?: string | null;
+    history: StoreRevenueWithdrawal[];
+  };
+  codBalance: {
+    total: number;
+    withdrawn: number;
+    balance: number;
+    lastUpdatedAmount?: number;
+    lastUpdatedAt?: string | null;
+    lastUpdatedSource?: string | null;
+    history: StoreRevenueWithdrawal[];
+  };
 }
 
 function StatCard({ icon: Icon, label, value, sub }: { icon: React.ElementType; label: string; value: string; sub?: string }) {
@@ -211,7 +252,7 @@ export default function AdminDashboard() {
             {data.ownerAccounts.map((acct) => (
               <div key={acct.name} className="space-y-3">
                 <h4 className="font-serif text-lg text-[var(--gold)]">{acct.name}</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-[var(--bg-surface)] rounded p-3">
                     <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Owner Stock Profit</p>
                     <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.totalEarned)} BDT</p>
@@ -221,16 +262,12 @@ export default function AdminDashboard() {
                     <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.storeShareEarned)} BDT</p>
                   </div>
                   <div className="bg-[var(--bg-surface)] rounded p-3">
-                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Profit Remaining</p>
-                    <p className="font-serif text-lg text-[var(--success)]">{fmt(acct.profitAvailable ?? 0)} BDT</p>
-                  </div>
-                  <div className="bg-[var(--bg-surface)] rounded p-3">
-                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Revenue Remaining</p>
-                    <p className="font-serif text-lg text-[var(--success)]">{fmt(acct.revenueAvailable ?? 0)} BDT</p>
-                  </div>
-                  <div className="bg-[var(--bg-surface)] rounded p-3 sm:col-span-2 lg:col-span-1">
                     <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Withdrawn</p>
                     <p className="font-serif text-lg text-[var(--error)]">{fmt(acct.totalWithdrawn)} BDT</p>
+                  </div>
+                  <div className="bg-[var(--bg-surface)] rounded p-3">
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Available</p>
+                    <p className="font-serif text-lg text-[var(--success)]">{fmt(acct.availableBalance)} BDT</p>
                   </div>
                 </div>
               </div>
@@ -246,7 +283,21 @@ export default function AdminDashboard() {
           (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()))
         );
         return myAccount ? (
-          <WithdrawalsSection key={myAccount.name} account={myAccount} canWithdraw onWithdraw={loadDashboard} />
+          <div className="space-y-6">
+            <WithdrawalsSection key={myAccount.name} account={myAccount} canWithdraw onWithdraw={loadDashboard} />
+            <StoreRevenueWithdrawalSection
+              storeRevenue={data.storeRevenue}
+              currentAdmin={myAccount}
+              canAct
+              onChange={loadDashboard}
+            />
+            <CodWithdrawalSection
+              codBalance={data.codBalance}
+              currentAdmin={myAccount}
+              canAct
+              onChange={loadDashboard}
+            />
+          </div>
         ) : null;
       })()}
 
@@ -400,9 +451,18 @@ interface Withdrawal {
   id: string;
   amount: number;
   ownerName: string;
+  withdrawFrom?: string;
+  paymentSource?: string;
   withdrawalType?: "profit" | "revenue";
   note: string;
   withdrawnBy: string;
+  requestedBy?: string;
+  requestedByEmail?: string;
+  approvedBy?: string[];
+  approvals?: StoreRevenueApproval[];
+  status?: string;
+  updatedAt?: string;
+  completedAt?: string;
   createdAt: string;
 }
 
@@ -411,12 +471,13 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [withdrawalType, setWithdrawalType] = useState<"profit" | "revenue">("profit");
+  const [withdrawFrom, setWithdrawFrom] = useState("Owner's Profit");
+  const [paymentSource, setPaymentSource] = useState("Bkash");
   const [submitting, setSubmitting] = useState(false);
   const ownerName = account.name;
 
   const load = useCallback(() =>
-    fetch(`/api/withdrawals?ownerName=${encodeURIComponent(ownerName)}`)
+    fetch(`/api/withdrawals?ownerName=${encodeURIComponent(ownerName)}&withdrawalType=profit`)
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setWithdrawals(data); })
       .finally(() => setLoading(false)),
@@ -425,24 +486,20 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
   useEffect(() => { load(); }, [load]);
 
   const totalWithdrawn = withdrawals.reduce((s, w) => s + w.amount, 0);
-  const profitWithdrawn = withdrawals.reduce((s, w) => s + (w.withdrawalType === "revenue" ? 0 : w.amount), 0);
-  const revenueWithdrawn = withdrawals.reduce((s, w) => s + (w.withdrawalType === "revenue" ? w.amount : 0), 0);
-  const profitBalance = account.profitAvailable ?? Math.max(0, (account.totalEarned || 0) - profitWithdrawn);
-  const revenueBalance = account.revenueAvailable ?? Math.max(0, (account.storeShareEarned || 0) - revenueWithdrawn);
-  const selectedBalance = withdrawalType === "revenue" ? revenueBalance : profitBalance;
+  const profitBalance = account.availableBalance;
   const fmt = (n: number) => n.toLocaleString("en-BD");
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(amount);
     if (!amt || amt <= 0) { toast("Enter a valid amount", "error"); return; }
-    if (amt > selectedBalance) { toast(`Amount exceeds ${ownerName}'s ${withdrawalType} balance`, "error"); return; }
+    if (amt > profitBalance) { toast(`Amount exceeds ${ownerName}'s available balance`, "error"); return; }
 
     setSubmitting(true);
     const res = await fetch("/api/withdrawals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: amt, note, ownerName, withdrawalType }),
+      body: JSON.stringify({ amount: amt, note, ownerName, withdrawFrom, paymentSource, withdrawalType: "profit" }),
     });
     if (res.ok) {
       toast(`Withdrawal for ${ownerName} recorded`, "success");
@@ -465,18 +522,14 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Withdrawn</p>
           <p className="font-serif text-lg text-[var(--error)]">{fmt(totalWithdrawn)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Profit Balance</p>
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Available Balance</p>
           <p className={`font-serif text-lg ${profitBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(profitBalance)} BDT</p>
-        </div>
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Revenue Balance</p>
-          <p className={`font-serif text-lg ${revenueBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(revenueBalance)} BDT</p>
         </div>
       </div>
 
@@ -495,17 +548,6 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
             />
           </div>
           <div className="w-full sm:w-48">
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdraw From</label>
-            <select
-              value={withdrawalType}
-              onChange={(e) => setWithdrawalType(e.target.value as "profit" | "revenue")}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-            >
-              <option value="profit">Owner Profit</option>
-              <option value="revenue">Store Revenue</option>
-            </select>
-          </div>
-          <div className="flex-1 w-full">
             <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Comment / reason (optional)</label>
             <input
               type="text"
@@ -515,6 +557,27 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
               className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
               placeholder="e.g. Cash withdrawal for expenses"
             />
+          </div>
+          <div className="w-full sm:w-48">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdraw From</label>
+            <select
+              value={withdrawFrom}
+              onChange={(e) => setWithdrawFrom(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            >
+              <option value="Owner's Profit">Owner&apos;s Profit</option>
+            </select>
+          </div>
+          <div className="w-full sm:w-40">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Payment Source</label>
+            <select
+              value={paymentSource}
+              onChange={(e) => setPaymentSource(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            >
+              <option value="Bkash">Bkash</option>
+              <option value="Bank">Bank</option>
+            </select>
           </div>
           <button
             type="submit"
@@ -585,6 +648,475 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+interface StoreRevenueWithdrawalProps {
+  storeRevenue: DashboardData["storeRevenue"];
+  currentAdmin: OwnerAccount;
+  canAct: boolean;
+  onChange?: () => void;
+}
+
+function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onChange }: StoreRevenueWithdrawalProps) {
+  const [amount, setAmount] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [withdrawFrom, setWithdrawFrom] = useState("Store Revenue");
+  const [paymentSource, setPaymentSource] = useState("Bkash");
+  const [submitting, setSubmitting] = useState(false);
+
+  const history = storeRevenue.history || [];
+  const pendingRequest = history.find((item) => (item.status ?? "Pending Approval") === "Pending Approval");
+  const currentAlreadyApproved = Boolean(
+    pendingRequest?.approvals?.some((approval) => String(approval.email || "").toLowerCase() === currentAdmin.email.toLowerCase())
+  );
+
+  const fmt = (n: number) => n.toLocaleString("en-BD");
+  const selectedBalance = paymentSource === "Bank"
+    ? (storeRevenue.bankBalance ?? storeRevenue.balance)
+    : (storeRevenue.bkashBalance ?? storeRevenue.balance);
+
+  const submitRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(amount);
+    if (!amt || amt <= 0) { toast("Enter a valid revenue withdrawal amount", "error"); return; }
+    if (amt > selectedBalance) { toast(`Amount exceeds available balance`, "error"); return; }
+
+    setSubmitting(true);
+    const res = await fetch("/api/withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ownerName: "Store",
+        withdrawFrom: "Store Revenue",
+        paymentSource,
+        withdrawalType: "revenue",
+        amount: amt,
+        note: purpose,
+      }),
+    });
+
+    if (res.ok) {
+      toast("Store revenue withdrawal requested", "success");
+      setAmount("");
+      setPurpose("");
+      onChange?.();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "Failed to request revenue withdrawal", "error");
+    }
+    setSubmitting(false);
+  };
+
+  const approveRequest = async () => {
+    if (!pendingRequest) return;
+    setSubmitting(true);
+    const res = await fetch("/api/withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ownerName: "Store",
+        withdrawFrom: "Store Revenue",
+        paymentSource: pendingRequest.paymentSource || paymentSource,
+        withdrawalType: "revenue",
+        action: "approve",
+        withdrawalId: pendingRequest.id,
+        amount: pendingRequest.amount,
+        note: pendingRequest.note || "",
+      }),
+    });
+
+    if (res.ok) {
+      toast("Store revenue withdrawal approved", "success");
+      onChange?.();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "Failed to approve revenue withdrawal", "error");
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+      <div className="flex items-center gap-3 mb-5">
+        <Wallet size={18} className="text-[var(--gold)]" />
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Store Revenue Withdrawal</h3>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Store Revenue</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.total)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Revenue Withdrawn</p>
+          <p className="font-serif text-lg text-[var(--error)]">{fmt(storeRevenue.withdrawn)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Revenue Balance</p>
+          <p className="font-serif text-lg text-[var(--success)]">{fmt(storeRevenue.balance)} BDT</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Bkash Balance</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bkashBalance || 0)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Bank Balance</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bankBalance || 0)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Last Updated</p>
+          <p className="font-serif text-lg text-[var(--success)]">{fmt(storeRevenue.lastUpdatedAmount || 0)} BDT</p>
+          <p className="text-[10px] text-[var(--text-muted)] mt-1">{storeRevenue.lastUpdatedSource || "No updates yet"}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Total</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.codBalance.total)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Withdrawn</p>
+          <p className="font-serif text-lg text-[var(--error)]">{fmt(data.codBalance.withdrawn)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
+          <p className="font-serif text-lg text-[var(--success)]">{fmt(data.codBalance.balance)} BDT</p>
+        </div>
+      </div>
+
+      {canAct && !pendingRequest && (
+        <form onSubmit={submitRequest} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 mb-6">
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Amount (BDT)</label>
+            <input
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="Enter amount"
+            />
+          </div>
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Purpose / notes</label>
+            <input
+              type="text"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              maxLength={500}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="e.g. Stock Purchase"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdraw From</label>
+            <select
+              value={withdrawFrom}
+              onChange={(e) => setWithdrawFrom(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            >
+              <option value="Store Revenue">Store Revenue</option>
+            </select>
+          </div>
+          <div className="w-full sm:w-40">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Payment Source</label>
+            <select
+              value={paymentSource}
+              onChange={(e) => setPaymentSource(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            >
+              <option value="Bkash">Bkash</option>
+              <option value="Bank">Bank</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-5 py-2 bg-[var(--gold)] text-black text-[10px] uppercase tracking-wider rounded hover:bg-[var(--gold-hover)] transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {submitting ? "Processing..." : "Withdraw Revenue"}
+          </button>
+        </form>
+      )}
+
+      {pendingRequest && (
+        <div className="mb-6 bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p className="text-sm font-serif text-[var(--gold)]">Pending Revenue Withdrawal</p>
+              <p className="text-xs text-[var(--text-secondary)]">{pendingRequest.note || "No purpose provided"}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-serif text-lg text-[var(--gold)]">{fmt(pendingRequest.amount)} BDT</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Amount</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+            <span>Status: {pendingRequest.status || "Pending Approval"}</span>
+            <span>From: {pendingRequest.withdrawFrom || "Store Revenue"}</span>
+            <span>Source: {pendingRequest.paymentSource || "Bkash"}</span>
+            <span>Approved by: {pendingRequest.approvedBy?.join(", ") || "None yet"}</span>
+          </div>
+          {canAct && !currentAlreadyApproved ? (
+            <button
+              type="button"
+              onClick={approveRequest}
+              disabled={submitting}
+              className="px-5 py-2 bg-[var(--success)] text-black text-[10px] uppercase tracking-wider rounded hover:opacity-90 transition-colors disabled:opacity-50"
+            >
+              {submitting ? "Processing..." : "Approve Revenue Withdrawal"}
+            </button>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">Waiting for the second admin approval.</p>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <h4 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Revenue Withdrawal History</h4>
+        {history.length === 0 ? (
+          <p className="text-sm text-[var(--text-secondary)]">No revenue withdrawals yet</p>
+        ) : (
+          <div className="space-y-3">
+            {history.map((item) => (
+              <div key={item.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-serif text-sm text-[var(--gold)]">{fmt(item.amount)} BDT</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{item.note || "No purpose provided"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{item.status || "Pending Approval"}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{new Date(item.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs text-[var(--text-secondary)] border-t border-[var(--border)] pt-2">
+                  <span>Requested by: {item.requestedBy || "—"}</span>
+                  <span>From: {item.withdrawFrom || "Store Revenue"}</span>
+                  <span>Source: {item.paymentSource || "—"}</span>
+                  <span>Approved by: {item.approvedBy?.join(", ") || "—"}</span>
+                  <span>Completed: {item.completedAt ? new Date(item.completedAt).toLocaleString() : "Pending"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface CodWithdrawalProps {
+  codBalance: DashboardData["codBalance"];
+  currentAdmin: OwnerAccount;
+  canAct: boolean;
+  onChange?: () => void;
+}
+
+function CodWithdrawalSection({ codBalance, currentAdmin, canAct, onChange }: CodWithdrawalProps) {
+  const [amount, setAmount] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const history = codBalance.history || [];
+  const pendingRequest = history.find((item) => (item.status ?? "Pending Approval") === "Pending Approval");
+  const currentAlreadyApproved = Boolean(
+    pendingRequest?.approvals?.some((approval) => String(approval.email || "").toLowerCase() === currentAdmin.email.toLowerCase())
+  );
+
+  const fmt = (n: number) => n.toLocaleString("en-BD");
+
+  const submitRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(amount);
+    if (!amt || amt <= 0) { toast("Enter a valid COD withdrawal amount", "error"); return; }
+    if (amt > codBalance.balance) { toast(`Amount exceeds available COD balance`, "error"); return; }
+
+    setSubmitting(true);
+    const res = await fetch("/api/withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ownerName: "Store",
+        withdrawFrom: "COD Balance",
+        withdrawalType: "cod",
+        paymentSource: "COD",
+        amount: amt,
+        note: purpose,
+      }),
+    });
+
+    if (res.ok) {
+      toast("COD withdrawal requested", "success");
+      setAmount("");
+      setPurpose("");
+      onChange?.();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "Failed to request COD withdrawal", "error");
+    }
+    setSubmitting(false);
+  };
+
+  const approveRequest = async () => {
+    if (!pendingRequest) return;
+    setSubmitting(true);
+    const res = await fetch("/api/withdrawals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ownerName: "Store",
+        withdrawFrom: "COD Balance",
+        withdrawalType: "cod",
+        paymentSource: "COD",
+        action: "approve",
+        withdrawalId: pendingRequest.id,
+        amount: pendingRequest.amount,
+        note: pendingRequest.note || "",
+      }),
+    });
+
+    if (res.ok) {
+      toast("COD withdrawal approved", "success");
+      onChange?.();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast(err.error || "Failed to approve COD withdrawal", "error");
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded p-5">
+      <div className="flex items-center gap-3 mb-5">
+        <Wallet size={18} className="text-[var(--gold)]" />
+        <h3 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">COD Balance Withdrawal</h3>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Total</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(codBalance.total)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Withdrawn</p>
+          <p className="font-serif text-lg text-[var(--error)]">{fmt(codBalance.withdrawn)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
+          <p className="font-serif text-lg text-[var(--success)]">{fmt(codBalance.balance)} BDT</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Last Updated</p>
+          <p className="font-serif text-lg text-[var(--success)]">{fmt(codBalance.lastUpdatedAmount || 0)} BDT</p>
+          <p className="text-[10px] text-[var(--text-muted)] mt-1">{codBalance.lastUpdatedSource || "COD"}</p>
+        </div>
+      </div>
+
+      {canAct && !pendingRequest && (
+        <form onSubmit={submitRequest} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 mb-6">
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Amount (BDT)</label>
+            <input
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="Enter amount"
+            />
+          </div>
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Purpose / notes</label>
+            <input
+              type="text"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              maxLength={500}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+              placeholder="e.g. Cash handling"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-5 py-2 bg-[var(--gold)] text-black text-[10px] uppercase tracking-wider rounded hover:bg-[var(--gold-hover)] transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {submitting ? "Processing..." : "Withdraw COD"}
+          </button>
+        </form>
+      )}
+
+      {pendingRequest && (
+        <div className="mb-6 bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p className="text-sm font-serif text-[var(--gold)]">Pending COD Withdrawal</p>
+              <p className="text-xs text-[var(--text-secondary)]">{pendingRequest.note || "No purpose provided"}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-serif text-lg text-[var(--gold)]">{fmt(pendingRequest.amount)} BDT</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Amount</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+            <span>Status: {pendingRequest.status || "Pending Approval"}</span>
+            <span>From: {pendingRequest.withdrawFrom || "COD Balance"}</span>
+            <span>Approved by: {pendingRequest.approvedBy?.join(", ") || "None yet"}</span>
+          </div>
+          {canAct && !currentAlreadyApproved ? (
+            <button
+              type="button"
+              onClick={approveRequest}
+              disabled={submitting}
+              className="px-5 py-2 bg-[var(--success)] text-black text-[10px] uppercase tracking-wider rounded hover:opacity-90 transition-colors disabled:opacity-50"
+            >
+              {submitting ? "Processing..." : "Approve COD Withdrawal"}
+            </button>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">Waiting for the second admin approval.</p>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <h4 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">COD Withdrawal History</h4>
+        {history.length === 0 ? (
+          <p className="text-sm text-[var(--text-secondary)]">No COD withdrawals yet</p>
+        ) : (
+          <div className="space-y-3">
+            {history.map((item) => (
+              <div key={item.id} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-serif text-sm text-[var(--gold)]">{fmt(item.amount)} BDT</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{item.note || "No purpose provided"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{item.status || "Pending Approval"}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{new Date(item.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs text-[var(--text-secondary)] border-t border-[var(--border)] pt-2">
+                  <span>Requested by: {item.requestedBy || "—"}</span>
+                  <span>Source: {item.paymentSource || "COD"}</span>
+                  <span>Approved by: {item.approvedBy?.join(", ") || "—"}</span>
+                  <span>Completed: {item.completedAt ? new Date(item.completedAt).toLocaleString() : "Pending"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
