@@ -130,7 +130,7 @@ export async function POST(req: Request) {
       const doc = await docRef.get();
       if (!doc.exists) return NextResponse.json({ error: "Withdrawal request not found" }, { status: 404 });
 
-      const existing = doc.data() as { withdrawFrom?: string; withdrawalType?: string; paymentSource?: string; approvals?: Array<{ name?: string; email?: string }>; amount?: number; note?: string; completedAt?: unknown; processedBy?: string; balanceAfter?: number };
+      const existing = doc.data() as { withdrawFrom?: string; withdrawalType?: string; paymentSource?: string; approvals?: Array<{ name?: string; email?: string; approvedAt?: unknown }>; amount?: number; note?: string; completedAt?: unknown; processedBy?: string; balanceAfter?: number };
       if ((existing.withdrawFrom ?? "COD Balance") !== "COD Balance") {
         return NextResponse.json({ error: "Not a COD balance withdrawal request" }, { status: 400 });
       }
