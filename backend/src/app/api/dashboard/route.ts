@@ -287,26 +287,37 @@ export async function GET() {
           profitTotalsByOwner[ownerName].storeShareEarned += amount;
         }
       }
-      const withdrawalsByOwner: Record<string, number> = {};
+      const withdrawalsByOwner: Record<string, { profit: number; revenue: number }> = {};
       for (const doc of withdrawalsSnap.docs) {
         const w = doc.data();
         const owner = w.ownerName || "Unknown";
-        withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + (w.amount || 0);
+        if (!withdrawalsByOwner[owner]) withdrawalsByOwner[owner] = { profit: 0, revenue: 0 };
+        const amount = Number(w.amount || 0);
+        if ((w as any).withdrawalType === "revenue") {
+          withdrawalsByOwner[owner].revenue += amount;
+        } else {
+          withdrawalsByOwner[owner].profit += amount;
+        }
       }
       const buildBalance = (name: string, email: string) => {
         const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
         const ledger = profitTotalsByOwner[name] || { totalEarned: 0, storeShareEarned: 0 };
         const totalEarned = Math.round(ledger.totalEarned || acct.totalEarned || 0);
         const storeShareEarned = Math.round(ledger.storeShareEarned || acct.storeShareEarned || 0);
-        const earned = totalEarned + storeShareEarned;
-        const withdrawn = withdrawalsByOwner[name] || 0;
+        const withdrawn = withdrawalsByOwner[name] || { profit: 0, revenue: 0 };
+        const profitAvailable = Math.round(totalEarned - withdrawn.profit);
+        const revenueAvailable = Math.round(storeShareEarned - withdrawn.revenue);
         return {
           name,
           email,
           totalEarned,
           storeShareEarned,
-          totalWithdrawn: Math.round(withdrawn),
-          availableBalance: Math.round(earned - withdrawn),
+          profitWithdrawn: Math.round(withdrawn.profit),
+          revenueWithdrawn: Math.round(withdrawn.revenue),
+          totalWithdrawn: Math.round(withdrawn.profit + withdrawn.revenue),
+          profitAvailable,
+          revenueAvailable,
+          availableBalance: Math.round(profitAvailable + revenueAvailable),
         };
       };
       const o1 = settings?.owner1Name ?? "Tayeb";

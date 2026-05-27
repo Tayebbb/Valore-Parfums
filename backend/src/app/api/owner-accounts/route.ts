@@ -53,13 +53,15 @@ export async function GET() {
     );
     const totalEarned = Math.round(ledger.totalEarned || account.totalEarned || 0);
     const storeShareEarned = Math.round(ledger.storeShareEarned || account.storeShareEarned || 0);
-    const totalWithdrawn = withdrawalsByOwner[name] || 0;
+    const ownerWithdrawals = withdrawalsByOwner[name] || 0;
+    const ownerBalance = (accountsMap[name]?.totalEarned || totalEarned) - ownerWithdrawals;
+    const revenueBalance = (accountsMap[name]?.storeShareEarned || storeShareEarned);
     return {
       name,
       totalEarned,
       storeShareEarned,
-      totalWithdrawn,
-      availableBalance: Math.round(totalEarned + storeShareEarned - totalWithdrawn),
+      totalWithdrawn: ownerWithdrawals,
+      availableBalance: Math.round(ownerBalance + revenueBalance),
     };
   };
 

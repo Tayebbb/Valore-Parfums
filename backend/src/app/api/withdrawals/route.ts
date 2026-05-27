@@ -31,6 +31,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const { amount, note, ownerName } = body;
+  const withdrawalType = body.withdrawalType === "revenue" ? "revenue" : "profit";
 
   if (!amount || typeof amount !== "number" || amount <= 0) {
     return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
@@ -59,11 +60,19 @@ export async function POST(req: Request) {
   const accountDoc = await db.collection(Collections.ownerAccounts).doc(ownerName).get();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const account = accountDoc.exists ? (accountDoc.data() as any) : { totalEarned: 0, storeShareEarned: 0 };
-  const totalEarned = (account.totalEarned || 0) + (account.storeShareEarned || 0);
 
-  // Sum existing withdrawals for this owner (query only this owner's records)
+  // Sum existing withdrawals for this owner and source type (legacy withdrawals count as profit withdrawals)
   const wSnap = await db.collection(Collections.withdrawals).where("ownerName", "==", ownerName).get();
-  const totalWithdrawn = wSnap.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+  const totalWithdrawn = wSnap.docs.reduce((sum, doc) => {
+    const w = doc.data() as any;
+    const existingType = w.withdrawalType === "revenue" ? "revenue" : "profit";
+    if (existingType !== withdrawalType) return sum;
+    return sum + (w.amount || 0);
+  }, 0);
+
+  const totalEarned = withdrawalType === "revenue"
+    ? (account.storeShareEarned || 0)
+    : (account.totalEarned || 0);
 
   const available = totalEarned - totalWithdrawn;
   if (amount > available) {
@@ -75,6 +84,7 @@ export async function POST(req: Request) {
   const data = {
     amount,
     ownerName: String(ownerName).slice(0, 100),
+    withdrawalType,
     note: String(note || "").slice(0, 500),
     withdrawnBy: admin.name,
     createdAt: now,
@@ -87,7 +97,7 @@ export async function POST(req: Request) {
   await db.collection(Collections.profitTransactions).doc(txId).set({
     orderId: null,
     ownerName,
-    type: "withdrawal",
+    type: `withdrawal-${withdrawalType}`,
     amount: -amount,
     description: `Withdrawal by ${admin.name}${note ? `: ${String(note).slice(0, 200)}` : ""}`,
     createdAt: now,

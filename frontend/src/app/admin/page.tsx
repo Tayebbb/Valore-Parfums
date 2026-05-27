@@ -27,6 +27,10 @@ interface OwnerAccount {
   totalEarned: number;
   storeShareEarned: number;
   totalWithdrawn: number;
+  profitWithdrawn?: number;
+  revenueWithdrawn?: number;
+  profitAvailable?: number;
+  revenueAvailable?: number;
   availableBalance: number;
 }
 
@@ -207,7 +211,7 @@ export default function AdminDashboard() {
             {data.ownerAccounts.map((acct) => (
               <div key={acct.name} className="space-y-3">
                 <h4 className="font-serif text-lg text-[var(--gold)]">{acct.name}</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="bg-[var(--bg-surface)] rounded p-3">
                     <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Owner Stock Profit</p>
                     <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.totalEarned)} BDT</p>
@@ -217,12 +221,16 @@ export default function AdminDashboard() {
                     <p className="font-serif text-lg text-[var(--gold)]">{fmt(acct.storeShareEarned)} BDT</p>
                   </div>
                   <div className="bg-[var(--bg-surface)] rounded p-3">
-                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdrawn</p>
-                    <p className="font-serif text-lg text-[var(--error)]">{fmt(acct.totalWithdrawn)} BDT</p>
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Profit Remaining</p>
+                    <p className="font-serif text-lg text-[var(--success)]">{fmt(acct.profitAvailable ?? 0)} BDT</p>
                   </div>
                   <div className="bg-[var(--bg-surface)] rounded p-3">
-                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Remaining Revenue</p>
-                    <p className={`font-serif text-lg ${acct.availableBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(acct.availableBalance)} BDT</p>
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Revenue Remaining</p>
+                    <p className="font-serif text-lg text-[var(--success)]">{fmt(acct.revenueAvailable ?? 0)} BDT</p>
+                  </div>
+                  <div className="bg-[var(--bg-surface)] rounded p-3 sm:col-span-2 lg:col-span-1">
+                    <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Withdrawn</p>
+                    <p className="font-serif text-lg text-[var(--error)]">{fmt(acct.totalWithdrawn)} BDT</p>
                   </div>
                 </div>
               </div>
@@ -231,26 +239,16 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Withdrawal — shown for both owners */}
-      {data.ownerAccounts && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {data.ownerAccounts.map((acct) => {
-            const canWithdraw =
-              (acct.email && user?.email && acct.email.toLowerCase() === user.email.toLowerCase()) ||
-              (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()));
-
-            return (
-              <WithdrawalsSection
-                key={acct.name}
-                ownerName={acct.name}
-                availableBalance={acct.availableBalance}
-                canWithdraw={canWithdraw}
-                onWithdraw={loadDashboard}
-              />
-            );
-          })}
-        </div>
-      )}
+      {/* Withdrawal — only for the logged-in owner */}
+      {data.ownerAccounts && (() => {
+        const myAccount = data.ownerAccounts.find((acct) =>
+          (acct.email && user?.email && acct.email.toLowerCase() === user.email.toLowerCase()) ||
+          (!acct.email && user?.name && user.name.toLowerCase().includes(acct.name.toLowerCase()))
+        );
+        return myAccount ? (
+          <WithdrawalsSection key={myAccount.name} account={myAccount} canWithdraw onWithdraw={loadDashboard} />
+        ) : null;
+      })()}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -402,17 +400,20 @@ interface Withdrawal {
   id: string;
   amount: number;
   ownerName: string;
+  withdrawalType?: "profit" | "revenue";
   note: string;
   withdrawnBy: string;
   createdAt: string;
 }
 
-function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdraw }: { ownerName: string; availableBalance: number; canWithdraw: boolean; onWithdraw?: () => void }) {
+function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: OwnerAccount; canWithdraw: boolean; onWithdraw?: () => void }) {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [withdrawalType, setWithdrawalType] = useState<"profit" | "revenue">("profit");
   const [submitting, setSubmitting] = useState(false);
+  const ownerName = account.name;
 
   const load = useCallback(() =>
     fetch(`/api/withdrawals?ownerName=${encodeURIComponent(ownerName)}`)
@@ -424,19 +425,24 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
   useEffect(() => { load(); }, [load]);
 
   const totalWithdrawn = withdrawals.reduce((s, w) => s + w.amount, 0);
+  const profitWithdrawn = withdrawals.reduce((s, w) => s + (w.withdrawalType === "revenue" ? 0 : w.amount), 0);
+  const revenueWithdrawn = withdrawals.reduce((s, w) => s + (w.withdrawalType === "revenue" ? w.amount : 0), 0);
+  const profitBalance = account.profitAvailable ?? Math.max(0, (account.totalEarned || 0) - profitWithdrawn);
+  const revenueBalance = account.revenueAvailable ?? Math.max(0, (account.storeShareEarned || 0) - revenueWithdrawn);
+  const selectedBalance = withdrawalType === "revenue" ? revenueBalance : profitBalance;
   const fmt = (n: number) => n.toLocaleString("en-BD");
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(amount);
     if (!amt || amt <= 0) { toast("Enter a valid amount", "error"); return; }
-    if (amt > availableBalance) { toast(`Amount exceeds ${ownerName}'s available balance`, "error"); return; }
+    if (amt > selectedBalance) { toast(`Amount exceeds ${ownerName}'s ${withdrawalType} balance`, "error"); return; }
 
     setSubmitting(true);
     const res = await fetch("/api/withdrawals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: amt, note, ownerName }),
+      body: JSON.stringify({ amount: amt, note, ownerName, withdrawalType }),
     });
     if (res.ok) {
       toast(`Withdrawal for ${ownerName} recorded`, "success");
@@ -459,14 +465,18 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Withdrawn</p>
           <p className="font-serif text-lg text-[var(--error)]">{fmt(totalWithdrawn)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Remaining Revenue</p>
-          <p className={`font-serif text-lg ${availableBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(availableBalance)} BDT</p>
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Profit Balance</p>
+          <p className={`font-serif text-lg ${profitBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(profitBalance)} BDT</p>
+        </div>
+        <div className="bg-[var(--bg-surface)] rounded p-3">
+          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Revenue Balance</p>
+          <p className={`font-serif text-lg ${revenueBalance >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>{fmt(revenueBalance)} BDT</p>
         </div>
       </div>
 
@@ -483,6 +493,17 @@ function WithdrawalsSection({ ownerName, availableBalance, canWithdraw, onWithdr
               className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
               placeholder="Enter amount"
             />
+          </div>
+          <div className="w-full sm:w-48">
+            <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Withdraw From</label>
+            <select
+              value={withdrawalType}
+              onChange={(e) => setWithdrawalType(e.target.value as "profit" | "revenue")}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+            >
+              <option value="profit">Owner Profit</option>
+              <option value="revenue">Store Revenue</option>
+            </select>
           </div>
           <div className="flex-1 w-full">
             <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Comment / reason (optional)</label>
