@@ -130,17 +130,26 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading, fetchUser } = useAuth();
 
-  const loadDashboard = () =>
-    fetch("/api/dashboard", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setData);
+  const loadDashboard = async () => {
+    try {
+      const response = await fetch("/api/dashboard", { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || typeof payload !== "object" || !("owners" in payload) || !("storeRevenue" in payload) || !("codBalance" in payload)) {
+        throw new Error((payload as { error?: string } | null)?.error || "Failed to load dashboard");
+      }
+      setData(payload as DashboardData);
+    } catch (error) {
+      console.error("Dashboard load error:", error);
+      setData(null);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) fetchUser();
   }, [authLoading, fetchUser]);
 
   useEffect(() => {
-    loadDashboard().finally(() => setLoading(false));
+    void loadDashboard().finally(() => setLoading(false));
   }, []);
 
   if (loading || authLoading) {
