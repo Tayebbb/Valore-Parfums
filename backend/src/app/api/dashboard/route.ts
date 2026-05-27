@@ -169,20 +169,25 @@ export async function GET() {
   // Ownership profit breakdown from actual order items (replaces prisma.orderItem.findMany with order include)
   const completedItems = allItems.filter((i) => normalizeOrderStatus(i.orderStatus) === "Dispatched");
   const ownershipBreakdown: Record<string, { total: number; today: number; month: number }> = {};
+  const ownershipWithStoreShareBreakdown: Record<string, { total: number; today: number; month: number }> = {};
   let crossOwnerTotal = 0, crossOwnerToday = 0, crossOwnerMonth = 0;
 
   for (const item of completedItems) {
     const name = item.ownerName || "Store";
     if (!ownershipBreakdown[name]) ownershipBreakdown[name] = { total: 0, today: 0, month: 0 };
+    if (!ownershipWithStoreShareBreakdown[name]) ownershipWithStoreShareBreakdown[name] = { total: 0, today: 0, month: 0 };
     ownershipBreakdown[name].total += item.ownerProfit ?? 0;
+    ownershipWithStoreShareBreakdown[name].total += (item.ownerProfit ?? 0) + (item.otherOwnerProfit ?? 0);
     crossOwnerTotal += item.otherOwnerProfit ?? 0;
     const createdAt = toDate(item.orderCreatedAt);
     if (createdAt >= startOfDay) {
       ownershipBreakdown[name].today += item.ownerProfit ?? 0;
+      ownershipWithStoreShareBreakdown[name].today += (item.ownerProfit ?? 0) + (item.otherOwnerProfit ?? 0);
       crossOwnerToday += item.otherOwnerProfit ?? 0;
     }
     if (createdAt >= startOfMonth) {
       ownershipBreakdown[name].month += item.ownerProfit ?? 0;
+      ownershipWithStoreShareBreakdown[name].month += (item.ownerProfit ?? 0) + (item.otherOwnerProfit ?? 0);
       crossOwnerMonth += item.otherOwnerProfit ?? 0;
     }
   }
@@ -236,16 +241,16 @@ export async function GET() {
       owner1Share: settings?.owner1Share ?? 60,
       owner2Share: settings?.owner2Share ?? 40,
       totalProfit: {
-        owner1: Math.round(ownershipBreakdown["Tayeb"]?.total ?? 0),
-        owner2: Math.round(ownershipBreakdown["Enid"]?.total ?? 0),
+        owner1: Math.round(ownershipWithStoreShareBreakdown["Tayeb"]?.total ?? 0),
+        owner2: Math.round(ownershipWithStoreShareBreakdown["Enid"]?.total ?? 0),
       },
       todayProfit: {
-        owner1: Math.round(ownershipBreakdown["Tayeb"]?.today ?? 0),
-        owner2: Math.round(ownershipBreakdown["Enid"]?.today ?? 0),
+        owner1: Math.round(ownershipWithStoreShareBreakdown["Tayeb"]?.today ?? 0),
+        owner2: Math.round(ownershipWithStoreShareBreakdown["Enid"]?.today ?? 0),
       },
       monthProfit: {
-        owner1: Math.round(ownershipBreakdown["Tayeb"]?.month ?? 0),
-        owner2: Math.round(ownershipBreakdown["Enid"]?.month ?? 0),
+        owner1: Math.round(ownershipWithStoreShareBreakdown["Tayeb"]?.month ?? 0),
+        owner2: Math.round(ownershipWithStoreShareBreakdown["Enid"]?.month ?? 0),
       },
     },
     // Owner account balances (from ownerAccounts + withdrawals collections)
