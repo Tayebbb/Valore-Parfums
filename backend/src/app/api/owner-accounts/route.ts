@@ -40,13 +40,26 @@ export async function GET() {
   // Build owner summaries
   const buildOwnerSummary = (name: string) => {
     const account = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
+    const ledger = transactionsSnap.docs.reduce(
+      (acc, doc) => {
+        const tx = doc.data() as any;
+        if ((tx.ownerName || "") !== name) return acc;
+        const amount = Number(tx.amount || 0);
+        if (tx.type === "sale") acc.totalEarned += amount;
+        if (tx.type === "cross-owner-share" || tx.type === "store-share") acc.storeShareEarned += amount;
+        return acc;
+      },
+      { totalEarned: 0, storeShareEarned: 0 },
+    );
+    const totalEarned = Math.round(ledger.totalEarned || account.totalEarned || 0);
+    const storeShareEarned = Math.round(ledger.storeShareEarned || account.storeShareEarned || 0);
     const totalWithdrawn = withdrawalsByOwner[name] || 0;
     return {
       name,
-      totalEarned: Math.round(account.totalEarned || 0),
-      storeShareEarned: Math.round(account.storeShareEarned || 0),
+      totalEarned,
+      storeShareEarned,
       totalWithdrawn,
-      availableBalance: Math.round((account.totalEarned || 0) + (account.storeShareEarned || 0) - totalWithdrawn),
+      availableBalance: Math.round(totalEarned + storeShareEarned - totalWithdrawn),
     };
   };
 

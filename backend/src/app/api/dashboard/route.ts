@@ -20,7 +20,7 @@ export async function GET() {
 
   // Fetch all orders, perfumes, bottles, stock requests, settings, and ALL order items in parallel
   // Using collectionGroup("items") avoids N+1 subcollection reads
-  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap, ownerAccountsSnap, withdrawalsSnap, fulfilledRequestsSnap] = await Promise.all([
+  const [ordersSnap, perfumesSnap, bottlesSnap, stockRequestsSnap, settingsDoc, allItemsSnap, ownerAccountsSnap, withdrawalsSnap, fulfilledRequestsSnap, profitTransactionsSnap] = await Promise.all([
     db.collection(Collections.orders).get(),
     db.collection(Collections.perfumes).orderBy("totalStockMl", "asc").get(),
     db.collection(Collections.bottles).orderBy("availableCount", "asc").get(),
@@ -30,6 +30,7 @@ export async function GET() {
     db.collection(Collections.ownerAccounts).get(),
     db.collection(Collections.withdrawals).get(),
     db.collection(Collections.requests).where("status", "==", "Fulfilled").get(),
+    db.collection(Collections.profitTransactions).get(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -120,7 +121,7 @@ export async function GET() {
   const mostSold = Array.from(soldMap.entries())
     .map(([perfumeName, agg]) => ({ perfumeName, _sum: { quantity: agg.quantity, totalPrice: agg.totalPrice } }))
     .sort((a, b) => b._sum.quantity - a._sum.quantity)
-    .slice(0, 5);
+    .slice(0, 6);
 
   // Most requested (replaces prisma.stockRequest.groupBy by perfumeName)
   const requestedMap = new Map<string, number>();
@@ -192,6 +193,20 @@ export async function GET() {
     }
   }
 
+  // Ledger-based owner earnings, matching owner account totals and store share credits
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profitTransactions = profitTransactionsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  const ownerLedgerBreakdown: Record<string, { total: number; today: number; month: number }> = {};
+  for (const tx of profitTransactions) {
+    const ownerName = tx.ownerName || "Unknown";
+    if (!ownerLedgerBreakdown[ownerName]) ownerLedgerBreakdown[ownerName] = { total: 0, today: 0, month: 0 };
+    const amount = Number(tx.amount || 0);
+    ownerLedgerBreakdown[ownerName].total += amount;
+    const createdAt = tx.createdAt ? toDate(tx.createdAt) : null;
+    if (createdAt && createdAt >= startOfDay) ownerLedgerBreakdown[ownerName].today += amount;
+    if (createdAt && createdAt >= startOfMonth) ownerLedgerBreakdown[ownerName].month += amount;
+  }
+
   // Aggregate profit from fulfilled perfume requests
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fulfilledRequests = fulfilledRequestsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
@@ -241,16 +256,16 @@ export async function GET() {
       owner1Share: settings?.owner1Share ?? 60,
       owner2Share: settings?.owner2Share ?? 40,
       totalProfit: {
-        owner1: Math.round(ownershipWithStoreShareBreakdown["Tayeb"]?.total ?? 0),
-        owner2: Math.round(ownershipWithStoreShareBreakdown["Enid"]?.total ?? 0),
+        owner1: Math.round(ownerLedgerBreakdown["Tayeb"]?.total ?? 0),
+        owner2: Math.round(ownerLedgerBreakdown["Enid"]?.total ?? 0),
       },
       todayProfit: {
-        owner1: Math.round(ownershipWithStoreShareBreakdown["Tayeb"]?.today ?? 0),
-        owner2: Math.round(ownershipWithStoreShareBreakdown["Enid"]?.today ?? 0),
+        owner1: Math.round(ownerLedgerBreakdown["Tayeb"]?.today ?? 0),
+        owner2: Math.round(ownerLedgerBreakdown["Enid"]?.today ?? 0),
       },
       monthProfit: {
-        owner1: Math.round(ownershipWithStoreShareBreakdown["Tayeb"]?.month ?? 0),
-        owner2: Math.round(ownershipWithStoreShareBreakdown["Enid"]?.month ?? 0),
+        owner1: Math.round(ownerLedgerBreakdown["Tayeb"]?.month ?? 0),
+        owner2: Math.round(ownerLedgerBreakdown["Enid"]?.month ?? 0),
       },
     },
     // Owner account balances (from ownerAccounts + withdrawals collections)
@@ -260,6 +275,18 @@ export async function GET() {
       for (const doc of ownerAccountsSnap.docs) {
         accountsMap[doc.id] = doc.data();
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const profitTotalsByOwner: Record<string, { totalEarned: number; storeShareEarned: number }> = {};
+      for (const tx of profitTransactions) {
+        const ownerName = tx.ownerName || "Unknown";
+        if (!profitTotalsByOwner[ownerName]) profitTotalsByOwner[ownerName] = { totalEarned: 0, storeShareEarned: 0 };
+        const amount = Number(tx.amount || 0);
+        if (tx.type === "sale") {
+          profitTotalsByOwner[ownerName].totalEarned += amount;
+        } else if (tx.type === "cross-owner-share" || tx.type === "store-share") {
+          profitTotalsByOwner[ownerName].storeShareEarned += amount;
+        }
+      }
       const withdrawalsByOwner: Record<string, number> = {};
       for (const doc of withdrawalsSnap.docs) {
         const w = doc.data();
@@ -268,13 +295,16 @@ export async function GET() {
       }
       const buildBalance = (name: string, email: string) => {
         const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
-        const earned = (acct.totalEarned || 0) + (acct.storeShareEarned || 0);
+        const ledger = profitTotalsByOwner[name] || { totalEarned: 0, storeShareEarned: 0 };
+        const totalEarned = Math.round(ledger.totalEarned || acct.totalEarned || 0);
+        const storeShareEarned = Math.round(ledger.storeShareEarned || acct.storeShareEarned || 0);
+        const earned = totalEarned + storeShareEarned;
         const withdrawn = withdrawalsByOwner[name] || 0;
         return {
           name,
           email,
-          totalEarned: Math.round(acct.totalEarned || 0),
-          storeShareEarned: Math.round(acct.storeShareEarned || 0),
+          totalEarned,
+          storeShareEarned,
           totalWithdrawn: Math.round(withdrawn),
           availableBalance: Math.round(earned - withdrawn),
         };
