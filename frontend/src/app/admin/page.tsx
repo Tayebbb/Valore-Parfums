@@ -775,21 +775,6 @@ function StoreRevenueWithdrawalSection({ storeRevenue, currentAdmin, canAct, onC
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Total</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(data.codBalance.total)} BDT</p>
-        </div>
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Withdrawn</p>
-          <p className="font-serif text-lg text-[var(--error)]">{fmt(data.codBalance.withdrawn)} BDT</p>
-        </div>
-        <div className="bg-[var(--bg-surface)] rounded p-3">
-          <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
-          <p className="font-serif text-lg text-[var(--success)]">{fmt(data.codBalance.balance)} BDT</p>
-        </div>
-      </div>
-
       {canAct && !pendingRequest && (
         <form onSubmit={submitRequest} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 mb-6">
           <div className="flex-1 w-full">
