@@ -48,7 +48,7 @@ type PickupMethod = "Pickup" | "Delivery";
 interface CheckoutForm {
   customerName: string;
   customerPhone: string;
-  customerEmail: string;
+  recipientEmail: string;
   pickupMethod: PickupMethod;
   deliveryZone: "" | DeliveryZone;
   pickupLocationId: string;
@@ -181,7 +181,7 @@ function CheckoutContent() {
   const [form, setForm] = useState<CheckoutForm>({
     customerName: "",
     customerPhone: "",
-    customerEmail: user?.email || "",
+    recipientEmail: user?.email || "",
     pickupMethod: "Pickup",
     deliveryZone: "",
     pickupLocationId: "",
@@ -370,7 +370,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (user?.email) {
-      setForm((prev) => ({ ...prev, customerEmail: prev.customerEmail || user.email || "" }));
+      setForm((prev) => ({ ...prev, recipientEmail: prev.recipientEmail || user.email || "" }));
     }
   }, [user?.email]);
 
@@ -393,7 +393,7 @@ function CheckoutContent() {
           ...prev,
           customerName: prev.customerName || String(data?.name || ""),
           customerPhone: prev.customerPhone || String(data?.phone || ""),
-          customerEmail: prev.customerEmail || String(data?.email || user.email || ""),
+          recipientEmail: prev.recipientEmail || String(data?.email || user.email || ""),
           pickupMethod:
             prev.area || prev.city || prev.fullAddress || prev.pickupLocationId
               ? prev.pickupMethod
@@ -611,10 +611,10 @@ function CheckoutContent() {
 
     if (!form.customerName.trim()) newErrors.customerName = "Name is required";
     if (!form.customerPhone.trim()) newErrors.customerPhone = "Phone is required";
-    if (!form.customerEmail.trim()) {
-      newErrors.customerEmail = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) {
-      newErrors.customerEmail = "Valid email is required";
+    if (!form.recipientEmail.trim()) {
+      newErrors.recipientEmail = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.recipientEmail.trim())) {
+      newErrors.recipientEmail = "Valid email is required";
     }
 
     if (isDelivery) {
@@ -669,7 +669,7 @@ function CheckoutContent() {
         body: JSON.stringify({
           customerName: form.customerName.trim(),
           customerPhone: form.customerPhone.trim(),
-          customerEmail: form.customerEmail.trim(),
+          recipientEmail: form.recipientEmail.trim(),
           pickupMethod: form.pickupMethod,
           deliveryZone: form.pickupMethod === "Delivery" ? form.deliveryZone : "",
           pickupLocationId: form.pickupMethod === "Pickup" ? form.pickupLocationId : "",
@@ -774,9 +774,9 @@ function CheckoutContent() {
     deliveryAddress,
     deliveryFee,
     displayItems,
-    form.customerEmail,
     form.customerName,
     form.customerPhone,
+    form.recipientEmail,
     form.area,
     form.city,
     form.fullAddress,
@@ -882,21 +882,21 @@ function CheckoutContent() {
           ].map((tab) => (
             <button
               key={tab.key}
-              type="button"
+                    fieldRefs.current.recipientEmail = el;
               onClick={() => scrollToSection(tab.key)}
               className="checkout-tab w-full min-w-0 rounded-lg border border-border bg-card px-2 py-1.5 text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-hover hover:text-gold"
             >
-              {tab.label}
+                    Recipient Email
             </button>
           ))}
         </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-5">
-          <div className="space-y-4 lg:col-span-3">
+                    value={form.recipientEmail}
+                    onChange={(e) => setField("recipientEmail", e.target.value)}
+                    className={getInputClass(Boolean(errors.recipientEmail))}
             <section
               ref={(el) => {
-                sectionRefs.current.customer = el as HTMLDivElement | null;
-              }}
+                  {errors.recipientEmail ? (
+                    <p className="mt-1 text-[11px] text-error">{errors.recipientEmail}</p>
               className="checkout-panel scroll-mt-24 rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] sm:p-5"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#b1894c] dark:text-[#C9A96E]">Section 1</p>
@@ -948,21 +948,21 @@ function CheckoutContent() {
                 <div
                   className="sm:col-span-2"
                   ref={(el) => {
-                    fieldRefs.current.customerEmail = el;
+                    fieldRefs.current.recipientEmail = el;
                   }}
                 >
                   <label className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-text-muted">
-                    Email
+                    Recipient Email
                   </label>
                   <input
                     type="email"
-                    value={form.customerEmail}
-                    onChange={(e) => setField("customerEmail", e.target.value)}
-                    className={getInputClass(Boolean(errors.customerEmail))}
+                    value={form.recipientEmail}
+                    onChange={(e) => setField("recipientEmail", e.target.value)}
+                    className={getInputClass(Boolean(errors.recipientEmail))}
                     placeholder="you@email.com"
                   />
-                  {errors.customerEmail ? (
-                    <p className="mt-1 text-[11px] text-error">{errors.customerEmail}</p>
+                  {errors.recipientEmail ? (
+                    <p className="mt-1 text-[11px] text-error">{errors.recipientEmail}</p>
                   ) : null}
                 </div>
               </div>

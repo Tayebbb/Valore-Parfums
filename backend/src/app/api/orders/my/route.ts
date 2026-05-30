@@ -4,6 +4,10 @@ import { getSessionUser } from "@/lib/auth";
 import { normalizeOrderImagePath } from "@/lib/utils";
 import { FieldPath } from "firebase-admin/firestore";
 
+function normalizeEmail(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
 // GET /api/orders/my - returns orders for the authenticated user only
 export async function GET() {
   const user = await getSessionUser();
@@ -11,8 +15,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [byUserIdSnap, byEmailSnap] = await Promise.all([
+  const [byUserIdSnap, byPlacedByEmailSnap, byRecipientEmailSnap] = await Promise.all([
     db.collection(Collections.orders).where("userId", "==", user.id).get(),
+    db.collection(Collections.orders).where("placedByEmail", "==", user.email).get(),
     db.collection(Collections.orders).where("customerEmail", "==", user.email).get(),
   ]);
 
@@ -20,8 +25,16 @@ export async function GET() {
   for (const doc of byUserIdSnap.docs) {
     orderDocsMap.set(doc.id, doc);
   }
-  for (const doc of byEmailSnap.docs) {
+  for (const doc of byPlacedByEmailSnap.docs) {
     orderDocsMap.set(doc.id, doc);
+  }
+  for (const doc of byRecipientEmailSnap.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    const explicitOwnerId = String(data.userId || "").trim();
+    const placedByEmail = normalizeEmail(data.placedByEmail);
+    if (!explicitOwnerId && !placedByEmail) {
+      orderDocsMap.set(doc.id, doc);
+    }
   }
 
   const orderDocs = Array.from(orderDocsMap.values());

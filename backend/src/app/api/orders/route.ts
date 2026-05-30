@@ -9,6 +9,22 @@ import { validateBatch, validateEmail, validateOrderData, validateString } from 
 import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, sendEmail } from "@/lib/email";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
 
+function normalizeLookupEmail(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function orderBelongsToUser(order: Record<string, unknown>, user: { id: string; email: string }): boolean {
+  const explicitOwnerId = String(order.userId || "").trim();
+  const placedByEmail = normalizeLookupEmail(order.placedByEmail);
+  const recipientEmail = normalizeLookupEmail(order.customerEmail || order.recipientEmail);
+  const userEmail = normalizeLookupEmail(user.email);
+
+  if (explicitOwnerId === user.id) return true;
+  if (placedByEmail && placedByEmail === userEmail) return true;
+  if (!explicitOwnerId && !placedByEmail && recipientEmail === userEmail) return true;
+  return false;
+}
+
 async function notifyAdminViaWebhook(payload: {
   title: string;
   message: string;
@@ -45,12 +61,27 @@ export async function GET(req: Request) {
     const { getSessionUser } = await import("@/lib/auth");
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // Fetch all orders for this user
-    const ordersSnap = await db.collection(Collections.orders).where("customerEmail", "==", user.email).get();
+    // Fetch all orders for this user using ownership fields, then fall back to
+    // legacy recipient-email-only orders when there is no explicit owner.
+    const [byUserIdSnap, byPlacedByEmailSnap, byRecipientEmailSnap] = await Promise.all([
+      db.collection(Collections.orders).where("userId", "==", user.id).get(),
+      db.collection(Collections.orders).where("placedByEmail", "==", user.email).get(),
+      db.collection(Collections.orders).where("customerEmail", "==", user.email).get(),
+    ]);
+
+    const orderDocsMap = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    for (const doc of byUserIdSnap.docs) orderDocsMap.set(doc.id, doc);
+    for (const doc of byPlacedByEmailSnap.docs) orderDocsMap.set(doc.id, doc);
+    for (const doc of byRecipientEmailSnap.docs) {
+      const data = doc.data() as Record<string, unknown>;
+      if (orderBelongsToUser(data, user)) {
+        orderDocsMap.set(doc.id, doc);
+      }
+    }
     
     // Return order summaries without fetching items subcollections (much faster)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let allOrders: any[] = ordersSnap.docs.map((doc) => ({
+    let allOrders: any[] = Array.from(orderDocsMap.values()).map((doc) => ({
       id: doc.id,
       ...doc.data(),
       items: [],
@@ -152,10 +183,13 @@ export async function POST(req: Request) {
     const normalizedPaymentMethod = String(paymentMethod || "Cash on Delivery");
     const isBkashManualPayment = normalizedPaymentMethod === "Bkash Manual";
     const isBankManualPayment = normalizedPaymentMethod === "Bank Manual";
+    const recipientEmail = String(orderData.recipientEmail || orderData.customerEmail || sessionUser?.email || "")
+      .trim()
+      .toLowerCase();
 
     const orderValidation = validateOrderData({
       customerName: orderData.customerName,
-      customerEmail: orderData.customerEmail || sessionUser?.email,
+      customerEmail: recipientEmail,
       customerPhone: orderData.customerPhone,
       deliveryAddress: isDelivery ? orderData.deliveryAddress : undefined,
     });
@@ -168,10 +202,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid order input", errors: validation.errors }, { status: 400 });
     }
 
-    if (orderData.customerEmail || sessionUser?.email) {
-      const emailValidation = validateEmail(orderData.customerEmail || sessionUser?.email, "customerEmail");
+    if (recipientEmail) {
+      const emailValidation = validateEmail(recipientEmail, "recipientEmail");
       if (!emailValidation.valid) {
-        return NextResponse.json({ error: "Invalid customer email", errors: emailValidation.errors }, { status: 400 });
+        return NextResponse.json({ error: "Invalid recipient email", errors: emailValidation.errors }, { status: 400 });
       }
     }
 
@@ -527,7 +561,9 @@ export async function POST(req: Request) {
     entryType: "order",
     userId: sessionUser?.id ?? null,
     isGuestOrder: !sessionUser,
-    customerEmail: orderData.customerEmail || sessionUser?.email || "",
+    placedByEmail: sessionUser?.email || "",
+    recipientEmail,
+    customerEmail: recipientEmail,
     hasFullBottle,
     pickupMethod,
     deliveryZone: isDelivery ? deliveryZone : "",
@@ -627,31 +663,6 @@ export async function POST(req: Request) {
       const itemId = uuid();
       await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set({ ...oi, orderId });
       createdItems.push({ id: itemId, ...oi });
-    }
-
-    // Save latest checkout details for signed-in users for faster future checkout.
-    if (sessionUser?.id) {
-      const savedDeliveryInfo = {
-        pickupMethod,
-        deliveryZone: isDelivery ? deliveryZone : "",
-        pickupLocationId: isDelivery ? "" : String(orderData.pickupLocationId || ""),
-        area: isDelivery ? String(orderData.area || "").trim().slice(0, 120) : "",
-        city: isDelivery ? String(orderData.city || "").trim().slice(0, 120) : "",
-        fullAddress: isDelivery ? String(orderData.fullAddress || "").trim().slice(0, 400) : "",
-        addressNotes: isDelivery ? String(orderData.addressNotes || "").trim().slice(0, 400) : "",
-      };
-
-      await db.collection(Collections.users).doc(sessionUser.id).set(
-        {
-          name: String(orderData.customerName || "").trim().slice(0, 100),
-          email: String(orderData.customerEmail || sessionUser.email || "").trim().toLowerCase().slice(0, 254),
-          phone: String(orderData.customerPhone || "").trim().slice(0, 20),
-          savedDeliveryInfo,
-          updatedAt: now,
-          lastCheckoutAt: now,
-        },
-        { merge: true },
-      );
     }
 
     // Send confirmation email (awaited to prevent function termination in serverless environment)

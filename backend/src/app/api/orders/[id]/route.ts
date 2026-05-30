@@ -93,7 +93,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!admin) {
     // Non-admin user: verify they own this order
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (data.customerEmail !== user.email && data.userId !== user.id) {
+    const userEmail = String(user.email || "").trim().toLowerCase();
+    const orderOwnerEmail = String(data.placedByEmail || "").trim().toLowerCase();
+    const recipientEmail = String(data.customerEmail || data.recipientEmail || "").trim().toLowerCase();
+    const hasExplicitOwner = Boolean(String(data.userId || "").trim() || orderOwnerEmail);
+    const ownsOrder = String(data.userId || "").trim() === user.id || orderOwnerEmail === userEmail || (!hasExplicitOwner && recipientEmail === userEmail);
+    if (!ownsOrder) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }

@@ -41,7 +41,7 @@ export async function GET() {
   const userData = userDoc.exists ? (userDoc.data() as Record<string, unknown>) : {};
 
   const name = String(userData.name || sessionUser.name || "");
-  const email = String(userData.email || sessionUser.email || "");
+  const email = String(sessionUser.email || "");
   const phone = String(userData.phone || "");
   const savedDeliveryInfo = normalizeSavedDeliveryInfo(userData.savedDeliveryInfo);
 
