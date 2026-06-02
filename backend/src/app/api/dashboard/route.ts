@@ -185,8 +185,14 @@ export async function GET() {
 
   for (const item of completedItems) {
     const name = item.ownerName || "Store";
-    if (!ownershipBreakdown[name]) ownershipBreakdown[name] = { total: 0, today: 0, month: 0 };
-    if (!ownershipWithStoreShareBreakdown[name]) ownershipWithStoreShareBreakdown[name] = { total: 0, today: 0, month: 0 };
+
+    // For Store items, ownerProfit = owner1 (Tayeb) 60%, otherOwnerProfit = owner2 (Enid) 40%
+    // Attribute to owner1/owner2 rather than generic "Store" bucket
+    const effectiveName = name === "Store" ? owner1Name : name;
+    if (!ownershipBreakdown[effectiveName]) ownershipBreakdown[effectiveName] = { total: 0, today: 0, month: 0 };
+    if (!ownershipWithStoreShareBreakdown[effectiveName]) ownershipWithStoreShareBreakdown[effectiveName] = { total: 0, today: 0, month: 0 };
+    const effectiveOtherOwner = effectiveName === owner1Name ? owner2Name : owner1Name;
+    if (!crossOwnerEarningsByOwner[effectiveOtherOwner]) crossOwnerEarningsByOwner[effectiveOtherOwner] = { total: 0, today: 0, month: 0 };
 
     let itemOwnerProfit: number;
     let itemOtherOwnerProfit: number;
@@ -205,26 +211,22 @@ export async function GET() {
       itemOtherOwnerProfit = item.otherOwnerProfit ?? 0;
     }
 
-    // Route cross-owner earnings to the OTHER owner (2-owner system)
-    const otherOwner = name === owner1Name ? owner2Name : owner1Name;
-    if (!crossOwnerEarningsByOwner[otherOwner]) crossOwnerEarningsByOwner[otherOwner] = { total: 0, today: 0, month: 0 };
-
-    ownershipBreakdown[name].total += itemOwnerProfit;
-    ownershipWithStoreShareBreakdown[name].total += itemOwnerProfit + itemOtherOwnerProfit;
+    ownershipBreakdown[effectiveName].total += itemOwnerProfit;
+    ownershipWithStoreShareBreakdown[effectiveName].total += itemOwnerProfit + itemOtherOwnerProfit;
     crossOwnerTotal += itemOtherOwnerProfit;
-    crossOwnerEarningsByOwner[otherOwner].total += itemOtherOwnerProfit;
+    crossOwnerEarningsByOwner[effectiveOtherOwner].total += itemOtherOwnerProfit;
     const createdAt = toDate(item.orderCreatedAt);
     if (createdAt >= startOfDay) {
-      ownershipBreakdown[name].today += itemOwnerProfit;
-      ownershipWithStoreShareBreakdown[name].today += itemOwnerProfit + itemOtherOwnerProfit;
+      ownershipBreakdown[effectiveName].today += itemOwnerProfit;
+      ownershipWithStoreShareBreakdown[effectiveName].today += itemOwnerProfit + itemOtherOwnerProfit;
       crossOwnerToday += itemOtherOwnerProfit;
-      crossOwnerEarningsByOwner[otherOwner].today += itemOtherOwnerProfit;
+      crossOwnerEarningsByOwner[effectiveOtherOwner].today += itemOtherOwnerProfit;
     }
     if (createdAt >= startOfMonth) {
-      ownershipBreakdown[name].month += itemOwnerProfit;
-      ownershipWithStoreShareBreakdown[name].month += itemOwnerProfit + itemOtherOwnerProfit;
+      ownershipBreakdown[effectiveName].month += itemOwnerProfit;
+      ownershipWithStoreShareBreakdown[effectiveName].month += itemOwnerProfit + itemOtherOwnerProfit;
       crossOwnerMonth += itemOtherOwnerProfit;
-      crossOwnerEarningsByOwner[otherOwner].month += itemOtherOwnerProfit;
+      crossOwnerEarningsByOwner[effectiveOtherOwner].month += itemOtherOwnerProfit;
     }
   }
 

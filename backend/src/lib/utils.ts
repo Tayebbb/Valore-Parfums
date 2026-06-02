@@ -89,13 +89,14 @@ export function calculateProfit(
 // ─── Ownership Profit Split ────────────────────────────
 export type OwnerType = "Store" | "Tayeb" | "Enid";
 
-export function splitProfit(profit: number, owner: OwnerType, ownerPercent = 85): { ownerProfit: number; otherOwnerProfit: number } {
+export function splitProfit(profit: number, owner: OwnerType, ownerPercent = 85, storeOwner1Share = 60): { ownerProfit: number; otherOwnerProfit: number } {
   if (profit <= 0) return { ownerProfit: 0, otherOwnerProfit: 0 };
   if (owner === "Store") {
-    // Store-owned: entire profit goes to store pool (split later by owner shares)
-    return { ownerProfit: 0, otherOwnerProfit: 0 };
+    // Store-owned: split by owner1Share (60%) / owner2Share (40%)
+    const owner1Amount = Math.round(profit * (storeOwner1Share / 100));
+    return { ownerProfit: owner1Amount, otherOwnerProfit: profit - owner1Amount };
   }
-  // Owner (Tayeb or Enid): configurable split — owner gets ownerPercent, the other owner gets the rest
+  // Personal owner (Tayeb or Enid): ownerPercent split (85/15 for personal collection)
   const ownerShare = Math.round(profit * (ownerPercent / 100));
   return {
     ownerProfit: ownerShare,

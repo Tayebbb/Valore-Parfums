@@ -282,7 +282,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           ownerProfit = earningsResult.bottleOwnerEarnings;
           otherOwnerProfit = earningsResult.otherOwnerEarnings;
         } else {
-          const split = splitProfit(itemProfit, ownerName, ownerProfitPercent);
+          const storeOwner1Share = Number(settings?.owner1Share ?? 60);
+          const split = splitProfit(itemProfit, ownerName, ownerProfitPercent, storeOwner1Share);
           ownerProfit = split.ownerProfit;
           otherOwnerProfit = split.otherOwnerProfit;
         }

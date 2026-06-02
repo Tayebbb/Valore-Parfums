@@ -450,9 +450,14 @@ export async function POST(req: Request) {
       });
       ownerProfit = earningsResult.bottleOwnerEarnings;
       otherOwnerProfit = earningsResult.otherOwnerEarnings;
+    } else if (owner === "Store") {
+      // Store-owned: split profit 60/40 between owner1 (Tayeb) and owner2 (Enid)
+      const { ownerProfitMinor: o1Minor, otherOwnerProfitMinor: o2Minor } = splitProfitMinor(itemProfitMinor, owner1Share);
+      ownerProfit = fromMinorUnits(o1Minor);     // owner1 (Tayeb) 60%
+      otherOwnerProfit = fromMinorUnits(o2Minor); // owner2 (Enid) 40%
     } else {
-      ownerProfit = owner === "Store" ? 0 : fromMinorUnits(ownerProfitMinor);
-      otherOwnerProfit = owner === "Store" ? 0 : fromMinorUnits(otherOwnerProfitMinor);
+      ownerProfit = fromMinorUnits(ownerProfitMinor);
+      otherOwnerProfit = fromMinorUnits(otherOwnerProfitMinor);
     }
 
     // Deduct stock (replaces prisma.perfume.update with decrement)

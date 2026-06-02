@@ -78,6 +78,9 @@ async function main() {
   let bkashWithdrawableMinor = 0;
   let bankWithdrawableMinor = 0;
   let codWithdrawableMinor = 0;
+  // Store cost breakdown across all personal collection items
+  let totalPackagingMaterialMinor = 0;
+  let totalBottleCostMinor = 0;
 
   // Per-order personal collection deduction
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,11 +138,16 @@ async function main() {
           (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
           Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
         );
+        const packMat = Number(snap.packagingCost ?? 0) * qty;
+        const bottleCostRaw = Number(snap.bottleCost ?? 0) * qty;
+        totalPackagingMaterialMinor += toMinorUnits(packMat);
+        totalBottleCostMinor += toMinorUnits(bottleCostRaw);
         console.log(
           `    └─ [PERSONAL] ${item.name || item.perfumeName || item.id.slice(0,8)}  owner=${item.ownerName}  sellingPrice=${item.totalPrice}` +
-          `  packagingCost=${((Number(snap.packagingCost??0)+Number(snap.bottleCost??0))*qty).toFixed(2)}` +
+          `  packagingMaterial=${packMat.toFixed(2)}  bottleCost=${bottleCostRaw.toFixed(2)}  totalPackaging=${(packMat+bottleCostRaw).toFixed(2)}` +
           `  productCost=${(Number(snap.costPricePerMl??0)*Number(item.ml??0)*qty).toFixed(2)}` +
-          `  profit=${r.profit.toFixed(2)}  bottleOwnerEarnings=${r.bottleOwnerEarnings.toFixed(2)}  otherOwnerEarnings=${r.otherOwnerEarnings.toFixed(2)}`
+          `  profit=${r.profit.toFixed(2)}  bottleOwnerEarnings=${r.bottleOwnerEarnings.toFixed(2)}  otherOwnerEarnings=${r.otherOwnerEarnings.toFixed(2)}` +
+          `  storeKeeps=${(packMat+bottleCostRaw).toFixed(2)}`
         );
       } else {
         console.log(
@@ -148,6 +156,12 @@ async function main() {
       }
     }
   }
+
+  console.log("\n─── STORE REVENUE BREAKDOWN (personal collection items) ─");
+  console.log(`  Packaging material cost (snap.packagingCost × qty): ${fmt(fromMinorUnits(totalPackagingMaterialMinor))} BDT`);
+  console.log(`  Bottle/sprayer cost     (snap.bottleCost × qty):    ${fmt(fromMinorUnits(totalBottleCostMinor))} BDT`);
+  console.log(`  ─────────────────────────────────────────────────────`);
+  console.log(`  Total store keeps (packaging + bottle):              ${fmt(fromMinorUnits(totalPackagingMaterialMinor + totalBottleCostMinor))} BDT`);
 
   console.log("\n─── REVENUE SUMMARY ────────────────────────────────────");
   console.log(`  Total Revenue (gross, excl delivery): ${fmt(fromMinorUnits(totalRevenueMinor))} BDT`);
