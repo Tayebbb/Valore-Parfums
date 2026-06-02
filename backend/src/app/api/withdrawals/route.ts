@@ -5,6 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
 import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
 import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
+import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
 
 interface OrderDoc {
   id: string;
@@ -104,18 +105,51 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only the two admins can manage withdrawals" }, { status: 403 });
   }
 
-  const ordersSnap = await db.collection(Collections.orders).get();
+  const [ordersSnap, allItemsSnap] = await Promise.all([
+    db.collection(Collections.orders).get(),
+    db.collectionGroup("items").get(),
+  ]);
   const completedOrders = ordersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as OrderDoc)).filter((order) => normalizeOrderStatus(order.status, order.pickupMethod) === "Dispatched");
+  // Build itemsByOrder map for dispatched orders (needed for personal_collection deductions)
+  const dispatchedOrderIds = new Set(completedOrders.map((o) => o.id));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const itemsByOrder = new Map<string, any[]>();
+  for (const doc of allItemsSnap.docs) {
+    const orderId = doc.ref.parent.parent?.id;
+    if (!orderId || !dispatchedOrderIds.has(orderId)) continue;
+    const list = itemsByOrder.get(orderId) || [];
+    list.push({ id: doc.id, ...doc.data() });
+    itemsByOrder.set(orderId, list);
+  }
   const completedCodOrders = completedOrders.filter((order) => String(order.paymentMethod || "") === "Cash on Delivery");
   const storeRevenueMinorForOrder = (order: OrderDoc) => {
     const totalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
     const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, totalMinor - deliveryFeeMinor);
   };
+  // Deduct bottle-owner earnings from store revenue for personal_collection items
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const personalCollectionDeductionMinor = (orderId: string): number => {
+    const items: any[] = itemsByOrder.get(orderId) || [];
+    let deductionMinor = 0;
+    for (const item of items) {
+      if (!item.isPersonalCollection || (item.ownerName || "Store") === "Store") continue;
+      const snap = item.pricingSnapshot;
+      if (!snap) continue;
+      const qty = Number(item.quantity ?? 1);
+      const result = calculatePersonalBottleEarnings({
+        sellingPrice: Number(item.totalPrice ?? 0),
+        packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
+        productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+      });
+      deductionMinor += toMinorUnits(result.bottleOwnerEarnings + result.otherOwnerEarnings);
+    }
+    return deductionMinor;
+  };
   const sourceTotalsMinor = {
-    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),
-    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),
-    COD: completedCodOrders.reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),
+    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    COD: completedCodOrders.reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
   };
 
   const revenueWithdrawalsSnap = await db.collection(Collections.withdrawals).get();
