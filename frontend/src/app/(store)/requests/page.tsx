@@ -281,13 +281,13 @@ function RequestsPageContent() {
                 {type === "decant" && (
                   <div>
                     <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Size (ml) *</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {mlOptions.map((size) => (
                         <button
                           key={size}
                           type="button"
                           onClick={() => setMl(size)}
-                          className={`flex-1 py-2 rounded border text-sm transition-colors ${
+                          className={`px-3 py-2 rounded border text-sm transition-colors ${
                             ml === size
                               ? "border-[var(--gold)] bg-[var(--gold-tint)] text-[var(--gold)]"
                               : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"

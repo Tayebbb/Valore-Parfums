@@ -6,6 +6,40 @@ import { requireAdmin } from "@/lib/auth";
 import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
 import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
 
+interface OrderDoc {
+  id: string;
+  status?: string;
+  pickupMethod?: string;
+  paymentMethod?: string;
+  total?: number;
+  deliveryFee?: number;
+  profit?: number;
+  financialsMinor?: {
+    totalMinor?: number;
+    deliveryFeeMinor?: number;
+    totalProfitMinor?: number;
+  };
+}
+
+interface ApprovalEntry {
+  name: string;
+  email: string;
+  approvedAt: Timestamp;
+}
+
+interface PendingWithdrawalDoc {
+  amount?: number;
+  withdrawFrom?: string;
+  withdrawalType?: string;
+  paymentSource?: string;
+  note?: string;
+  processedBy?: string;
+  completedAt?: Timestamp | null;
+  balanceAfter?: number | null;
+  approvals?: ApprovalEntry[];
+  [key: string]: unknown;
+}
+
 // GET all withdrawals — admin only
 // Supports ?ownerName=Tayeb filter
 export async function GET(req: Request) {
@@ -59,8 +93,7 @@ export async function POST(req: Request) {
   }
 
   const settingsDoc = await db.collection(Collections.settings).doc("default").get();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
+  const settings = settingsDoc.exists ? (settingsDoc.data() as Record<string, unknown>) : null;
   const owner1Name = settings?.owner1Name ?? "Tayeb";
   const owner2Name = settings?.owner2Name ?? "Enid";
   const owner1Email = String(settings?.owner1Email ?? "").toLowerCase();
@@ -72,9 +105,9 @@ export async function POST(req: Request) {
   }
 
   const ordersSnap = await db.collection(Collections.orders).get();
-  const completedOrders = ordersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter((order: any) => normalizeOrderStatus(order.status, order.pickupMethod) === "Dispatched");
-  const completedCodOrders = completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Cash on Delivery");
-  const storeRevenueMinorForOrder = (order: any) => {
+  const completedOrders = ordersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as OrderDoc)).filter((order) => normalizeOrderStatus(order.status, order.pickupMethod) === "Dispatched");
+  const completedCodOrders = completedOrders.filter((order) => String(order.paymentMethod || "") === "Cash on Delivery");
+  const storeRevenueMinorForOrder = (order: OrderDoc) => {
     const totalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
     const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     const revenueMinor = Math.max(0, totalMinor - deliveryFeeMinor);
@@ -82,9 +115,9 @@ export async function POST(req: Request) {
     return Math.max(0, revenueMinor - totalProfitMinor);
   };
   const sourceTotalsMinor = {
-    Bkash: completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order: any) => sum + storeRevenueMinorForOrder(order), 0),
-    Bank: completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order: any) => sum + storeRevenueMinorForOrder(order), 0),
-    COD: completedCodOrders.reduce((sum: number, order: any) => sum + storeRevenueMinorForOrder(order), 0),
+    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),
+    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),
+    COD: completedCodOrders.reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),
   };
 
   const revenueWithdrawalsSnap = await db.collection(Collections.withdrawals).get();
@@ -127,13 +160,13 @@ export async function POST(req: Request) {
       if (!doc.exists) return NextResponse.json({ error: "Withdrawal request not found" }, { status: 404 });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existing = doc.data() as any;
+      const existing = doc.data() as PendingWithdrawalDoc;
       if ((existing.withdrawFrom ?? "Store Revenue") !== "Store Revenue" || String(existing.paymentSource || "") !== paymentSource) {
         return NextResponse.json({ error: "Not a store revenue withdrawal request for this payment source" }, { status: 400 });
       }
 
-      const approvals = Array.isArray(existing.approvals) ? [...existing.approvals] : [];
-      if (approvals.some((approval: any) => String(approval.email || "").toLowerCase() === admin.email.toLowerCase())) {
+      const approvals: ApprovalEntry[] = Array.isArray(existing.approvals) ? [...existing.approvals] : [];
+      if (approvals.some((approval) => String(approval.email || "").toLowerCase() === admin.email.toLowerCase())) {
         return NextResponse.json({ error: "You have already approved this request" }, { status: 400 });
       }
 
@@ -147,7 +180,7 @@ export async function POST(req: Request) {
           withdrawFrom: "Store Revenue",
           paymentSource,
           approvals,
-          approvedBy: approvals.map((approval: any) => approval.name),
+          approvedBy: approvals.map((approval) => approval.name),
           status: completed ? "Completed" : "Pending Approval",
           updatedAt: now,
           completedAt: completed ? now : existing.completedAt ?? null,
@@ -217,11 +250,10 @@ export async function POST(req: Request) {
   }
 
   const accountDoc = await db.collection(Collections.ownerAccounts).doc(ownerName).get();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const account = accountDoc.exists ? (accountDoc.data() as any) : { totalEarned: 0 };
+  const account = accountDoc.exists ? (accountDoc.data() as { totalEarned?: number }) : { totalEarned: 0 };
   const wSnap = await db.collection(Collections.withdrawals).where("ownerName", "==", ownerName).get();
   const totalWithdrawn = wSnap.docs.reduce((sum, doc) => {
-    const withdrawal = doc.data() as any;
+    const withdrawal = doc.data() as { withdrawFrom?: string; amount?: number };
     if ((withdrawal.withdrawFrom ?? "Owner's Profit") !== "Owner's Profit") return sum;
     return sum + Number(withdrawal.amount || 0);
   }, 0);

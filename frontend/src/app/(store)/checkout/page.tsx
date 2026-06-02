@@ -135,7 +135,7 @@ const OrderSummaryPanel = dynamic(() => import("@/components/checkout/OrderSumma
 
 
 const inputBaseClass =
-  "w-full rounded-xl border bg-[var(--bg-input)] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-all duration-200 focus:border-[#C9A96E] focus:ring-2 focus:ring-[rgba(201,169,110,0.2)]";
+  "w-full rounded-xl border bg-[var(--bg-input)] px-3 py-2.5 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-all duration-200 focus:border-[#C9A96E] focus:ring-2 focus:ring-[rgba(201,169,110,0.2)]";
 const textareaBaseClass = `${inputBaseClass} resize-none`;
 
 function getInputClass(hasError: boolean) {
@@ -934,6 +934,7 @@ function CheckoutContent() {
                   </label>
                   <input
                     type="text"
+                    inputMode="tel"
                     value={form.customerPhone}
                     onChange={(e) => setField("customerPhone", e.target.value)}
                     className={getInputClass(Boolean(errors.customerPhone))}
@@ -1019,7 +1020,7 @@ function CheckoutContent() {
                         value={form.pickupLocationId}
                         onChange={(e) => setField("pickupLocationId", e.target.value)}
                         disabled={loadingCheckoutConfig || checkoutConfig.pickupLocations.length === 0}
-                        className="w-full appearance-none rounded-xl border border-border bg-input px-3 py-2.5 pr-10 text-sm text-text-primary outline-none transition-all duration-200 focus:border-gold focus:ring-2 focus:ring-[rgba(201,169,110,0.2)] disabled:opacity-60"
+                        className="w-full appearance-none rounded-xl border border-border bg-input px-3 py-2.5 pr-10 text-base text-text-primary outline-none transition-all duration-200 focus:border-gold focus:ring-2 focus:ring-[rgba(201,169,110,0.2)] disabled:opacity-60"
                       >
                         {checkoutConfig.pickupLocations.length === 0 ? (
                           <option value="">No locations available</option>

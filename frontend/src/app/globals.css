@@ -409,6 +409,12 @@ a[href]:hover {
   animation: marquee-scroll 32s linear infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
 /* ── Status pill colors ── */
 .status-pending  { background: rgba(251,191,36,0.12); color: #fbbf24; }
 .status-pendingbkashverification { background: rgba(244,114,182,0.14); color: #f472b6; }

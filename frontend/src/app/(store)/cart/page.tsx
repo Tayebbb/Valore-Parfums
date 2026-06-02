@@ -26,7 +26,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-[5%] py-8">
+    <div className="px-4 sm:px-6 md:px-[5%] py-8 pb-24 lg:pb-8">
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-6"
@@ -84,14 +84,14 @@ export default function CartPage() {
                 <div className="flex items-center gap-2">
                 <button
                   onClick={() => updateQuantity(item.perfumeId, item.ml, Math.max(1, item.quantity - 1), item.isFullBottle, item.fullBottleSize)}
-                  className="w-8 h-8 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
+                  className="w-11 h-11 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
                   <Minus size={14} />
                 </button>
                 <span className="font-serif text-base w-6 text-center">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.perfumeId, item.ml, item.quantity + 1, item.isFullBottle, item.fullBottleSize)}
-                  className="w-8 h-8 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
+                  className="w-11 h-11 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
                   <Plus size={14} />
                 </button>
@@ -138,6 +138,22 @@ export default function CartPage() {
               Proceed to Checkout
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Sticky mobile checkout bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--bg-base)] px-4 py-3 lg:hidden">
+        <div className="flex items-center gap-3 max-w-6xl mx-auto">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Subtotal</p>
+            <p className="font-serif text-lg text-[var(--gold)] truncate">{total.toLocaleString("en-BD")} BDT</p>
+          </div>
+          <Link
+            href="/checkout"
+            className="rounded-xl bg-[var(--gold)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-black shadow-[0_10px_22px_var(--gold-glow)] transition-all hover:bg-[var(--gold-light)]"
+          >
+            Checkout
+          </Link>
         </div>
       </div>
     </div>

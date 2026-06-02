@@ -102,7 +102,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
         </div>
         {/* Keep card text compact so product browsing feels lighter. */}
         <div className="p-3.5">
-          <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
+          <h3 className="font-serif text-lg font-light leading-tight line-clamp-2">{perfume.name}</h3>
           <p className="text-sm md:text-base leading-relaxed font-medium text-text-muted mt-0.5">{perfume.brand}</p>
           <div className="mt-2.5">
             {displayStartingPrice > 0 ? (
@@ -573,7 +573,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
             placeholder="Search..."
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex-1 bg-transparent px-2 py-2.5 text-sm outline-none placeholder:text-text-muted"
+            className="flex-1 bg-transparent px-2 py-2.5 text-base outline-none placeholder:text-text-muted"
           />
           {searchInput && (
             <button type="button" onClick={() => { handleSearchChange(""); }} className="pr-2 text-text-muted hover:text-text-primary">
@@ -785,7 +785,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           <select
             value={sortParam}
             onChange={(e) => updateFilter("sort", e.target.value)}
-            className="bg-card border border-border rounded px-3 py-2 text-sm text-text-secondary outline-none cursor-pointer hover:border-gold transition-colors"
+            className="bg-card border border-border rounded px-3 py-2 text-base text-text-secondary outline-none cursor-pointer hover:border-gold transition-colors"
           >
             {sortOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -795,7 +795,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
           {/* Mobile filter toggle */}
           <button
             onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-            className={`lg:hidden flex items-center gap-2 px-4 py-2 text-sm border rounded transition-colors ${
+            className={`lg:hidden flex items-center gap-2 px-4 py-2.5 text-sm border rounded transition-colors ${
               mobileFiltersOpen ? "bg-gold text-black border-gold" : "border-border text-text-secondary hover:border-gold"
             }`}
           >

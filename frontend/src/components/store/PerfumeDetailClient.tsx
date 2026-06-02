@@ -257,7 +257,7 @@ export default function PerfumePage({
   }
 
   return (
-    <div className="px-4 sm:px-6 md:px-[5%] py-7 sm:py-8">
+    <div className="px-4 sm:px-6 md:px-[5%] py-7 sm:py-8 pb-24 md:pb-8">
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-6"
@@ -392,7 +392,7 @@ export default function PerfumePage({
                 <button
                   onClick={() => setSelectedOptionState("full-bottle")}
                   disabled={lockedVariant !== null || !fullBottleOrderingEnabled}
-                  className={`px-4 py-2.5 rounded text-sm transition-all ${
+                  className={`px-4 py-3 rounded text-sm transition-all ${
                     selectedOption === "full-bottle"
                       ? "bg-[var(--gold)] text-black"
                       : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
@@ -405,7 +405,7 @@ export default function PerfumePage({
                 <button
                   onClick={() => setSelectedOptionState("decant")}
                   disabled={lockedVariant !== null}
-                  className={`px-4 py-2.5 rounded text-sm transition-all ${
+                  className={`px-4 py-3 rounded text-sm transition-all ${
                     selectedOption === "decant"
                       ? "bg-[var(--gold)] text-black"
                       : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
@@ -427,7 +427,7 @@ export default function PerfumePage({
                       setSelectedMl(p.ml);
                     }}
                     disabled={!p.available}
-                    className={`px-4 py-2.5 rounded text-sm transition-all font-sans tabular-nums ${
+                    className={`px-4 py-3 rounded text-sm transition-all font-sans tabular-nums ${
                       selectedOption === "decant" && selectedMl === p.ml
                         ? "bg-[var(--gold)] text-black"
                         : p.available
@@ -453,14 +453,14 @@ export default function PerfumePage({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-10 h-10 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
+                  className="w-11 h-11 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
                   <Minus size={16} />
                 </button>
                 <span className="font-serif text-xl w-8 text-center">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="w-10 h-10 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
+                  className="w-11 h-11 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
                   <Plus size={16} />
                 </button>
@@ -512,7 +512,7 @@ export default function PerfumePage({
               <ShoppingBag size={18} /> Full Bottle Ordering Disabled
             </button>
           ) : selectedPrice?.available ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="hidden md:grid md:grid-cols-2 gap-3">
               <button
                 onClick={handleAddToCart}
                 className="w-full flex items-center justify-center gap-3 bg-[var(--gold)] text-black py-3.5 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums hover:bg-[var(--gold-light)] transition-colors"
@@ -578,12 +578,9 @@ export default function PerfumePage({
             Full Bottle Ordering Disabled
           </button>
         ) : (
-          <button
-            onClick={handleAddToCart}
-            className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums"
-          >
-            Add to Cart
-          </button>
+          <div className="flex items-center justify-center w-full py-3 text-xs uppercase tracking-wider font-sans font-semibold text-[var(--text-muted)]">
+            ↑ Select a Size
+          </div>
         )}
       </div>
 

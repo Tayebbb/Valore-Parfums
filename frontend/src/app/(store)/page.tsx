@@ -47,7 +47,7 @@ function PerfumeCard({ perfume, prices, priority }: { perfume: PerfumeDocument; 
         </div>
         {/* Lean card spacing keeps the listing easy to scan. */}
         <div className="p-3.5">
-          <h3 className="font-serif text-lg font-light leading-tight">{perfume.name}</h3>
+          <h3 className="font-serif text-lg font-light leading-tight line-clamp-2">{perfume.name}</h3>
           <div className="mt-2.5">
             {lowestPrice ? (
               <p className="font-serif text-base md:text-xl leading-snug font-medium text-[var(--gold-light)]">
@@ -107,16 +107,16 @@ export default async function HomePage() {
           <p className="text-sm text-[var(--text-secondary)] mt-4 max-w-md mx-auto leading-relaxed">
             Premium perfume decants from the world&apos;s finest fragrances. Experience luxury without the full-bottle commitment.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-4">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/shop"
-              className="bg-[var(--gold)] text-black px-8 py-3 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-hover)] transition-colors rounded"
+              className="w-full sm:w-auto bg-[var(--gold)] text-black px-8 py-3 text-xs uppercase tracking-wider font-medium hover:bg-[var(--gold-hover)] transition-colors rounded text-center"
             >
               Shop Now
             </Link>
             <Link
               href="/shop?bestSeller=true"
-              className="border border-[var(--border)] px-8 py-3 text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition-colors rounded"
+              className="w-full sm:w-auto border border-[var(--border)] px-8 py-3 text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition-colors rounded text-center"
             >
               Best Sellers
             </Link>

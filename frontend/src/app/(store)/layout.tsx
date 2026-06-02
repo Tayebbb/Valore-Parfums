@@ -133,6 +133,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{id:string;name:string;brand:string;images:string;category:string;slug?:string;brandSlug?:string;canonicalPath?:string}[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
@@ -151,6 +152,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const saved = safeStorageGetJSON<string[]>("valore_recent_searches", "localStorage");
+    if (Array.isArray(saved)) setRecentSearches(saved);
+  }, []);
+
+  const saveRecentSearch = useCallback((query: string) => {
+    const q = query.trim();
+    if (!q) return;
+    setRecentSearches((prev) => {
+      const updated = [q, ...prev.filter((s) => s !== q)].slice(0, 5);
+      safeStorageSetJSON("valore_recent_searches", updated, "localStorage");
+      return updated;
+    });
+  }, []);
 
   useEffect(() => {
     let cacheTimer: number | null = null;
@@ -241,6 +258,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      saveRecentSearch(searchQuery.trim());
       router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
       setSearchQuery("");
@@ -342,7 +360,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <Image src="/valore-logo.png" alt="Valore Parfums" width={36} height={36} className="rounded-full object-cover" priority />
-            <h1 className="font-serif text-2xl font-light tracking-wide text-[var(--gold)]">
+            <h1 className="font-serif text-xl sm:text-2xl font-light tracking-wide text-[var(--gold)]">
               Valore Parfums
             </h1>
           </Link>
@@ -425,7 +443,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Search */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+              className="flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
             >
               <Search size={18} />
             </button>
@@ -433,7 +451,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Theme Toggle */}
             <button
               onClick={toggle}
-              className="flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+              className="flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
               title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Toggle theme"}
             >
               {(!mounted || theme === "dark") ? <Sun size={18} /> : <Moon size={18} />}
@@ -441,7 +459,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
             {/* Wishlist */}
             {user && (
-              <Link href="/wishlist" className="hidden sm:flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
+              <Link href="/wishlist" className="hidden sm:flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
                 <Heart size={18} />
               </Link>
             )}
@@ -450,7 +468,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div className="relative flex items-center justify-center" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+                className="flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
               >
                 <User size={18} />
               </button>
@@ -518,7 +536,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 placeholder="Search perfumes, brands, notes..."
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
+                className="flex-1 bg-transparent text-base outline-none placeholder:text-[var(--text-muted)]"
               />
               {searchLoading && <div className="spinner !w-4 !h-4 flex-shrink-0" />}
               <button
@@ -540,7 +558,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         <Link
                           key={p.id}
                           href={p.canonicalPath || buildCanonicalProductPath(p)}
-                          onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
+                          onClick={() => { saveRecentSearch(searchQuery.trim()); setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
                           className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--gold-tint)] transition-colors"
                         >
                           <div className="w-10 h-10 rounded bg-[var(--bg-surface)] flex-shrink-0 overflow-hidden relative">
@@ -559,7 +577,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     })}
                     <Link
                       href={`/shop?q=${encodeURIComponent(searchQuery.trim())}`}
-                      onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
+                      onClick={() => { saveRecentSearch(searchQuery.trim()); setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
                       className="block text-center py-3 text-xs uppercase tracking-wider text-[var(--gold)] hover:bg-[var(--gold-tint)] transition-colors"
                     >
                       View all results →
@@ -570,6 +588,34 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     <p className="text-sm text-[var(--text-muted)]">No perfumes found for &ldquo;{searchQuery}&rdquo;</p>
                   </div>
                 ) : null}
+              </div>
+            )}
+            {/* Recent searches (shown when search is open and query is empty) */}
+            {!searchQuery.trim() && recentSearches.length > 0 && (
+              <div className="px-4 sm:px-6 md:px-[5%] pb-4">
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Recent Searches</p>
+                    <button
+                      type="button"
+                      onClick={() => { setRecentSearches([]); safeStorageSetJSON("valore_recent_searches", [], "localStorage"); }}
+                      className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  {recentSearches.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => { handleSearchInput(q); if (searchRef.current) searchRef.current.focus(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--gold-tint)] hover:text-[var(--text-primary)] transition-colors border-b border-[var(--border)] last:border-b-0"
+                    >
+                      <Search size={14} className="text-[var(--text-muted)] flex-shrink-0" />
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -589,7 +635,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <button
                   type="button"
                   onClick={() => toggleMobileExpanded("shop")}
-                  className="p-1 text-[var(--text-secondary)]"
+                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-secondary)]"
                   aria-label="Toggle shop submenu"
                 >
                   <ChevronDown size={16} className={`transition-transform ${mobileExpanded === "shop" ? "rotate-180" : ""}`} />
@@ -694,7 +740,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Footer */}
       <footer className="border-t border-[var(--border)] mt-16 bg-[var(--bg-surface)]">
         <div className="px-4 sm:px-6 md:px-[5%] py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-1">
                 <Image src="/valore-logo.png" alt="Valore Parfums" width={32} height={32} className="rounded-full object-cover" />
