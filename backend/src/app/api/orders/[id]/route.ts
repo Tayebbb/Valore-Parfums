@@ -6,6 +6,7 @@ import { v4 as uuid } from "uuid";
 import { splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, toMinorUnits } from "@/lib/finance";
+import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
 import {
   generateOrderCancelledEmail,
   generateOrderConfirmationEmail,
@@ -268,7 +269,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         const costPrice = fromMinorUnits(breakdown.totalCostMinor);
         const itemProfit = nextTotalPrice - costPrice;
         const ownerName = (item.ownerName || "Store") as OwnerType;
-        const { ownerProfit, otherOwnerProfit } = splitProfit(itemProfit, ownerName, ownerProfitPercent);
+        let ownerProfit: number;
+        let otherOwnerProfit: number;
+        if (item.isPersonalCollection && ownerName !== "Store" && item.pricingSnapshot) {
+          const snap = item.pricingSnapshot;
+          const qty = Number(item.quantity ?? 1);
+          const earningsResult = calculatePersonalBottleEarnings({
+            sellingPrice: nextTotalPrice,
+            packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
+            productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+          });
+          ownerProfit = earningsResult.bottleOwnerEarnings;
+          otherOwnerProfit = earningsResult.otherOwnerEarnings;
+        } else {
+          const split = splitProfit(itemProfit, ownerName, ownerProfitPercent);
+          ownerProfit = split.ownerProfit;
+          otherOwnerProfit = split.otherOwnerProfit;
+        }
 
         await itemDoc.ref.update({
           unitPrice: nextUnitPrice,

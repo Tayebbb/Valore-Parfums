@@ -110,9 +110,7 @@ export async function POST(req: Request) {
   const storeRevenueMinorForOrder = (order: OrderDoc) => {
     const totalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
     const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
-    const revenueMinor = Math.max(0, totalMinor - deliveryFeeMinor);
-    const totalProfitMinor = Number(order?.financialsMinor?.totalProfitMinor ?? toMinorUnits(order.profit ?? 0));
-    return Math.max(0, revenueMinor - totalProfitMinor);
+    return Math.max(0, totalMinor - deliveryFeeMinor);
   };
   const sourceTotalsMinor = {
     Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => sum + storeRevenueMinorForOrder(order), 0),

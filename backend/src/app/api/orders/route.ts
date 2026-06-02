@@ -8,6 +8,7 @@ import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { validateBatch, validateEmail, validateOrderData, validateString } from "@/lib/validation";
 import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, sendEmail } from "@/lib/email";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
+import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
 
 function normalizeLookupEmail(value: unknown): string {
   return String(value || "").trim().toLowerCase();
@@ -439,8 +440,20 @@ export async function POST(req: Request) {
     const owner = (perfume.owner || "Store") as OwnerType;
     const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
     const { ownerProfitMinor, otherOwnerProfitMinor } = splitProfitMinor(itemProfitMinor, ownerProfitPercent);
-    const ownerProfit = owner === "Store" ? 0 : fromMinorUnits(ownerProfitMinor);
-    const otherOwnerProfit = owner === "Store" ? 0 : fromMinorUnits(otherOwnerProfitMinor);
+    let ownerProfit: number;
+    let otherOwnerProfit: number;
+    if (owner !== "Store" && isPersonalCollection) {
+      const earningsResult = calculatePersonalBottleEarnings({
+        sellingPrice: totalPrice,
+        packagingCost: (packagingCost + bottleCost) * quantity,
+        productCost: (perfume.purchasePricePerMl || 0) * requestedFullBottleMl * quantity,
+      });
+      ownerProfit = earningsResult.bottleOwnerEarnings;
+      otherOwnerProfit = earningsResult.otherOwnerEarnings;
+    } else {
+      ownerProfit = owner === "Store" ? 0 : fromMinorUnits(ownerProfitMinor);
+      otherOwnerProfit = owner === "Store" ? 0 : fromMinorUnits(otherOwnerProfitMinor);
+    }
 
     // Deduct stock (replaces prisma.perfume.update with decrement)
     if (!isFullBottleItem) {

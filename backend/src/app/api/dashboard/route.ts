@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
+import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
 import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
 
 // Helper: convert Firestore Timestamp to Date
@@ -182,19 +183,37 @@ export async function GET() {
     const name = item.ownerName || "Store";
     if (!ownershipBreakdown[name]) ownershipBreakdown[name] = { total: 0, today: 0, month: 0 };
     if (!ownershipWithStoreShareBreakdown[name]) ownershipWithStoreShareBreakdown[name] = { total: 0, today: 0, month: 0 };
-    ownershipBreakdown[name].total += item.ownerProfit ?? 0;
-    ownershipWithStoreShareBreakdown[name].total += (item.ownerProfit ?? 0) + (item.otherOwnerProfit ?? 0);
-    crossOwnerTotal += item.otherOwnerProfit ?? 0;
+
+    let itemOwnerProfit: number;
+    let itemOtherOwnerProfit: number;
+    if (item.isPersonalCollection && name !== "Store" && item.pricingSnapshot) {
+      const snap = item.pricingSnapshot;
+      const qty = Number(item.quantity ?? 1);
+      const earningsResult = calculatePersonalBottleEarnings({
+        sellingPrice: Number(item.totalPrice ?? 0),
+        packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
+        productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+      });
+      itemOwnerProfit = earningsResult.bottleOwnerEarnings;
+      itemOtherOwnerProfit = earningsResult.otherOwnerEarnings;
+    } else {
+      itemOwnerProfit = item.ownerProfit ?? 0;
+      itemOtherOwnerProfit = item.otherOwnerProfit ?? 0;
+    }
+
+    ownershipBreakdown[name].total += itemOwnerProfit;
+    ownershipWithStoreShareBreakdown[name].total += itemOwnerProfit + itemOtherOwnerProfit;
+    crossOwnerTotal += itemOtherOwnerProfit;
     const createdAt = toDate(item.orderCreatedAt);
     if (createdAt >= startOfDay) {
-      ownershipBreakdown[name].today += item.ownerProfit ?? 0;
-      ownershipWithStoreShareBreakdown[name].today += (item.ownerProfit ?? 0) + (item.otherOwnerProfit ?? 0);
-      crossOwnerToday += item.otherOwnerProfit ?? 0;
+      ownershipBreakdown[name].today += itemOwnerProfit;
+      ownershipWithStoreShareBreakdown[name].today += itemOwnerProfit + itemOtherOwnerProfit;
+      crossOwnerToday += itemOtherOwnerProfit;
     }
     if (createdAt >= startOfMonth) {
-      ownershipBreakdown[name].month += item.ownerProfit ?? 0;
-      ownershipWithStoreShareBreakdown[name].month += (item.ownerProfit ?? 0) + (item.otherOwnerProfit ?? 0);
-      crossOwnerMonth += item.otherOwnerProfit ?? 0;
+      ownershipBreakdown[name].month += itemOwnerProfit;
+      ownershipWithStoreShareBreakdown[name].month += itemOwnerProfit + itemOtherOwnerProfit;
+      crossOwnerMonth += itemOtherOwnerProfit;
     }
   }
 
@@ -240,9 +259,7 @@ export async function GET() {
   const storeRevenueMinorForOrder = (order: OrderRevenueShape) => {
     const orderTotalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
     const orderDeliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
-    const orderRevenueMinor = Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
-    const orderProfitMinor = Number(order?.financialsMinor?.totalProfitMinor ?? toMinorUnits(order.profit ?? 0));
-    return Math.max(0, orderRevenueMinor - orderProfitMinor);
+    return Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
   };
   const bkashPaymentsMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
