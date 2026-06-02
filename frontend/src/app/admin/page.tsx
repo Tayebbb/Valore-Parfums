@@ -92,6 +92,8 @@ interface DashboardData {
     balance: number;
     bkashBalance: number;
     bankBalance: number;
+    bkashWithdrawable?: number;
+    bankWithdrawable?: number;
     lastUpdatedAmount?: number;
     lastUpdatedAt?: string | null;
     lastUpdatedSource?: string | null;
@@ -101,6 +103,7 @@ interface DashboardData {
     total: number;
     withdrawn: number;
     balance: number;
+    withdrawable?: number;
     lastUpdatedAmount?: number;
     lastUpdatedAt?: string | null;
     lastUpdatedSource?: string | null;
@@ -671,10 +674,10 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
 
   const fmt = (n: number) => n.toLocaleString("en-BD");
   const selectedBalance = paymentSource === "Bank"
-    ? (storeRevenue.bankBalance ?? storeRevenue.balance)
+    ? (storeRevenue.bankWithdrawable ?? storeRevenue.bankBalance ?? storeRevenue.balance)
     : paymentSource === "COD"
-      ? (codBalance.balance ?? storeRevenue.balance)
-      : (storeRevenue.bkashBalance ?? storeRevenue.balance);
+      ? (codBalance.withdrawable ?? codBalance.balance ?? storeRevenue.balance)
+      : (storeRevenue.bkashWithdrawable ?? storeRevenue.bkashBalance ?? storeRevenue.balance);
 
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -761,15 +764,15 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Bkash Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bkashBalance || 0)} BDT</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bkashWithdrawable ?? storeRevenue.bkashBalance || 0)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Bank Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bankBalance || 0)} BDT</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bankWithdrawable ?? storeRevenue.bankBalance || 0)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(codBalance.balance || 0)} BDT</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt(codBalance.withdrawable ?? codBalance.balance || 0)} BDT</p>
         </div>
       </div>
 

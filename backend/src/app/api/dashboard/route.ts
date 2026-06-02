@@ -269,6 +269,35 @@ export async function GET() {
     .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
   const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
 
+  // Per-source withdrawable amounts: gross minus what is owed to bottle owners for personal_collection items
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const personalCollectionDeductionForOrder = (orderId: string): number => {
+    const items: any[] = itemsByOrder.get(orderId) || [];
+    let deductionMinor = 0;
+    for (const item of items) {
+      if (!item.isPersonalCollection || (item.ownerName || "Store") === "Store") continue;
+      const snap = item.pricingSnapshot;
+      if (!snap) continue;
+      const qty = Number(item.quantity ?? 1);
+      const result = calculatePersonalBottleEarnings({
+        sellingPrice: Number(item.totalPrice ?? 0),
+        packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
+        productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+      });
+      deductionMinor += toMinorUnits(result.bottleOwnerEarnings + result.otherOwnerEarnings);
+    }
+    return deductionMinor;
+  };
+  const bkashWithdrawableMinor = completedOrderList
+    .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
+    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+  const bankWithdrawableMinor = completedOrderList
+    .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
+    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+  const codWithdrawableMinor = completedOrderList
+    .filter((o) => String(o.paymentMethod || "") === "Cash on Delivery")
+    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+
   type RevenueWithdrawalDoc = {
     id: string;
     amount?: number;
@@ -335,13 +364,19 @@ export async function GET() {
   const latestRevenueEvent = revenueEvents[0] || null;
   const bkashBalance = fromMinorUnits(Math.max(0, bkashPaymentsMinor - bkashWithdrawnMinor));
   const bankBalance = fromMinorUnits(Math.max(0, bankPaymentsMinor - bankWithdrawnMinor));
-  const storeRevenueTotalMinor = Math.max(0, totalRevenueMinor - totalProfitMinor);
+  // Withdrawable balances per source (deducted by bottle owner earnings)
+  const bkashWithdrawable = fromMinorUnits(Math.max(0, bkashWithdrawableMinor - bkashWithdrawnMinor));
+  const bankWithdrawable = fromMinorUnits(Math.max(0, bankWithdrawableMinor - bankWithdrawnMinor));
+  const codWithdrawable = fromMinorUnits(Math.max(0, codWithdrawableMinor - codWithdrawnMinor));
+  // Total store revenue = only what the store actually keeps (packaging cost recovery for personal_collection)
+  const storeRevenueTotalMinor = bkashWithdrawableMinor + bankWithdrawableMinor + codWithdrawableMinor;
   const storeRevenueTotal = fromMinorUnits(storeRevenueTotalMinor);
   const storeRevenueBalance = fromMinorUnits(Math.max(0, storeRevenueTotalMinor - totalRevenueWithdrawnMinor));
   const codBalance = {
     total: fromMinorUnits(Math.max(0, codPaymentsMinor)),
     withdrawn: fromMinorUnits(codWithdrawnMinor),
     balance: fromMinorUnits(Math.max(0, codPaymentsMinor - codWithdrawnMinor)),
+    withdrawable: codWithdrawable,
     lastUpdatedAmount: latestCodWithdrawal ? Number(latestCodWithdrawal.amount || 0) : 0,
     lastUpdatedAt: latestCodWithdrawal ? toDate(latestCodWithdrawal.completedAt || latestCodWithdrawal.updatedAt || latestCodWithdrawal.createdAt).toISOString() : null,
     lastUpdatedSource: "COD",
@@ -451,6 +486,8 @@ export async function GET() {
       balance: storeRevenueBalance,
       bkashBalance,
       bankBalance,
+      bkashWithdrawable,
+      bankWithdrawable,
       lastUpdatedAmount: latestRevenueEvent ? Math.abs(latestRevenueEvent.amount) : 0,
       lastUpdatedAt: latestRevenueEvent ? latestRevenueEvent.createdAt.toISOString() : null,
       lastUpdatedSource: latestRevenueEvent?.source || null,
