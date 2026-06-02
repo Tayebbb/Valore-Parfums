@@ -734,6 +734,27 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </ul>
             </div>
           </div>
+          <div className="mt-8 pt-6 border-t border-[var(--border)]">
+            <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Follow Us</h3>
+            <div className="flex flex-wrap items-center gap-5">
+              <a
+                href="https://www.facebook.com/ValoreParfums"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+              >
+                Facebook
+              </a>
+              <a
+                href="https://www.instagram.com/valore_parfums/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
+              >
+                Instagram
+              </a>
+            </div>
+          </div>
           <div className="gold-line my-8" />
           <p className="text-center text-[10px] text-[var(--text-muted)] tracking-wider">
             © {new Date().getFullYear()} Valore Parfums. All rights reserved.
