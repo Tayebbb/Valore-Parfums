@@ -764,15 +764,15 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Bkash Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bkashWithdrawable ?? storeRevenue.bkashBalance || 0)} BDT</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt((storeRevenue.bkashWithdrawable ?? storeRevenue.bkashBalance) || 0)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Bank Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(storeRevenue.bankWithdrawable ?? storeRevenue.bankBalance || 0)} BDT</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt((storeRevenue.bankWithdrawable ?? storeRevenue.bankBalance) || 0)} BDT</p>
         </div>
         <div className="bg-[var(--bg-surface)] rounded p-3">
           <p className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">COD Balance</p>
-          <p className="font-serif text-lg text-[var(--gold)]">{fmt(codBalance.withdrawable ?? codBalance.balance || 0)} BDT</p>
+          <p className="font-serif text-lg text-[var(--gold)]">{fmt((codBalance.withdrawable ?? codBalance.balance) || 0)} BDT</p>
         </div>
       </div>
 
