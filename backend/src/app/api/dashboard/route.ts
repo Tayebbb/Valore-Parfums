@@ -430,16 +430,16 @@ export async function GET() {
       owner1Share: settings?.owner1Share ?? 60,
       owner2Share: settings?.owner2Share ?? 40,
       totalProfit: {
-        owner1: Math.round(ownershipBreakdown[owner1Name]?.total ?? 0),
-        owner2: Math.round(ownershipBreakdown[owner2Name]?.total ?? 0),
+        owner1: Math.round((ownershipBreakdown[owner1Name]?.total ?? 0) + (crossOwnerEarningsByOwner[owner1Name]?.total ?? 0)),
+        owner2: Math.round((ownershipBreakdown[owner2Name]?.total ?? 0) + (crossOwnerEarningsByOwner[owner2Name]?.total ?? 0)),
       },
       todayProfit: {
-        owner1: Math.round(ownershipBreakdown[owner1Name]?.today ?? 0),
-        owner2: Math.round(ownershipBreakdown[owner2Name]?.today ?? 0),
+        owner1: Math.round((ownershipBreakdown[owner1Name]?.today ?? 0) + (crossOwnerEarningsByOwner[owner1Name]?.today ?? 0)),
+        owner2: Math.round((ownershipBreakdown[owner2Name]?.today ?? 0) + (crossOwnerEarningsByOwner[owner2Name]?.today ?? 0)),
       },
       monthProfit: {
-        owner1: Math.round(ownershipBreakdown[owner1Name]?.month ?? 0),
-        owner2: Math.round(ownershipBreakdown[owner2Name]?.month ?? 0),
+        owner1: Math.round((ownershipBreakdown[owner1Name]?.month ?? 0) + (crossOwnerEarningsByOwner[owner1Name]?.month ?? 0)),
+        owner2: Math.round((ownershipBreakdown[owner2Name]?.month ?? 0) + (crossOwnerEarningsByOwner[owner2Name]?.month ?? 0)),
       },
     },
     // Owner account balances (from ownerAccounts + withdrawals collections)
@@ -473,7 +473,8 @@ export async function GET() {
         const totalEarned = Math.round(ownershipBreakdown[name]?.total ?? 0);
         const storeShareEarned = Math.round(crossOwnerEarningsByOwner[name]?.total ?? 0);
         const withdrawn = withdrawalsByOwner[name] || 0;
-        const profitAvailable = Math.max(0, Math.round(totalEarned - withdrawn));
+        // Available = own bottle earnings + cross-owner earnings received - withdrawn
+        const profitAvailable = Math.max(0, Math.round(totalEarned + storeShareEarned - withdrawn));
         return {
           name,
           email,
