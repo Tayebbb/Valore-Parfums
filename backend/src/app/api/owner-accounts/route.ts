@@ -40,12 +40,13 @@ export async function GET() {
   // Build owner summaries
   const buildOwnerSummary = (name: string) => {
     const account = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
+    type LedgerTx = { ownerName?: string; amount?: number; type?: string };
     const ledger = transactionsSnap.docs.reduce(
       (acc, doc) => {
-        const tx = doc.data() as any;
+        const tx = doc.data() as LedgerTx;
         if ((tx.ownerName || "") !== name) return acc;
         const amount = Number(tx.amount || 0);
-        if (tx.type === "sale") acc.totalEarned += amount;
+        if (tx.type === "sale" || tx.type === "owner-revenue-base") acc.totalEarned += amount;
         if (tx.type === "cross-owner-share" || tx.type === "store-share") acc.storeShareEarned += amount;
         return acc;
       },

@@ -255,6 +255,7 @@ export async function POST(req: Request) {
     totalPrice: number;
     costPrice: number;
     ownerName: string;
+    isPersonalCollection?: boolean;
     ownerProfit: number;
     otherOwnerProfit: number;
     financialBreakdown: {
@@ -391,6 +392,7 @@ export async function POST(req: Request) {
     const bottleCost = isFullBottleItem ? 0 : (bottle?.costPerBottle ?? 0);
 
     // Personal collection: market price = purchase price
+    const isPersonalCollection = Boolean(perfume.isPersonalCollection);
     const effectiveMarketPricePerMl = perfume.isPersonalCollection
       ? perfume.purchasePricePerMl
       : perfume.marketPricePerMl;
@@ -466,6 +468,7 @@ export async function POST(req: Request) {
         totalPrice,
         costPrice,
         ownerName: owner,
+        isPersonalCollection,
         ownerProfit,
         otherOwnerProfit,
         financialBreakdown: itemBreakdown,

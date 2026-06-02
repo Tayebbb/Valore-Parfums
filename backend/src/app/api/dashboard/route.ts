@@ -67,13 +67,18 @@ export async function GET() {
 
   // Aggregates (replaces prisma.order.count, prisma.order.aggregate)
   const normalizedOrders = allOrders.map((order) => ({ ...order, normalizedStatus: normalizeOrderStatus(order.status, order.pickupMethod) }));
+  const revenueMinorExcludingDelivery = (order: Record<string, unknown>) => {
+    const totalMinor = Number((order.financialsMinor as { totalMinor?: number } | undefined)?.totalMinor ?? toMinorUnits(Number(order.total ?? 0)));
+    const deliveryFeeMinor = Number((order.financialsMinor as { deliveryFeeMinor?: number } | undefined)?.deliveryFeeMinor ?? toMinorUnits(Number(order.deliveryFee ?? 0)));
+    return Math.max(0, totalMinor - deliveryFeeMinor);
+  };
   const totalOrders = normalizedOrders.length;
   const completedOrders = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched").length;
   const pendingOrders = normalizedOrders.filter((o) => ["Pending", "Confirmed", "Sourcing", "Ready"].includes(o.normalizedStatus)).length;
   const pendingBkashVerifications = allOrders.filter((o) => o.status === "Pending Bkash Verification").length;
   const pendingBankVerifications = allOrders.filter((o) => o.status === "Pending Bank Verification").length;
   const completedOrderList = normalizedOrders.filter((o) => o.normalizedStatus === "Dispatched");
-  const totalRevenueMinor = completedOrderList.reduce((s, o) => s + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+  const totalRevenueMinor = completedOrderList.reduce((s, o) => s + revenueMinorExcludingDelivery(o), 0);
   const totalProfitMinor = completedOrderList.reduce((s, o) => s + Number(o?.financialsMinor?.totalProfitMinor ?? toMinorUnits(o.profit ?? 0)), 0);
   const totalRevenue = fromMinorUnits(totalRevenueMinor);
   const totalProfitVal = fromMinorUnits(totalProfitMinor);
@@ -82,12 +87,12 @@ export async function GET() {
   const todayOrdersNonCancelled = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.normalizedStatus !== "Cancelled");
   const todayCompleted = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfDay && o.normalizedStatus === "Dispatched");
   const todayOrders = todayOrdersNonCancelled.length;
-  const todayRevenue = fromMinorUnits(todayCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0));
+  const todayRevenue = fromMinorUnits(todayCompleted.reduce((s, o) => s + revenueMinorExcludingDelivery(o), 0));
   const todayProfitVal = fromMinorUnits(todayCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalProfitMinor ?? toMinorUnits(o.profit ?? 0)), 0));
 
   // Month aggregates
   const monthCompleted = normalizedOrders.filter((o) => toDate(o.createdAt) >= startOfMonth && o.normalizedStatus === "Dispatched");
-  const monthRevenue = fromMinorUnits(monthCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0));
+  const monthRevenue = fromMinorUnits(monthCompleted.reduce((s, o) => s + revenueMinorExcludingDelivery(o), 0));
   const monthProfitVal = fromMinorUnits(monthCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalProfitMinor ?? toMinorUnits(o.profit ?? 0)), 0));
 
   // Low stock perfumes (replaces prisma.perfume.findMany take 10 + filter)
@@ -144,7 +149,7 @@ export async function GET() {
     });
     dailySales.push({
       date: dayStart.toISOString().split("T")[0],
-      revenue: fromMinorUnits(dayCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0)),
+      revenue: fromMinorUnits(dayCompleted.reduce((s, o) => s + revenueMinorExcludingDelivery(o), 0)),
       profit: fromMinorUnits(dayCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalProfitMinor ?? toMinorUnits(o.profit ?? 0)), 0)),
       orders: dayCompleted.length,
     });
@@ -161,7 +166,7 @@ export async function GET() {
     });
     monthlySales.push({
       month: mStart.toLocaleString("default", { month: "short", year: "2-digit" }),
-      revenue: fromMinorUnits(mCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0)),
+      revenue: fromMinorUnits(mCompleted.reduce((s, o) => s + revenueMinorExcludingDelivery(o), 0)),
       profit: fromMinorUnits(mCompleted.reduce((s, o) => s + Number(o?.financialsMinor?.totalProfitMinor ?? toMinorUnits(o.profit ?? 0)), 0)),
       orders: mCompleted.length,
     });
@@ -226,13 +231,26 @@ export async function GET() {
     (o) => o.normalizedStatus !== "Cancelled" && ["Bkash Manual", "Bank Manual"].includes(String(o.paymentMethod || "")),
   );
   const completedCodOrders = completedOrderList.filter((o) => String(o.paymentMethod || "") === "Cash on Delivery");
+  type OrderRevenueShape = {
+    financialsMinor?: { totalMinor?: number; totalProfitMinor?: number; deliveryFeeMinor?: number };
+    total?: number;
+    profit?: number;
+    deliveryFee?: number;
+  };
+  const storeRevenueMinorForOrder = (order: OrderRevenueShape) => {
+    const orderTotalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
+    const orderDeliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
+    const orderRevenueMinor = Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
+    const orderProfitMinor = Number(order?.financialsMinor?.totalProfitMinor ?? toMinorUnits(order.profit ?? 0));
+    return Math.max(0, orderRevenueMinor - orderProfitMinor);
+  };
   const bkashPaymentsMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
-    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+    .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
   const bankPaymentsMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
-    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
-  const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+    .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
+  const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
 
   type RevenueWithdrawalDoc = {
     id: string;
@@ -280,13 +298,13 @@ export async function GET() {
   const revenueEvents: RevenueEvent[] = [
     ...completedPaymentOrders.map((o) => ({
       createdAt: toDate(o.createdAt),
-      amount: fromMinorUnits(Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0))),
+      amount: fromMinorUnits(revenueMinorExcludingDelivery(o)),
       source: String(o.paymentMethod || "") === "Bkash Manual" ? "Bkash" : "Bank",
       kind: "payment" as const,
     })),
     ...completedCodOrders.map((o) => ({
       createdAt: toDate(o.createdAt),
-      amount: fromMinorUnits(Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0))),
+      amount: fromMinorUnits(revenueMinorExcludingDelivery(o)),
       source: "COD",
       kind: "payment" as const,
     })),
@@ -300,8 +318,9 @@ export async function GET() {
   const latestRevenueEvent = revenueEvents[0] || null;
   const bkashBalance = fromMinorUnits(Math.max(0, bkashPaymentsMinor - bkashWithdrawnMinor));
   const bankBalance = fromMinorUnits(Math.max(0, bankPaymentsMinor - bankWithdrawnMinor));
-  const storeRevenueTotal = fromMinorUnits(Math.max(0, totalRevenueMinor));
-  const storeRevenueBalance = fromMinorUnits(Math.max(0, totalRevenueMinor - totalRevenueWithdrawnMinor));
+  const storeRevenueTotalMinor = Math.max(0, totalRevenueMinor - totalProfitMinor);
+  const storeRevenueTotal = fromMinorUnits(storeRevenueTotalMinor);
+  const storeRevenueBalance = fromMinorUnits(Math.max(0, storeRevenueTotalMinor - totalRevenueWithdrawnMinor));
   const codBalance = {
     total: fromMinorUnits(Math.max(0, codPaymentsMinor)),
     withdrawn: fromMinorUnits(codWithdrawnMinor),
@@ -372,7 +391,7 @@ export async function GET() {
         const ownerName = tx.ownerName || "Unknown";
         if (!profitTotalsByOwner[ownerName]) profitTotalsByOwner[ownerName] = { totalEarned: 0, storeShareEarned: 0 };
         const amount = Number(tx.amount || 0);
-        if (tx.type === "sale") {
+        if (tx.type === "sale" || tx.type === "owner-revenue-base") {
           profitTotalsByOwner[ownerName].totalEarned += amount;
         } else if (tx.type === "cross-owner-share" || tx.type === "store-share") {
           profitTotalsByOwner[ownerName].storeShareEarned += amount;

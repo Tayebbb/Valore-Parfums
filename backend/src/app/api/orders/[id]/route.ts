@@ -477,6 +477,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
 
     const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
+    const personalRevenueByOwner: Record<string, number> = {};
     for (const itemDoc of itemsSnap.docs) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const item = itemDoc.data() as any;
@@ -484,6 +485,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       if (!profitByOwner[name]) profitByOwner[name] = { ownerProfit: 0, otherOwnerProfit: 0 };
       profitByOwner[name].ownerProfit += item.ownerProfit ?? 0;
       profitByOwner[name].otherOwnerProfit += item.otherOwnerProfit ?? 0;
+
+      if (name !== "Store" && item.isPersonalCollection) {
+        const totalPriceMinor = toMinorUnits(Number(item.totalPrice || 0));
+        const ownerProfitMinor = toMinorUnits(Number(item.ownerProfit || 0));
+        const otherOwnerProfitMinor = toMinorUnits(Number(item.otherOwnerProfit || 0));
+        const quantity = Math.max(0, Number(item.quantity || 0));
+        const packagingCostPerUnit = Number(item?.pricingSnapshot?.packagingCost || 0);
+        const bottleCostPerUnit = Number(item?.pricingSnapshot?.bottleCost || 0);
+        const excludedCostsMinor = toMinorUnits((packagingCostPerUnit + bottleCostPerUnit) * quantity);
+        const ownerRevenueMinor = Math.max(0, totalPriceMinor - ownerProfitMinor - otherOwnerProfitMinor - excludedCostsMinor);
+        const ownerRevenue = fromMinorUnits(ownerRevenueMinor);
+        personalRevenueByOwner[name] = (personalRevenueByOwner[name] || 0) + ownerRevenue;
+      }
     }
 
     for (const [ownerName, profits] of Object.entries(profitByOwner)) {
@@ -520,6 +534,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         });
         await db.collection(Collections.ownerAccounts).doc(otherOwner).set(
           { storeShareEarned: FieldValue.increment(profits.otherOwnerProfit) },
+          { merge: true },
+        );
+      }
+
+      if ((personalRevenueByOwner[ownerName] || 0) > 0) {
+        const ownerRevenueCredit = personalRevenueByOwner[ownerName];
+        const txId = uuid();
+        await db.collection(Collections.profitTransactions).doc(txId).set({
+          orderId: id,
+          ownerName,
+          type: "owner-revenue-base",
+          amount: ownerRevenueCredit,
+          description: `Personal collection revenue credit from order ${id.slice(0, 8)} (excluding profit, packaging and bottle costs)`,
+          createdAt: now,
+        });
+        await db.collection(Collections.ownerAccounts).doc(ownerName).set(
+          { totalEarned: FieldValue.increment(ownerRevenueCredit) },
           { merge: true },
         );
       }
@@ -596,6 +627,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Only reverse profit if profit was previously credited (order was Dispatched)
     if (previousStatusDb === "Dispatched") {
       const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
+      const personalRevenueByOwner: Record<string, number> = {};
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
@@ -603,6 +635,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (!profitByOwner[name]) profitByOwner[name] = { ownerProfit: 0, otherOwnerProfit: 0 };
         profitByOwner[name].ownerProfit += item.ownerProfit ?? 0;
         profitByOwner[name].otherOwnerProfit += item.otherOwnerProfit ?? 0;
+
+        if (name !== "Store" && item.isPersonalCollection) {
+          const totalPriceMinor = toMinorUnits(Number(item.totalPrice || 0));
+          const ownerProfitMinor = toMinorUnits(Number(item.ownerProfit || 0));
+          const otherOwnerProfitMinor = toMinorUnits(Number(item.otherOwnerProfit || 0));
+          const quantity = Math.max(0, Number(item.quantity || 0));
+          const packagingCostPerUnit = Number(item?.pricingSnapshot?.packagingCost || 0);
+          const bottleCostPerUnit = Number(item?.pricingSnapshot?.bottleCost || 0);
+          const excludedCostsMinor = toMinorUnits((packagingCostPerUnit + bottleCostPerUnit) * quantity);
+          const ownerRevenueMinor = Math.max(0, totalPriceMinor - ownerProfitMinor - otherOwnerProfitMinor - excludedCostsMinor);
+          const ownerRevenue = fromMinorUnits(ownerRevenueMinor);
+          personalRevenueByOwner[name] = (personalRevenueByOwner[name] || 0) + ownerRevenue;
+        }
       }
 
       for (const [ownerName, profits] of Object.entries(profitByOwner)) {
@@ -637,6 +682,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           });
           await db.collection(Collections.ownerAccounts).doc(otherOwner).set(
             { storeShareEarned: FieldValue.increment(-profits.otherOwnerProfit) },
+            { merge: true },
+          );
+        }
+
+        if ((personalRevenueByOwner[ownerName] || 0) > 0) {
+          const ownerRevenueReverse = personalRevenueByOwner[ownerName];
+          const txId = uuid();
+          await db.collection(Collections.profitTransactions).doc(txId).set({
+            orderId: id,
+            ownerName,
+            type: "owner-revenue-base",
+            amount: -ownerRevenueReverse,
+            description: `Reversed personal collection revenue credit from cancelled order ${id.slice(0, 8)}`,
+            createdAt: now,
+          });
+          await db.collection(Collections.ownerAccounts).doc(ownerName).set(
+            { totalEarned: FieldValue.increment(-ownerRevenueReverse) },
             { merge: true },
           );
         }

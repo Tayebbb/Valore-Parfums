@@ -74,10 +74,17 @@ export async function POST(req: Request) {
   const ordersSnap = await db.collection(Collections.orders).get();
   const completedOrders = ordersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter((order: any) => normalizeOrderStatus(order.status, order.pickupMethod) === "Dispatched");
   const completedCodOrders = completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Cash on Delivery");
+  const storeRevenueMinorForOrder = (order: any) => {
+    const totalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
+    const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
+    const revenueMinor = Math.max(0, totalMinor - deliveryFeeMinor);
+    const totalProfitMinor = Number(order?.financialsMinor?.totalProfitMinor ?? toMinorUnits(order.profit ?? 0));
+    return Math.max(0, revenueMinor - totalProfitMinor);
+  };
   const sourceTotalsMinor = {
-    Bkash: completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order: any) => sum + Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)), 0),
-    Bank: completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order: any) => sum + Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)), 0),
-    COD: completedCodOrders.reduce((sum: number, order: any) => sum + Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)), 0),
+    Bkash: completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order: any) => sum + storeRevenueMinorForOrder(order), 0),
+    Bank: completedOrders.filter((order: any) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order: any) => sum + storeRevenueMinorForOrder(order), 0),
+    COD: completedCodOrders.reduce((sum: number, order: any) => sum + storeRevenueMinorForOrder(order), 0),
   };
 
   const revenueWithdrawalsSnap = await db.collection(Collections.withdrawals).get();
