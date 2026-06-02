@@ -177,7 +177,11 @@ export async function GET() {
   const completedItems = allItems.filter((i) => normalizeOrderStatus(i.orderStatus) === "Dispatched");
   const ownershipBreakdown: Record<string, { total: number; today: number; month: number }> = {};
   const ownershipWithStoreShareBreakdown: Record<string, { total: number; today: number; month: number }> = {};
+  // Per-owner cross earnings: when owner A sells, the otherOwnerEarnings go to the other owner
+  const crossOwnerEarningsByOwner: Record<string, { total: number; today: number; month: number }> = {};
   let crossOwnerTotal = 0, crossOwnerToday = 0, crossOwnerMonth = 0;
+  const owner1Name: string = settings?.owner1Name ?? "Tayeb";
+  const owner2Name: string = settings?.owner2Name ?? "Enid";
 
   for (const item of completedItems) {
     const name = item.ownerName || "Store";
@@ -201,19 +205,26 @@ export async function GET() {
       itemOtherOwnerProfit = item.otherOwnerProfit ?? 0;
     }
 
+    // Route cross-owner earnings to the OTHER owner (2-owner system)
+    const otherOwner = name === owner1Name ? owner2Name : owner1Name;
+    if (!crossOwnerEarningsByOwner[otherOwner]) crossOwnerEarningsByOwner[otherOwner] = { total: 0, today: 0, month: 0 };
+
     ownershipBreakdown[name].total += itemOwnerProfit;
     ownershipWithStoreShareBreakdown[name].total += itemOwnerProfit + itemOtherOwnerProfit;
     crossOwnerTotal += itemOtherOwnerProfit;
+    crossOwnerEarningsByOwner[otherOwner].total += itemOtherOwnerProfit;
     const createdAt = toDate(item.orderCreatedAt);
     if (createdAt >= startOfDay) {
       ownershipBreakdown[name].today += itemOwnerProfit;
       ownershipWithStoreShareBreakdown[name].today += itemOwnerProfit + itemOtherOwnerProfit;
       crossOwnerToday += itemOtherOwnerProfit;
+      crossOwnerEarningsByOwner[otherOwner].today += itemOtherOwnerProfit;
     }
     if (createdAt >= startOfMonth) {
       ownershipBreakdown[name].month += itemOwnerProfit;
       ownershipWithStoreShareBreakdown[name].month += itemOwnerProfit + itemOtherOwnerProfit;
       crossOwnerMonth += itemOtherOwnerProfit;
+      crossOwnerEarningsByOwner[otherOwner].month += itemOtherOwnerProfit;
     }
   }
 
@@ -412,23 +423,23 @@ export async function GET() {
       Tayeb: ownershipBreakdown["Tayeb"] ?? { total: 0, today: 0, month: 0 },
       Enid: ownershipBreakdown["Enid"] ?? { total: 0, today: 0, month: 0 },
     },
-    // Legacy owners field for backward compat
+    // Legacy owners field — now uses item-based recalculation instead of ledger
     owners: {
-      owner1Name: settings?.owner1Name ?? "Tayeb",
-      owner2Name: settings?.owner2Name ?? "Enid",
+      owner1Name,
+      owner2Name,
       owner1Share: settings?.owner1Share ?? 60,
       owner2Share: settings?.owner2Share ?? 40,
       totalProfit: {
-        owner1: Math.round(ownerLedgerBreakdown["Tayeb"]?.total ?? 0),
-        owner2: Math.round(ownerLedgerBreakdown["Enid"]?.total ?? 0),
+        owner1: Math.round(ownershipBreakdown[owner1Name]?.total ?? 0),
+        owner2: Math.round(ownershipBreakdown[owner2Name]?.total ?? 0),
       },
       todayProfit: {
-        owner1: Math.round(ownerLedgerBreakdown["Tayeb"]?.today ?? 0),
-        owner2: Math.round(ownerLedgerBreakdown["Enid"]?.today ?? 0),
+        owner1: Math.round(ownershipBreakdown[owner1Name]?.today ?? 0),
+        owner2: Math.round(ownershipBreakdown[owner2Name]?.today ?? 0),
       },
       monthProfit: {
-        owner1: Math.round(ownerLedgerBreakdown["Tayeb"]?.month ?? 0),
-        owner2: Math.round(ownerLedgerBreakdown["Enid"]?.month ?? 0),
+        owner1: Math.round(ownershipBreakdown[owner1Name]?.month ?? 0),
+        owner2: Math.round(ownershipBreakdown[owner2Name]?.month ?? 0),
       },
     },
     // Owner account balances (from ownerAccounts + withdrawals collections)
@@ -458,12 +469,11 @@ export async function GET() {
         withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + Number(w.amount || 0);
       }
       const buildBalance = (name: string, email: string) => {
-        const acct = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
-        const ledger = profitTotalsByOwner[name] || { totalEarned: 0, storeShareEarned: 0 };
-        const totalEarned = Math.round(ledger.totalEarned || acct.totalEarned || 0);
-        const storeShareEarned = Math.round(ledger.storeShareEarned || acct.storeShareEarned || 0);
+        // Use item-based recalculation (correct for personal_collection)
+        const totalEarned = Math.round(ownershipBreakdown[name]?.total ?? 0);
+        const storeShareEarned = Math.round(crossOwnerEarningsByOwner[name]?.total ?? 0);
         const withdrawn = withdrawalsByOwner[name] || 0;
-        const profitAvailable = Math.round(totalEarned - withdrawn);
+        const profitAvailable = Math.max(0, Math.round(totalEarned - withdrawn));
         return {
           name,
           email,
