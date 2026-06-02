@@ -882,21 +882,20 @@ function CheckoutContent() {
           ].map((tab) => (
             <button
               key={tab.key}
-                    fieldRefs.current.recipientEmail = el;
               onClick={() => scrollToSection(tab.key)}
               className="checkout-tab w-full min-w-0 rounded-lg border border-border bg-card px-2 py-1.5 text-[10px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-border-hover hover:text-gold"
             >
-                    Recipient Email
+              {tab.label}
             </button>
           ))}
         </div>
-                    value={form.recipientEmail}
-                    onChange={(e) => setField("recipientEmail", e.target.value)}
-                    className={getInputClass(Boolean(errors.recipientEmail))}
+
+        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5 lg:items-start">
+          <div className="space-y-4 lg:col-span-3">
             <section
               ref={(el) => {
-                  {errors.recipientEmail ? (
-                    <p className="mt-1 text-[11px] text-error">{errors.recipientEmail}</p>
+                sectionRefs.current.customer = el as HTMLDivElement | null;
+              }}
               className="checkout-panel scroll-mt-24 rounded-2xl border border-border bg-card p-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)] sm:p-5"
             >
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#b1894c] dark:text-[#C9A96E]">Section 1</p>
