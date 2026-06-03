@@ -27,7 +27,7 @@ function resolveSiteUrl(): string {
 
   if (fromNetlify) return fromNetlify;
 
-  return isNetlify ? "https://valoreparfums.netlify.app" : "https://valoreparfums.app";
+  return "https://www.valoreparfums.app";
 }
 
 export const SITE_URL = resolveSiteUrl();

@@ -24,8 +24,8 @@ function getAllowedOrigins(): string[] {
 
   if (process.env.NODE_ENV === "production") {
     return [
-      "https://valore-parfums.vercel.app",
-      "https://valore-parfums-two.vercel.app",
+      "https://www.valoreparfums.app",
+      "https://valoreparfums.app",
     ];
   }
 
