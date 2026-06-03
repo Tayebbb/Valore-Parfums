@@ -9,6 +9,7 @@ import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin } from "@/lib/utils";
+import { parseImageList } from "@/lib/image-utils";
 import { PaginationNav } from "@/components/ui/PaginationNav";
 
 export interface Perfume {
@@ -66,7 +67,7 @@ function getStartingPriceEstimate(perfume: Perfume): number {
 }
 
 function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo[] }) {
-  const images: string[] = JSON.parse(perfume.images || "[]");
+  const images: string[] = parseImageList(perfume.images);
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
   const estimatedStartingPrice = getStartingPriceEstimate(perfume);
   const displayStartingPrice = lowestPrice?.sellingPrice || estimatedStartingPrice;

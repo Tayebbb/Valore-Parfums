@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getActivePerfumes, buildCanonicalProductPath, SITE_NAME } from "@/lib/seo-catalog";
+import { getActivePerfumes, buildCanonicalProductPath, SITE_NAME, SITE_URL } from "@/lib/seo-catalog";
 
 interface ContentSection {
   heading: string;
@@ -15,16 +15,26 @@ interface SeoRichContentPageProps {
   ctaHref: string;
 }
 
-export function buildSeoMetadata(metaTitle: string, metaDescription: string, keywords: string[]): Metadata {
+export function buildSeoMetadata(metaTitle: string, metaDescription: string, keywords: string[], canonicalPath?: string): Metadata {
+  const canonical = canonicalPath ? `${SITE_URL}${canonicalPath}` : undefined;
   return {
     title: metaTitle,
     description: metaDescription,
     keywords,
+    ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: metaTitle,
       description: metaDescription,
       siteName: SITE_NAME,
       type: "article",
+      ...(canonical ? { url: canonical } : {}),
+      images: [{ url: `${SITE_URL}/valore-logo.png`, width: 512, height: 512, alt: "Valore Parfums" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: metaTitle,
+      description: metaDescription,
+      images: [`${SITE_URL}/valore-logo.png`],
     },
   };
 }

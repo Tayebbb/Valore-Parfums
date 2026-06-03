@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface CartItem {
   perfumeId: string;
@@ -22,8 +23,10 @@ interface CartStore {
   subtotal: () => number;
 }
 
-export const useCart = create<CartStore>((set, get) => ({
-  items: [],
+export const useCart = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
 
   addItem: (item) => {
     set((state) => {
@@ -82,4 +85,7 @@ export const useCart = create<CartStore>((set, get) => ({
   subtotal: () => {
     return get().items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   },
-}));
+}),
+    { name: "vp-cart" }
+  )
+);

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { buildCanonicalProductPath, getActivePerfumes, parseImageList } from "@/lib/seo-catalog";
+import { buildCanonicalProductPath, getActivePerfumes, parseImageList, SITE_URL } from "@/lib/seo-catalog";
 import Image from "next/image";
 import { PaginationNav } from "@/components/ui/PaginationNav";
 
@@ -23,13 +23,27 @@ export default async function DecantsCategoryPage({ searchParams }: { searchPara
   const paginatedPerfumes = perfumes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <main className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
-      <header className="max-w-4xl mb-8">
-        <h1 className="font-serif text-3xl md:text-4xl font-light leading-tight">Perfume Decants in Bangladesh</h1>
-        <p className="mt-3 text-text-secondary max-w-3xl text-sm md:text-base leading-relaxed">
-          Discover authentic decants in 3ml, 10ml, 15ml, and 30ml sizes. Each perfume has one canonical page with variant selector and full bottle request option.
-        </p>
-      </header>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+              { "@type": "ListItem", position: 2, name: "Perfume Decants", item: `${SITE_URL}/category/decants` },
+            ],
+          }),
+        }}
+      />
+      <main className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
+        <header className="max-w-4xl mb-8">
+          <h1 className="font-serif text-3xl md:text-4xl font-light leading-tight">Perfume Decants in Bangladesh</h1>
+          <p className="mt-3 text-text-secondary max-w-3xl text-sm md:text-base leading-relaxed">
+            Discover authentic decants in 3ml, 10ml, 15ml, and 30ml sizes. Each perfume has one canonical page with variant selector and full bottle request option.
+          </p>
+        </header>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {paginatedPerfumes.map((perfume) => {
@@ -52,5 +66,6 @@ export default async function DecantsCategoryPage({ searchParams }: { searchPara
         <PaginationNav basePath="/category/decants" currentPage={currentPage} totalPages={totalPages} className="col-span-full" />
       </section>
     </main>
+    </>
   );
 }

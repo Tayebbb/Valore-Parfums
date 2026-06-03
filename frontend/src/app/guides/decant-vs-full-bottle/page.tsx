@@ -8,6 +8,7 @@ export const metadata: Metadata = buildSeoMetadata(
   "Decant vs Full Bottle Guide | Which Perfume Buying Path Is Better?",
   "A buyer-intent guide for Bangladesh perfume shoppers comparing decants and full bottle purchases.",
   ["decant vs full bottle", "try before buy perfume", "perfume buying guide Bangladesh"],
+  "/guides/decant-vs-full-bottle",
 );
 
 export default async function DecantVsFullBottleGuidePage() {

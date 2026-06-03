@@ -19,9 +19,15 @@ import {
   resolvePerfumeSlug,
   serializePerfumeForApi,
   buildProductSlug,
+  parseImageList,
 } from "@/lib/seo-catalog";
 
 export const revalidate = 300;
+
+export async function generateStaticParams() {
+  const perfumes = await getActivePerfumes();
+  return perfumes.map((p) => ({ slug: buildProductSlug(p) }));
+}
 
 type RouteProps = {
   params: Promise<{ slug: string }>;
@@ -82,6 +88,8 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
   const title = buildProductMetaTitle(product);
   const description = buildProductMetaDescription(product);
   const keywords = getProductKeywordBundle(product.name);
+  const firstImage = parseImageList(product.images)[0] || "";
+  const ogImage = firstImage.startsWith("http") ? firstImage : firstImage ? `${SITE_URL}${firstImage}` : `${SITE_URL}/valore-logo.png`;
 
   return {
     title,
@@ -94,11 +102,13 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
       url: `${SITE_URL}${canonicalPath}`,
       siteName: SITE_NAME,
       type: "website",
+      images: [{ url: ogImage, width: 800, height: 800, alt: `${product.name} by ${product.brand}` }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [ogImage],
     },
   };
 }
@@ -138,6 +148,20 @@ export default async function ProductPage({ params }: RouteProps) {
         <ProductSchemaWithReviews product={product} offers={offers} />
       </Suspense>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+              { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
+              { "@type": "ListItem", position: 3, name: product.name, item: `${SITE_URL}${canonicalPath}` },
+            ],
+          }),
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

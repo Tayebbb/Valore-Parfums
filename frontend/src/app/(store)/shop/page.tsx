@@ -1,8 +1,28 @@
-﻿import { Suspense } from "react";
-import { getActivePerfumes } from "@/lib/seo-catalog";
+﻿import type { Metadata } from "next";
+import { Suspense } from "react";
+import { getActivePerfumes, SITE_URL } from "@/lib/seo-catalog";
 import ShopContent, { type Perfume } from "./ShopContent";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: "Shop Perfume Decants & Samples | Valore Parfums Bangladesh",
+  description: "Browse our full collection of authentic perfume decants and samples in Bangladesh. Filter by brand, season, and category.",
+  alternates: { canonical: `${SITE_URL}/shop` },
+  keywords: ["perfume decants shop", "buy perfume samples bangladesh", "fragrance shop dhaka"],
+  openGraph: {
+    title: "Shop Perfume Decants & Samples | Valore Parfums",
+    description: "Browse authentic perfume decants from luxury brands. 3ml, 5ml, 10ml, 15ml, 30ml sizes available.",
+    url: `${SITE_URL}/shop`,
+    siteName: "Valore Parfums",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Shop Perfume Decants | Valore Parfums Bangladesh",
+    description: "Browse authentic perfume decants. Multiple sizes available.",
+  },
+};
 
 function ShopSkeleton() {
   return (
