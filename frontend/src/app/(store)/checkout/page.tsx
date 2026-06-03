@@ -1323,6 +1323,24 @@ function CheckoutContent() {
                       <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Number</p>
                       <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankAccountNumber || "Not set"}</p>
                     </div>
+                    {checkoutConfig.bankAccountType ? (
+                      <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Account Type</p>
+                        <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankAccountType}</p>
+                      </div>
+                    ) : null}
+                    {checkoutConfig.bankDistrict ? (
+                      <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">District</p>
+                        <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankDistrict}</p>
+                      </div>
+                    ) : null}
+                    {checkoutConfig.bankBranch ? (
+                      <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Branch</p>
+                        <p className="mt-1 text-sm text-text-primary">{checkoutConfig.bankBranch}</p>
+                      </div>
+                    ) : null}
                     <div className="rounded-lg border border-border bg-surface px-2.5 py-2">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-text-muted">Amount to Pay</p>
                       <p className="mt-1 text-sm font-semibold text-gold">{total.toLocaleString("en-BD")} BDT</p>
