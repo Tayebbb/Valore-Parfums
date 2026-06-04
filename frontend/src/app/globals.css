@@ -406,7 +406,7 @@ a[href]:hover {
 }
 .marquee-track {
   display: inline-flex;
-  animation: marquee-scroll 48s linear infinite;
+  animation: marquee-scroll 56s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
