@@ -21,7 +21,12 @@ const nextConfig: NextConfig = {
 
   // API requests are handled by frontend route handlers under /api.
   async rewrites() {
-    return [];
+    return [
+      {
+        source: "/favicon.ico",
+        destination: "/icon.png",
+      },
+    ];
   },
 
   // Optimize images
