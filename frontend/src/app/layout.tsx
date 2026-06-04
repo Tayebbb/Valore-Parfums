@@ -39,8 +39,9 @@ export const metadata: Metadata = {
   authors: [{ name: "Valore Parfums" }],
   robots: { index: true, follow: true },
   icons: {
-    icon: "/valore-logo.png",
-    apple: "/valore-logo.png",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/apple-icon.png",
   },
   openGraph: {
     type: "website",
