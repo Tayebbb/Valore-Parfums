@@ -51,6 +51,7 @@ interface Order {
   } | null;
   deliveryZone?: string;
   deliveryFee?: number;
+  deliveryAddress?: string;
   estimatedPrepTime?: string;
   pickupContactNumber?: string;
   status: string;
@@ -1001,6 +1002,12 @@ export default function OrdersPage() {
                     <span className="text-[var(--text-muted)]">Delivery Fee</span>
                     <span>{fmt(selectedOrder.deliveryFee ?? 0)} BDT</span>
                   </div>
+                  {selectedOrder.deliveryAddress && (
+                    <div className="flex flex-col gap-1 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)]">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Delivery Address</p>
+                      <p className="text-sm break-words">{selectedOrder.deliveryAddress}</p>
+                    </div>
+                  )}
                 </>
               )}
 
