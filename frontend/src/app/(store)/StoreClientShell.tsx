@@ -360,7 +360,7 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <Image src="/valore-logo.png" alt="Valore Parfums" width={36} height={36} className="rounded-full object-cover" priority />
-            <h1 className="font-serif text-xl sm:text-2xl font-light tracking-wide text-[var(--gold)]">
+            <h1 className="font-serif text-base sm:text-2xl font-light tracking-wide text-[var(--gold)] whitespace-nowrap">
               Valore Parfums
             </h1>
           </Link>
