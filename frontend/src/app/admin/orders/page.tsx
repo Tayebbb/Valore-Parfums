@@ -1002,12 +1002,44 @@ export default function OrdersPage() {
                     <span className="text-[var(--text-muted)]">Delivery Fee</span>
                     <span>{fmt(selectedOrder.deliveryFee ?? 0)} BDT</span>
                   </div>
-                  {selectedOrder.deliveryAddress && (
-                    <div className="flex flex-col gap-1 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)]">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Delivery Address</p>
-                      <p className="text-sm break-words">{selectedOrder.deliveryAddress}</p>
-                    </div>
-                  )}
+                  {selectedOrder.deliveryAddress && (() => {
+                    const parts = selectedOrder.deliveryAddress!.split(" | ");
+                    const addressLine = parts[0] || "";
+                    const areaCity = parts[1] && !parts[1].startsWith("Note:") ? parts[1] : "";
+                    const notePart = parts.find((p) => p.startsWith("Note: "));
+                    const note = notePart ? notePart.replace(/^Note: /, "") : "";
+                    const [area, ...cityParts] = areaCity.split(", ");
+                    const city = cityParts.join(", ");
+                    return (
+                      <div className="flex flex-col gap-2 border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)]">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Delivery Address</p>
+                        {addressLine && (
+                          <div className="flex justify-between gap-3">
+                            <span className="text-[var(--text-muted)] shrink-0">Address</span>
+                            <span className="text-right break-words">{addressLine}</span>
+                          </div>
+                        )}
+                        {area && (
+                          <div className="flex justify-between gap-3">
+                            <span className="text-[var(--text-muted)] shrink-0">Area</span>
+                            <span className="text-right">{area}</span>
+                          </div>
+                        )}
+                        {city && (
+                          <div className="flex justify-between gap-3">
+                            <span className="text-[var(--text-muted)] shrink-0">City</span>
+                            <span className="text-right">{city}</span>
+                          </div>
+                        )}
+                        {note && (
+                          <div className="flex justify-between gap-3">
+                            <span className="text-[var(--text-muted)] shrink-0">Note</span>
+                            <span className="text-right break-words">{note}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </>
               )}
 
