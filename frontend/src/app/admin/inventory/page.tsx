@@ -499,7 +499,11 @@ export default function InventoryPage() {
 
     try {
       // Build the payload — strip UI-only fields
-      const { bottleSizeMl, marketPriceWhole, purchasePriceWhole, ...payload } = form;
+      const payload = { ...form } as PerfumeForm;
+      const bottleSizeMl = payload.bottleSizeMl;
+      delete (payload as Partial<PerfumeForm>).bottleSizeMl;
+      delete (payload as Partial<PerfumeForm>).marketPriceWhole;
+      delete (payload as Partial<PerfumeForm>).purchasePriceWhole;
       if (!payload.partialDealType) payload.partialSellingPrice = 0;
       // Total stock = bottle size (N/A = 0)
       const effectiveBottleSize = bottleSizeMl > 0 ? bottleSizeMl : 0;
