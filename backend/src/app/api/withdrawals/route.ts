@@ -151,9 +151,9 @@ export async function POST(req: Request) {
     return deductionMinor;
   };
   const sourceTotalsMinor = {
-    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
-    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
-    COD: completedCodOrders.reduce((sum: number, order) => Math.max(0, sum + codRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => sum + Math.max(0, storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => sum + Math.max(0, storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    COD: completedCodOrders.reduce((sum: number, order) => sum + Math.max(0, codRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
   };
 
   const revenueWithdrawalsSnap = await db.collection(Collections.withdrawals).get();

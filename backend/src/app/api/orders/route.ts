@@ -426,9 +426,7 @@ export async function POST(req: Request) {
 
     const unitCost = isFullBottleItem
       ? 0
-      : isPartialDeal
-        ? Math.ceil(((perfume.purchasePricePerMl || 0) * requestedFullBottleMl) * (requestedFullBottleMl / 100))
-        : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + packagingCost + bottleCost);
+      : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + packagingCost + bottleCost);
     const itemBreakdown = computeItemBreakdown({
       unitCostMinor: toMinorUnits(unitCost),
       unitSellingPriceMinor: toMinorUnits(unitPrice),

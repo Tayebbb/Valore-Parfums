@@ -352,7 +352,7 @@ export async function GET() {
 
   const codWithdrawalDocs = withdrawalsSnap.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
-    .filter((w) => w.withdrawFrom === "COD Balance" || w.withdrawalType === "cod");
+    .filter((w) => String(w.paymentSource || "") === "COD");
   const completedCodWithdrawals = codWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
   const codWithdrawnMinor = completedRevenueWithdrawals
     .filter((w) => String(w.paymentSource || "") === "COD")
@@ -368,7 +368,7 @@ export async function GET() {
     })),
     ...completedCodOrders.map((o) => ({
       createdAt: toDate(o.createdAt),
-      amount: fromMinorUnits(revenueMinorExcludingDelivery(o)),
+      amount: fromMinorUnits(codRevenueMinorForOrder(o)),
       source: "COD",
       kind: "payment" as const,
     })),
