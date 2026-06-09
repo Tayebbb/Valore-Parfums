@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins } from "@/lib/utils";
 
 async function getOrderItemsMap(orderIds: string[]) {
   if (orderIds.length === 0) return new Map<string, Array<Record<string, unknown> & { id: string }>>();
@@ -270,6 +271,153 @@ export async function GET(req: Request) {
       csv = toCSV(headers, rows);
       filename = "payment_reconciliation.csv";
       break;
+    }
+
+    case "price-list":
+    case "price-list-pdf": {
+      const [perfumesSnap, sizesSnap, bottlesSnap, settingsDoc] = await Promise.all([
+        db.collection(Collections.perfumes).where("isActive", "==", true).orderBy("name", "asc").get(),
+        db.collection(Collections.decantSizes).get(),
+        db.collection(Collections.bottles).get(),
+        db.collection(Collections.settings).doc("default").get(),
+      ]);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sizes = sizesSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((s: any) => s.enabled === true).sort((a: any, b: any) => a.ml - b.ml) as any[];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bottles = bottlesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const settings = settingsDoc.exists ? settingsDoc.data() as any : {};
+      const packagingCost = Number(settings?.packagingCost ?? 20);
+      const margins = parseTierMargins(settings?.tierMargins);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const perfumes = perfumesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+
+      if (type === "price-list") {
+        // CSV: one row per perfume per size
+        const mlHeaders = sizes.map((s: { ml: number }) => `${s.ml}ml (BDT)`);
+        const headers = ["Name", "Brand", "Category", "Inspired By", ...mlHeaders];
+        const rows = perfumes.map((p) => {
+          const effectiveMarketPricePerMl = p.isPersonalCollection ? p.purchasePricePerMl : p.marketPricePerMl;
+          const fullBottlePrice = effectiveMarketPricePerMl * 100;
+          const tier = getBrandTier(fullBottlePrice);
+          const prices = sizes.map((size: { ml: number }) => {
+            const bottle = bottles.find((b: { ml: number }) => b.ml === size.ml);
+            const bottleCost = bottle?.costPerBottle ?? 0;
+            const profitMargin = getTierProfitMargin(tier, size.ml, margins);
+            const partialType = String(p.partialDealType || "").toLowerCase();
+            const isPartialDeal = partialType === "decant" || partialType === "full_bottle";
+            const partialSellingPrice = Number(p.partialSellingPrice ?? p.partialSellingPricePerMl ?? 0);
+            const inStock = Number(p.totalStockMl) >= size.ml;
+            if (!inStock) return "Out of Stock";
+            const sellingPrice = isPartialDeal
+              ? Math.ceil(Math.max(0, partialSellingPrice))
+              : calculateSellingPrice(effectiveMarketPricePerMl, size.ml, bottleCost, packagingCost, profitMargin);
+            return sellingPrice.toString();
+          });
+          return [
+            asString(p.name),
+            asString(p.brand),
+            asString(p.category),
+            asString(p.inspiredBy),
+            ...prices,
+          ];
+        });
+        csv = toCSV(headers, rows);
+        filename = "valore_price_list.csv";
+        break;
+      }
+
+      // PDF: return styled HTML for browser printing
+      // Only show 5ml, 10ml, 15ml — filter from enabled sizes
+      const PDF_ML_SIZES = [5, 10, 15];
+      const pdfSizes = PDF_ML_SIZES.filter((ml) => sizes.some((s: { ml: number }) => s.ml === ml));
+
+      const tableRows = perfumes.map((p, idx: number) => {
+        const effectiveMarketPricePerMl = p.isPersonalCollection ? p.purchasePricePerMl : p.marketPricePerMl;
+        const fullBottlePrice = effectiveMarketPricePerMl * 100;
+        const tier = getBrandTier(fullBottlePrice);
+        const priceCells = pdfSizes.map((ml: number) => {
+          const bottle = bottles.find((b: { ml: number }) => b.ml === ml);
+          const bottleCost = bottle?.costPerBottle ?? 0;
+          const profitMargin = getTierProfitMargin(tier, ml, margins);
+          const partialType = String(p.partialDealType || "").toLowerCase();
+          const isPartialDeal = partialType === "decant" || partialType === "full_bottle";
+          const partialSellingPrice = Number(p.partialSellingPrice ?? p.partialSellingPricePerMl ?? 0);
+          const inStock = Number(p.totalStockMl) >= ml;
+          if (!inStock) return `<td class="oos">—</td>`;
+          const sellingPrice = isPartialDeal
+            ? Math.ceil(Math.max(0, partialSellingPrice))
+            : calculateSellingPrice(effectiveMarketPricePerMl, ml, bottleCost, packagingCost, profitMargin);
+          return `<td>${sellingPrice.toLocaleString("en-BD")}</td>`;
+        }).join("");
+        const displayName = asString(p.name);
+        return `<tr>
+          <td class="name-cell"><span class="num">${idx + 1}.</span> ${displayName}</td>
+          ${priceCells}
+        </tr>`;
+      }).join("\n");
+
+      const mlHeaders = pdfSizes.map((ml: number) => `<th>${ml} ml</th>`).join("");
+      const dateStr = new Date().toLocaleDateString("en-BD", { year: "numeric", month: "long", day: "numeric" });
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Valore Parfums — Price List</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #1a1a1a; padding: 40px 48px; font-size: 12px; }
+  .header { margin-bottom: 28px; }
+  .brand-name { font-size: 28px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #555; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #fff; }
+  thead th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; border-top: 2px solid #1a1a1a; border-bottom: 1px solid #ccc; }
+  thead th:not(:first-child) { text-align: left; min-width: 80px; }
+  tbody tr { border-bottom: 1px solid #e5e5e5; }
+  tbody tr:last-child { border-bottom: 2px solid #1a1a1a; }
+  tbody td { padding: 9px 14px; vertical-align: middle; font-size: 12px; }
+  tbody td:not(:first-child) { font-variant-numeric: tabular-nums; }
+  .name-cell { max-width: 260px; }
+  .num { color: #555; }
+  .oos { color: #bbb; }
+  .footer { margin-top: 20px; font-size: 10px; color: #999; }
+  @media print {
+    body { padding: 20px 28px; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+    @page { margin: 16mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand-name">Valore Parfums</div>
+    <div class="subtitle">Price List &nbsp;·&nbsp; ${dateStr} &nbsp;·&nbsp; Prices in BDT</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Perfume</th>
+        ${mlHeaders}
+      </tr>
+    </thead>
+    <tbody>
+      ${tableRows}
+    </tbody>
+  </table>
+  <div class="footer">Prices are subject to change. All prices include packaging cost. &nbsp;|&nbsp; valore-parfums.com</div>
+  <script>window.onload = function(){ window.print(); }</script>
+</body>
+</html>`;
+
+      return new NextResponse(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+        },
+      });
     }
 
     default:
