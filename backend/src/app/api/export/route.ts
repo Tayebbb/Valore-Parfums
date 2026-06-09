@@ -358,7 +358,8 @@ export async function GET(req: Request) {
             : calculateSellingPrice(effectiveMarketPricePerMl, ml, bottleCost, packagingCost, profitMargin);
           return `<td>${sellingPrice.toLocaleString("en-BD")}</td>`;
         }).join("");
-        const displayName = asString(p.name);
+        const brand = asString(p.brand);
+        const displayName = brand ? `${brand} ${asString(p.name)}` : asString(p.name);
         return `<tr>
           <td class="name-cell"><span class="num">${idx + 1}.</span> ${displayName}</td>
           ${priceCells}
