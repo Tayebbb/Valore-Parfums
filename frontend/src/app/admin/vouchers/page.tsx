@@ -178,21 +178,23 @@ export default function VouchersPage() {
             </div>
             <div className="flex items-center gap-3">
               <input
+                id="firstOrderOnly"
                 type="checkbox"
                 checked={form.firstOrderOnly}
                 onChange={(e) => setForm({ ...form, firstOrderOnly: e.target.checked })}
                 className="w-4 h-4 accent-[var(--gold)]"
               />
-              <label className="text-sm text-[var(--text-secondary)]">First order only</label>
+              <label htmlFor="firstOrderOnly" className="text-sm text-[var(--text-secondary)] cursor-pointer select-none">First order only</label>
             </div>
             <div className="flex items-center gap-3">
               <input
+                id="voucherIsActive"
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
                 className="w-4 h-4 accent-[var(--gold)]"
               />
-              <label className="text-sm text-[var(--text-secondary)]">Active</label>
+              <label htmlFor="voucherIsActive" className="text-sm text-[var(--text-secondary)] cursor-pointer select-none">Active</label>
             </div>
           </div>
           <div className="flex gap-3 mt-4">

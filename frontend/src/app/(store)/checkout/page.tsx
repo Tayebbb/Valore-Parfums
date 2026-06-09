@@ -587,7 +587,7 @@ function CheckoutContent() {
       const res = await fetch("/api/vouchers/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: voucherCode, orderTotal: displaySubtotal, hasFullBottle }),
+        body: JSON.stringify({ code: voucherCode, orderTotal: displaySubtotal, hasFullBottle, customerEmail: form.recipientEmail.trim() }),
       });
       const data = await res.json();
 
