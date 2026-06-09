@@ -375,8 +375,15 @@ export async function GET() {
     })),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const latestRevenueEvent = revenueEvents[0] || null;
-  const bkashBalance = fromMinorUnits(Math.max(0, bkashPaymentsMinor - bkashWithdrawnMinor));
-  const bankBalance = fromMinorUnits(Math.max(0, bankPaymentsMinor - bankWithdrawnMinor));
+  // Full totals received via each payment method (including delivery fee, since customer pays full amount)
+  const bkashTotalReceivedMinor = completedPaymentOrders
+    .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
+    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+  const bankTotalReceivedMinor = completedPaymentOrders
+    .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
+    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+  const bkashBalance = fromMinorUnits(Math.max(0, bkashTotalReceivedMinor - bkashWithdrawnMinor));
+  const bankBalance = fromMinorUnits(Math.max(0, bankTotalReceivedMinor - bankWithdrawnMinor));
   // Withdrawable balances per source (deducted by bottle owner earnings)
   const bkashWithdrawable = fromMinorUnits(Math.max(0, bkashWithdrawableMinor - bkashWithdrawnMinor));
   const bankWithdrawable = fromMinorUnits(Math.max(0, bankWithdrawableMinor - bankWithdrawnMinor));
