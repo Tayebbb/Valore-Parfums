@@ -59,17 +59,22 @@ function isOrderPaymentReceived(orderData: Record<string, unknown>, statusHint?:
 
 type EmailPayload = Parameters<typeof sendEmail>[0];
 
-async function sendEmailOrThrow(
+async function sendEmailSafe(
   orderId: string,
   templateName: string,
   customerEmail: string,
   emailPayload: EmailPayload,
 ): Promise<void> {
   console.log(`[EMAIL] Sending ${templateName} to ${customerEmail}`);
-  const result = await sendEmail(emailPayload);
-  if (!result.success) {
-    console.error(`[EMAIL ERROR] Failed for ${orderId}:`, result.error || "Unknown error");
-    throw new Error(result.error || "Email send failed");
+  try {
+    const result = await sendEmail(emailPayload);
+    if (!result.success) {
+      console.error(`[EMAIL ERROR] Failed for ${orderId}:`, result.error || "Unknown error");
+    } else {
+      console.log(`[EMAIL] Sent ${templateName} to ${customerEmail} (id=${result.messageId ?? "?"})`);
+    }
+  } catch (error) {
+    console.error(`[EMAIL ERROR] Exception for ${orderId}:`, error);
   }
 }
 
@@ -835,30 +840,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     } else if (!pickupContactNumber || !estimatedPrepTime) {
       console.log(`[EMAIL] Skipping pickup confirmation for ${id}: missing pickup details`);
     } else {
-      try {
-        await sendEmailOrThrow(
-          id,
-          "generatePickupConfirmationEmail",
+      await sendEmailSafe(
+        id,
+        "generatePickupConfirmationEmail",
+        customerEmail,
+        generatePickupConfirmationEmail({
+          orderId: id,
+          customerName: String(updatedData.customerName || "Customer"),
           customerEmail,
-          generatePickupConfirmationEmail({
-            orderId: id,
-            customerName: String(updatedData.customerName || "Customer"),
-            customerEmail,
-            items: emailItems,
-            total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
-            pickupContactNumber,
-            estimatedPrepTime,
-            pickupLocationName,
-            pickupLocationAddress,
-          }),
-        );
-      } catch (error) {
-        console.error(`[EMAIL ERROR] Failed for ${id}:`, error);
-        return NextResponse.json(
-          { error: "Failed to send pickup confirmation email" },
-          { status: 500 },
-        );
-      }
+          items: emailItems,
+          total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+          pickupContactNumber,
+          estimatedPrepTime,
+          pickupLocationName,
+          pickupLocationAddress,
+        }),
+      );
     }
   }
 
@@ -869,130 +866,122 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     } else if (!customerEmail) {
       console.log(`[EMAIL] Skipping ${templateKey} for ${id}: missing customer email`);
     } else {
-      try {
-        switch (templateKey) {
-          case "orderPlaced":
-            await sendEmailOrThrow(
-              id,
-              "generateOrderConfirmationEmail",
+      switch (templateKey) {
+        case "orderPlaced":
+          await sendEmailSafe(
+            id,
+            "generateOrderConfirmationEmail",
+            customerEmail,
+            generateOrderConfirmationEmail({
+              orderId: id,
+              customerName: String(updatedData.customerName || "Customer"),
               customerEmail,
-              generateOrderConfirmationEmail({
-                orderId: id,
-                customerName: String(updatedData.customerName || "Customer"),
-                customerEmail,
-                items: emailItems,
-                subtotal: Number(updatedData.subtotal ?? 0),
-                discount: Number(updatedData.discount ?? 0),
-                deliveryFee: Number(updatedData.deliveryFee ?? 0),
-                total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
-                paymentMethod: String(updatedData.paymentMethod || "Cash on Delivery"),
-              }),
-            );
-            break;
-          case "orderConfirmed":
-            await sendEmailOrThrow(
-              id,
-              "generateOrderConfirmedEmail",
+              items: emailItems,
+              subtotal: Number(updatedData.subtotal ?? 0),
+              discount: Number(updatedData.discount ?? 0),
+              deliveryFee: Number(updatedData.deliveryFee ?? 0),
+              total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+              paymentMethod: String(updatedData.paymentMethod || "Cash on Delivery"),
+            }),
+          );
+          break;
+        case "orderConfirmed":
+          await sendEmailSafe(
+            id,
+            "generateOrderConfirmedEmail",
+            customerEmail,
+            generateOrderConfirmedEmail({
+              customerName: String(updatedData.customerName || "Customer"),
               customerEmail,
-              generateOrderConfirmedEmail({
-                customerName: String(updatedData.customerName || "Customer"),
-                customerEmail,
-                orderId: id,
-                items: emailItems,
-                total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
-              }),
-            );
-            break;
-          case "readyForPickup":
-            if (!isPickupOrder) {
-              console.log(`[EMAIL] Skipping ready-for-pickup email for ${id}: delivery order`);
-              break;
-            }
-            await sendEmailOrThrow(
-              id,
-              "generatePickupReadyEmail",
-              customerEmail,
-              generatePickupReadyEmail({
-                customerName: String(updatedData.customerName || "Customer"),
-                customerEmail,
-                orderId: id,
-                items: emailItems,
-                pickupContactNumber: String(updatedData.pickupContactNumber || "").trim(),
-                pickupLocationName,
-                pickupLocationAddress,
-              }),
-            );
-            break;
-          case "outForDelivery":
-            if (isPickupOrder) {
-              console.log(`[EMAIL] Skipping out-for-delivery email for ${id}: pickup order`);
-              break;
-            }
-            await sendEmailOrThrow(
-              id,
-              "generateOrderDispatchedEmail",
-              customerEmail,
-              generateOrderDispatchedEmail({
-                customerName: String(updatedData.customerName || "Customer"),
-                customerEmail,
-                orderId: id,
-                items: emailItems,
-                trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
-                estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
-              }),
-            );
-            break;
-          case "completed":
-            await sendEmailOrThrow(
-              id,
-              "generateOrderDeliveredEmail",
-              customerEmail,
-              generateOrderDeliveredEmail({
-                customerName: String(updatedData.customerName || "Customer"),
-                customerEmail,
-                orderId: id,
-                items: emailItems,
-              }),
-            );
-            break;
-          case "cancelled": {
-            const wasPaid = isOrderPaymentReceived(updatedData as Record<string, unknown>, previousStatusDb);
-            const cancelledItems = items.map((item) => {
-              const row = item as Record<string, unknown>;
-              const quantity = Number(row.quantity || 0);
-              const unitPrice = Number(row.unitPrice || 0);
-              return {
-                perfumeName: String(row.perfumeName || "Perfume"),
-                quantity,
-                ml: Number(row.ml || 0),
-                totalPrice: Number(row.totalPrice || quantity * unitPrice),
-              };
-            });
-            await sendEmailOrThrow(
-              id,
-              "generateOrderCancelledEmail",
-              customerEmail,
-              generateOrderCancelledEmail({
-                customerName: String(updatedData.customerName || "Customer"),
-                customerEmail,
-                orderId: id,
-                cancelReason: String(updatedData.cancelReason || "Order cancelled by admin").trim(),
-                refundAmount: wasPaid ? Number(updatedData.refundAmount || updatedData.total || 0) : 0,
-                isPaid: wasPaid,
-                items: cancelledItems,
-              }),
-            );
+              orderId: id,
+              items: emailItems,
+              total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+            }),
+          );
+          break;
+        case "readyForPickup":
+          if (!isPickupOrder) {
+            console.log(`[EMAIL] Skipping ready-for-pickup email for ${id}: delivery order`);
             break;
           }
-          default:
-            console.log(`[EMAIL] Missing template mapping for status ${newStatusKey}`);
+          await sendEmailSafe(
+            id,
+            "generatePickupReadyEmail",
+            customerEmail,
+            generatePickupReadyEmail({
+              customerName: String(updatedData.customerName || "Customer"),
+              customerEmail,
+              orderId: id,
+              items: emailItems,
+              pickupContactNumber: String(updatedData.pickupContactNumber || "").trim(),
+              pickupLocationName,
+              pickupLocationAddress,
+            }),
+          );
+          break;
+        case "outForDelivery":
+          if (isPickupOrder) {
+            console.log(`[EMAIL] Skipping out-for-delivery email for ${id}: pickup order`);
+            break;
+          }
+          await sendEmailSafe(
+            id,
+            "generateOrderDispatchedEmail",
+            customerEmail,
+            generateOrderDispatchedEmail({
+              customerName: String(updatedData.customerName || "Customer"),
+              customerEmail,
+              orderId: id,
+              items: emailItems,
+              trackingNumber: String(updatedData.trackingNumber || "").trim() || undefined,
+              estimatedDelivery: String(updatedData.estimatedDelivery || "").trim() || undefined,
+            }),
+          );
+          break;
+        case "completed":
+          await sendEmailSafe(
+            id,
+            "generateOrderDeliveredEmail",
+            customerEmail,
+            generateOrderDeliveredEmail({
+              customerName: String(updatedData.customerName || "Customer"),
+              customerEmail,
+              orderId: id,
+              items: emailItems,
+            }),
+          );
+          break;
+        case "cancelled": {
+          const wasPaid = isOrderPaymentReceived(updatedData as Record<string, unknown>, previousStatusDb);
+          const cancelledItems = items.map((item) => {
+            const row = item as Record<string, unknown>;
+            const quantity = Number(row.quantity || 0);
+            const unitPrice = Number(row.unitPrice || 0);
+            return {
+              perfumeName: String(row.perfumeName || "Perfume"),
+              quantity,
+              ml: Number(row.ml || 0),
+              totalPrice: Number(row.totalPrice || quantity * unitPrice),
+            };
+          });
+          await sendEmailSafe(
+            id,
+            "generateOrderCancelledEmail",
+            customerEmail,
+            generateOrderCancelledEmail({
+              customerName: String(updatedData.customerName || "Customer"),
+              customerEmail,
+              orderId: id,
+              cancelReason: String(updatedData.cancelReason || "Order cancelled by admin").trim(),
+              refundAmount: wasPaid ? Number(updatedData.refundAmount || updatedData.total || 0) : 0,
+              isPaid: wasPaid,
+              items: cancelledItems,
+            }),
+          );
+          break;
         }
-      } catch (error) {
-        console.error(`[EMAIL ERROR] Failed for ${id}:`, error);
-        return NextResponse.json(
-          { error: `Failed to send ${templateKey} email` },
-          { status: 500 },
-        );
+        default:
+          console.log(`[EMAIL] Missing template mapping for status ${newStatusKey}`);
       }
     }
   }

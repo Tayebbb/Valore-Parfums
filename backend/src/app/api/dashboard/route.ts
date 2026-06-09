@@ -274,13 +274,18 @@ export async function GET() {
     const orderDeliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
   };
+  // For COD, the customer pays the full amount in cash (including delivery fee),
+  // so the delivery fee is part of the physical cash received and must be included.
+  const codRevenueMinorForOrder = (order: OrderRevenueShape) => {
+    return Math.max(0, Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)));
+  };
   const bkashPaymentsMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
     .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
   const bankPaymentsMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
     .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
-  const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
+  const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + codRevenueMinorForOrder(o), 0);
 
   // Per-source withdrawable amounts: gross minus what is owed to bottle owners for personal_collection items
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -309,7 +314,7 @@ export async function GET() {
     .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
   const codWithdrawableMinor = completedOrderList
     .filter((o) => String(o.paymentMethod || "") === "Cash on Delivery")
-    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+    .reduce((sum, o) => sum + Math.max(0, codRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
 
   type RevenueWithdrawalDoc = {
     id: string;

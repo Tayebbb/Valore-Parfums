@@ -127,6 +127,10 @@ export async function POST(req: Request) {
     const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, totalMinor - deliveryFeeMinor);
   };
+  // For COD, the customer pays the full amount in cash (including delivery fee).
+  const codRevenueMinorForOrder = (order: OrderDoc) => {
+    return Math.max(0, Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)));
+  };
   // Deduct bottle-owner earnings from store revenue for personal_collection items
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const personalCollectionDeductionMinor = (orderId: string): number => {
@@ -149,7 +153,7 @@ export async function POST(req: Request) {
   const sourceTotalsMinor = {
     Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
     Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
-    COD: completedCodOrders.reduce((sum: number, order) => Math.max(0, sum + storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    COD: completedCodOrders.reduce((sum: number, order) => Math.max(0, sum + codRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
   };
 
   const revenueWithdrawalsSnap = await db.collection(Collections.withdrawals).get();

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 export interface EmailNotification {
   to: string;
@@ -580,6 +581,33 @@ if (process.env.RESEND_API_KEY) {
   const fromAddress = process.env.RESEND_FROM_EMAIL || "Valore Parfums <orders@valoreparfums.app>";
   const provider = new ResendEmailProvider(process.env.RESEND_API_KEY, fromAddress);
   initializeEmailProvider(provider);
+  console.log("[EMAIL] Using Resend email provider.");
+} else if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
+    },
+  });
+  const fromEmail = process.env.GMAIL_FROM_EMAIL || process.env.GMAIL_USER;
+  initializeEmailProvider({
+    async send(email: EmailNotification) {
+      try {
+        const info = await transporter.sendMail({
+          from: fromEmail,
+          to: email.to,
+          subject: email.subject,
+          html: email.html,
+          text: email.text,
+        });
+        return { success: true, messageId: info.messageId };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+      }
+    },
+  });
+  console.log("[EMAIL] Using Gmail SMTP email provider.");
 } else {
-  console.warn("RESEND_API_KEY not found. Email provider not initialized.");
+  console.warn("No email provider configured. Set RESEND_API_KEY or GMAIL_USER/GMAIL_PASS.");
 }
