@@ -276,7 +276,7 @@ export async function GET(req: Request) {
     case "price-list":
     case "price-list-pdf": {
       const [perfumesSnap, sizesSnap, bottlesSnap, settingsDoc] = await Promise.all([
-        db.collection(Collections.perfumes).where("isActive", "==", true).orderBy("name", "asc").get(),
+        db.collection(Collections.perfumes).get(),
         db.collection(Collections.decantSizes).get(),
         db.collection(Collections.bottles).get(),
         db.collection(Collections.settings).doc("default").get(),
@@ -291,8 +291,14 @@ export async function GET(req: Request) {
       const packagingCost = Number(settings?.packagingCost ?? 20);
       const margins = parseTierMargins(settings?.tierMargins);
 
+      // Filter active perfumes and sort by name in JS (avoids requiring a composite Firestore index)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const perfumes = perfumesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+      const perfumes = perfumesSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((p: any) => p.isActive === true)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""))) as any[];
 
       if (type === "price-list") {
         // CSV: one row per perfume per size
