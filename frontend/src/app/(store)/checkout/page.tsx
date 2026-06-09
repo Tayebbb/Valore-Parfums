@@ -182,7 +182,7 @@ function CheckoutContent() {
     customerName: "",
     customerPhone: "",
     recipientEmail: user?.email || "",
-    pickupMethod: "Pickup",
+    pickupMethod: "Delivery",
     deliveryZone: "",
     pickupLocationId: "",
     area: "",

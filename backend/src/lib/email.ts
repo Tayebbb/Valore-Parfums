@@ -577,6 +577,60 @@ export function generatePaymentVerifiedEmail(orderData: {
   });
 }
 
+export function generateAdminNewOrderAlertEmail(orderData: {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  items: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  total: number;
+  paymentMethod: string;
+  pickupMethod: string;
+  deliveryZone?: string;
+  area?: string;
+}): EmailNotification {
+  const itemRows = orderData.items.map((item) => `
+    <tr>
+      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:10px 0;border-bottom:1px solid #f0ece4;">${item.perfumeName} — ${item.ml}ml</td>
+      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;text-align:center;padding:10px 0;border-bottom:1px solid #f0ece4;">×${item.quantity}</td>
+      <td style="font-family:'Cormorant Garamond',serif;font-size:14px;color:#111;text-align:right;padding:10px 0;border-bottom:1px solid #f0ece4;">৳ ${item.unitPrice * item.quantity}</td>
+    </tr>
+  `).join("");
+
+  const fulfillmentLine = orderData.pickupMethod === "Pickup"
+    ? "Pickup"
+    : `Delivery${orderData.deliveryZone ? ` — ${orderData.deliveryZone}` : ""}${orderData.area ? ` (${orderData.area})` : ""}`;
+
+  const html = createEmailShell(`
+    <p style="font-family:'Cormorant Garamond',serif;font-size:11px;letter-spacing:4px;color:#c9a96e;text-transform:uppercase;margin-bottom:20px;">New Order Alert</p>
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;color:#111;margin-bottom:20px;">Order <em>#${orderData.orderId}</em> Placed</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tr><td style="font-family:'Montserrat',sans-serif;font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;padding:6px 0;width:40%;">Customer</td><td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:6px 0;">${orderData.customerName}</td></tr>
+      <tr><td style="font-family:'Montserrat',sans-serif;font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;padding:6px 0;">Email</td><td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:6px 0;">${orderData.customerEmail}</td></tr>
+      <tr><td style="font-family:'Montserrat',sans-serif;font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;padding:6px 0;">Payment</td><td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:6px 0;">${orderData.paymentMethod}</td></tr>
+      <tr><td style="font-family:'Montserrat',sans-serif;font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;padding:6px 0;">Fulfillment</td><td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:6px 0;">${fulfillmentLine}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead><tr>
+        <th style="font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;color:#999;text-transform:uppercase;text-align:left;padding-bottom:10px;border-bottom:2px solid #e8e4dc;">Item</th>
+        <th style="font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;color:#999;text-transform:uppercase;text-align:center;padding-bottom:10px;border-bottom:2px solid #e8e4dc;">Qty</th>
+        <th style="font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;color:#999;text-transform:uppercase;text-align:right;padding-bottom:10px;border-bottom:2px solid #e8e4dc;">Price</th>
+      </tr></thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot><tr>
+        <td colspan="2" style="font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:2px;color:#999;text-transform:uppercase;padding-top:12px;">Total</td>
+        <td style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#111;text-align:right;padding-top:12px;">৳ ${orderData.total}</td>
+      </tr></tfoot>
+    </table>
+  `);
+
+  return {
+    to: "enid.hasan.21@gmail.com",
+    subject: `New Order #${orderData.orderId} — ${orderData.customerName} (৳${orderData.total})`,
+    html,
+    text: `New order #${orderData.orderId} from ${orderData.customerName} (${orderData.customerEmail}). Total: ৳${orderData.total}. Payment: ${orderData.paymentMethod}.`,
+  };
+}
+
 if (process.env.RESEND_API_KEY) {
   const fromAddress = process.env.RESEND_FROM_EMAIL || "Valore Parfums <orders@valoreparfums.app>";
   const provider = new ResendEmailProvider(process.env.RESEND_API_KEY, fromAddress);

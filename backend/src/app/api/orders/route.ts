@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { validateBatch, validateEmail, validateOrderData, validateString } from "@/lib/validation";
-import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, sendEmail } from "@/lib/email";
+import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, generateAdminNewOrderAlertEmail, sendEmail } from "@/lib/email";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
 import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
 
@@ -729,6 +729,29 @@ export async function POST(req: Request) {
       } catch (error) {
         console.error(`[EMAIL ERROR] Failed for ${orderId}:`, error);
       }
+    }
+
+    // Send admin alert email
+    const adminAlertItems = createdItems.map((it) => ({
+      perfumeName: String(it.perfumeName || "Perfume"),
+      quantity: Number(it.quantity || 0),
+      ml: Number(it.ml || 0),
+      unitPrice: Number(it.unitPrice || 0),
+    }));
+    try {
+      await sendEmail(generateAdminNewOrderAlertEmail({
+        orderId,
+        customerName: String(orderDoc.customerName || "Customer"),
+        customerEmail: String(orderDoc.customerEmail || ""),
+        items: adminAlertItems,
+        total,
+        paymentMethod: normalizedPaymentMethod,
+        pickupMethod,
+        deliveryZone: String(orderDoc.deliveryZone || ""),
+        area: String(orderDoc.area || ""),
+      }));
+    } catch (error) {
+      console.error(`[EMAIL] Admin alert failed for ${orderId}:`, error);
     }
 
     return NextResponse.json(serializeDoc({ id: orderId, ...orderDoc, items: createdItems }), { status: 201 });
