@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export interface EmailNotification {
   to: string;
@@ -11,40 +11,30 @@ export interface EmailProvider {
   send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-class GmailSmtpEmailProvider implements EmailProvider {
-  private transporter: nodemailer.Transporter;
-  private fromEmail: string;
+class ResendEmailProvider implements EmailProvider {
+  private client: Resend;
+  private fromAddress: string;
 
-  constructor(user: string, pass: string, fromEmail: string) {
-    this.fromEmail = fromEmail;
-    this.transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      pool: true,
-      maxConnections: 1,
-      maxMessages: 100,
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 20000,
-      auth: {
-        user,
-        pass,
-      },
-    });
+  constructor(apiKey: string, fromAddress: string) {
+    this.client = new Resend(apiKey);
+    this.fromAddress = fromAddress;
   }
 
   async send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      const info = await this.transporter.sendMail({
-        from: this.fromEmail,
+      const { data, error } = await this.client.emails.send({
+        from: this.fromAddress,
         to: email.to,
         subject: email.subject,
         html: email.html,
         text: email.text,
       });
 
-      return { success: true, messageId: info.messageId };
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, messageId: data?.id };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
@@ -245,7 +235,7 @@ export function generateOrderConfirmationEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Order Received - #${orderData.orderId}`,
+    subject: `Your Valore Parfums order has been received (#${orderData.orderId})`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} has been received.`,
   };
@@ -278,7 +268,7 @@ export function generateOrderConfirmedEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Order Confirmed - #${orderData.orderId}`,
+    subject: `Order confirmed — we're preparing your decants (#${orderData.orderId})`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} is confirmed.`,
   };
@@ -321,7 +311,7 @@ export function generateOrderDispatchedEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Order Dispatched - #${orderData.orderId}`,
+    subject: `Your order is on its way (#${orderData.orderId})`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} has been dispatched.`,
   };
@@ -352,7 +342,7 @@ export function generateOrderDeliveredEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Order Delivered - #${orderData.orderId}`,
+    subject: `Your Valore Parfums order has been delivered (#${orderData.orderId})`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} has been delivered.`,
   };
@@ -408,7 +398,7 @@ export function generateOrderCancelledEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Order Cancelled - #${orderData.orderId}`,
+    subject: `Update on your order #${orderData.orderId} from Valore Parfums`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} has been cancelled. ${refundApplicable ? `Payment was received and refund amount is ${effectiveRefundAmount}.` : "Payment was not received, so no refund is applicable."}`,
   };
@@ -466,7 +456,7 @@ export function generatePickupConfirmationEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Pickup Confirmed — Order #${orderData.orderId}`,
+    subject: `Your pickup order is confirmed (#${orderData.orderId})`,
     html,
     text: `Dear ${orderData.customerName},\nYour pickup order #${orderData.orderId} is confirmed. Your order will be ready within ${orderData.estimatedPrepTime}. Please contact ${orderData.pickupContactNumber} before arriving.`,
   };
@@ -518,7 +508,7 @@ export function generatePickupReadyEmail(orderData: {
 
   return {
     to: orderData.customerEmail,
-    subject: `Ready for Pickup — Order #${orderData.orderId}`,
+    subject: `Your order is ready for pickup (#${orderData.orderId})`,
     html,
     text: `Dear ${orderData.customerName},\nYour order #${orderData.orderId} is ready for pickup${orderData.pickupLocationName ? ` at ${orderData.pickupLocationName}` : ""}${orderData.pickupLocationAddress ? `, ${orderData.pickupLocationAddress}` : ""}. Please contact ${orderData.pickupContactNumber} before arriving.`,
   };
@@ -586,13 +576,10 @@ export function generatePaymentVerifiedEmail(orderData: {
   });
 }
 
-if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
-  const provider = new GmailSmtpEmailProvider(
-    process.env.GMAIL_USER,
-    process.env.GMAIL_PASS,
-    process.env.GMAIL_FROM_EMAIL || process.env.GMAIL_USER,
-  );
+if (process.env.RESEND_API_KEY) {
+  const fromAddress = process.env.RESEND_FROM_EMAIL || "Valore Parfums <orders@valoreparfums.app>";
+  const provider = new ResendEmailProvider(process.env.RESEND_API_KEY, fromAddress);
   initializeEmailProvider(provider);
 } else {
-  console.warn("GMAIL_USER/GMAIL_PASS not found. Email provider not initialized.");
+  console.warn("RESEND_API_KEY not found. Email provider not initialized.");
 }

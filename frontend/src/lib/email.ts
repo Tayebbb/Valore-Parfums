@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export interface EmailNotification {
   to: string;
@@ -11,34 +11,30 @@ export interface EmailProvider {
   send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-class GmailSmtpEmailProvider implements EmailProvider {
-  private transporter: nodemailer.Transporter;
-  private fromEmail: string;
+class ResendEmailProvider implements EmailProvider {
+  private client: Resend;
+  private fromAddress: string;
 
-  constructor(user: string, pass: string, fromEmail: string) {
-    this.fromEmail = fromEmail;
-    this.transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user,
-        pass,
-      },
-    });
+  constructor(apiKey: string, fromAddress: string) {
+    this.client = new Resend(apiKey);
+    this.fromAddress = fromAddress;
   }
 
   async send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      const info = await this.transporter.sendMail({
-        from: this.fromEmail,
+      const { data, error } = await this.client.emails.send({
+        from: this.fromAddress,
         to: email.to,
         subject: email.subject,
         html: email.html,
         text: email.text,
       });
 
-      return { success: true, messageId: info.messageId };
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, messageId: data?.id };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
@@ -470,13 +466,10 @@ export function generatePaymentVerifiedEmail(orderData: {
   });
 }
 
-if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
-  const provider = new GmailSmtpEmailProvider(
-    process.env.GMAIL_USER,
-    process.env.GMAIL_PASS,
-    process.env.GMAIL_FROM_EMAIL || process.env.GMAIL_USER,
-  );
+if (process.env.RESEND_API_KEY) {
+  const fromAddress = process.env.RESEND_FROM_EMAIL || "Valore Parfums <orders@valoreparfums.app>";
+  const provider = new ResendEmailProvider(process.env.RESEND_API_KEY, fromAddress);
   initializeEmailProvider(provider);
 } else {
-  console.warn("GMAIL_USER/GMAIL_PASS not found. Email provider not initialized.");
+  console.warn("RESEND_API_KEY not found. Email provider not initialized.");
 }
