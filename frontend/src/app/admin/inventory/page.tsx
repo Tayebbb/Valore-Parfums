@@ -501,14 +501,6 @@ export default function InventoryPage() {
       // Build the payload — strip UI-only fields
       const { bottleSizeMl, marketPriceWhole, purchasePriceWhole, ...payload } = form;
       if (!payload.partialDealType) payload.partialSellingPrice = 0;
-      // Auto-compute per-ML if whole bottle fields filled
-      if (bottleSizeMl > 0 && marketPriceWhole > 0) {
-        payload.marketPricePerMl = parseFloat((marketPriceWhole / bottleSizeMl).toFixed(2));
-      }
-      if (bottleSizeMl > 0 && purchasePriceWhole > 0) {
-        payload.purchasePricePerMl = parseFloat((purchasePriceWhole / bottleSizeMl).toFixed(2));
-      }
-
       // Total stock = bottle size (N/A = 0)
       const effectiveBottleSize = bottleSizeMl > 0 ? bottleSizeMl : 0;
       (payload as Record<string, unknown>).totalStockMl = effectiveBottleSize;
@@ -876,9 +868,7 @@ export default function InventoryPage() {
                     disabled={form.bottleSizeMl === -1}
                     onChange={(e) => {
                       const ml = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                      const mktPerMl = ml > 0 && form.marketPriceWhole > 0 ? parseFloat((form.marketPriceWhole / ml).toFixed(2)) : form.marketPricePerMl;
-                      const purPerMl = ml > 0 && form.purchasePriceWhole > 0 ? parseFloat((form.purchasePriceWhole / ml).toFixed(2)) : form.purchasePricePerMl;
-                      setForm({ ...form, bottleSizeMl: ml, marketPricePerMl: mktPerMl, purchasePricePerMl: purPerMl });
+                      setForm({ ...form, bottleSizeMl: ml });
                     }}
                     placeholder={form.bottleSizeMl === -1 ? "N/A" : "e.g. 100"}
                     className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] focus:bg-[var(--gold-tint)] outline-none transition-colors disabled:opacity-50"
