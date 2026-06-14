@@ -200,8 +200,8 @@ export default function AdminDashboard() {
         <StatCard icon={TrendingUp} label="Monthly Profit" value={`${fmt(data.monthProfit)} BDT`} />
         <StatCard icon={Package} label="bKash Verification" value={`${data.pendingBkashVerifications || 0}`} sub="Awaiting admin verification" />
         <StatCard icon={Package} label="Bank Verification" value={`${data.pendingBankVerifications || 0}`} sub="Awaiting admin verification" />
-        <StatCard icon={Wallet} label="Bkash Balance" value={`${fmt(data.storeRevenue.bkashBalance || 0)} BDT`} sub="Incl. delivery fee" />
-        <StatCard icon={Wallet} label="Bank Balance" value={`${fmt(data.storeRevenue.bankBalance || 0)} BDT`} sub="Incl. delivery fee" />
+        <StatCard icon={Wallet} label="Bkash Balance" value={`${fmt(data.storeRevenue.bkashBalance || 0)} BDT`} sub="Excl. delivery fee" />
+        <StatCard icon={Wallet} label="Bank Balance" value={`${fmt(data.storeRevenue.bankBalance || 0)} BDT`} sub="Excl. delivery fee" />
         <StatCard icon={Wallet} label="COD Balance" value={`${fmt(data.codBalance.balance || 0)} BDT`} sub="Completed orders only" />
         <StatCard icon={AlertTriangle} label="Low Stock Alerts" value={`${data.lowStockPerfumes.length}`} sub="Perfumes below threshold" />
         <StatCard icon={Inbox} label="Stock Requests" value={`${data.stockRequests}`} sub="Pending requests" />

@@ -274,10 +274,12 @@ export async function GET() {
     const orderDeliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
   };
-  // For COD, the customer pays the full amount in cash (including delivery fee),
-  // so the delivery fee is part of the physical cash received and must be included.
+  // For COD, the merchant app auto-deducts the delivery fee before remitting,
+  // so delivery fee is excluded from revenue just like Bkash/Bank.
   const codRevenueMinorForOrder = (order: OrderRevenueShape) => {
-    return Math.max(0, Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)));
+    const orderTotalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
+    const orderDeliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
+    return Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
   };
   const bkashPaymentsMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
@@ -380,13 +382,13 @@ export async function GET() {
     })),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const latestRevenueEvent = revenueEvents[0] || null;
-  // Full totals received via each payment method (including delivery fee, since customer pays full amount)
+  // Revenue totals excluding delivery fee (delivery fee is not counted as revenue)
   const bkashTotalReceivedMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
-    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+    .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
   const bankTotalReceivedMinor = completedPaymentOrders
     .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
-    .reduce((sum, o) => sum + Number(o?.financialsMinor?.totalMinor ?? toMinorUnits(o.total ?? 0)), 0);
+    .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
   const bkashBalance = fromMinorUnits(Math.max(0, bkashTotalReceivedMinor - bkashWithdrawnMinor));
   const bankBalance = fromMinorUnits(Math.max(0, bankTotalReceivedMinor - bankWithdrawnMinor));
   // Withdrawable balances per source (deducted by bottle owner earnings)

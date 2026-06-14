@@ -112,9 +112,8 @@ async function main() {
   console.log("\n─── DISPATCHED ORDERS ──────────────────────────────────");
   for (const order of dispatchedOrders) {
     const gross = grossMinor(order);
-    const sourceWithdrawableBase = String(order.paymentMethod || "") === "Cash on Delivery"
-      ? Math.max(0, Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)))
-      : gross;
+    // Delivery fee excluded from all payment methods — merchant app auto-deducts it.
+    const sourceWithdrawableBase = gross;
     const profitMinor = Number(order?.financialsMinor?.totalProfitMinor ?? toMinorUnits(order.profit ?? 0));
     const deduction = personalDeductionMinor(order);
     const withdrawable = Math.max(0, sourceWithdrawableBase - deduction);

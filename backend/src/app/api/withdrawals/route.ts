@@ -127,9 +127,11 @@ export async function POST(req: Request) {
     const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, totalMinor - deliveryFeeMinor);
   };
-  // For COD, the customer pays the full amount in cash (including delivery fee).
+  // Delivery fee is excluded from revenue — merchant app auto-deducts it before remitting.
   const codRevenueMinorForOrder = (order: OrderDoc) => {
-    return Math.max(0, Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0)));
+    const totalMinor = Number(order?.financialsMinor?.totalMinor ?? toMinorUnits(order.total ?? 0));
+    const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
+    return Math.max(0, totalMinor - deliveryFeeMinor);
   };
   // Deduct bottle-owner earnings from store revenue for personal_collection items
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
