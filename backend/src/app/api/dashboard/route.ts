@@ -476,8 +476,9 @@ export async function GET() {
       }
         const withdrawalsByOwner: Record<string, number> = {};
       for (const doc of withdrawalsSnap.docs) {
-        const w = doc.data() as { ownerName?: string; amount?: number; withdrawalType?: string; withdrawFrom?: string };
+          const w = doc.data() as { ownerName?: string; amount?: number; withdrawalType?: string; withdrawFrom?: string; status?: string };
         const owner = w.ownerName || "Unknown";
+          if ((w.status ?? "Completed") !== "Completed") continue;
         if (w.withdrawFrom !== undefined && w.withdrawFrom !== "Owner's Profit") continue;
         if (w.withdrawalType !== "profit" && w.withdrawalType !== undefined) continue;
         withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + Number(w.amount || 0);
