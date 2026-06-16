@@ -1135,7 +1135,9 @@ export default function OrdersPage() {
                     <span className="font-serif text-[var(--gold)] whitespace-nowrap">{fmt(item.totalPrice ?? 0)} BDT</span>
                   </div>
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                    Owner profit ({item.ownerName || "Owner"}): {fmt(Number(item.ownerProfit ?? 0))} BDT, Other owner: {fmt(Number(item.otherOwnerProfit ?? 0))} BDT
+                    {item.ownerName === "Store"
+                      ? `Store split - Tayeb (60%): ${fmt(Number(item.ownerProfit ?? 0))} BDT, Enid (40%): ${fmt(Number(item.otherOwnerProfit ?? 0))} BDT`
+                      : `Owner profit (${item.ownerName || "Owner"}): ${fmt(Number(item.ownerProfit ?? 0))} BDT, Other owner: ${fmt(Number(item.otherOwnerProfit ?? 0))} BDT`}
                   </p>
                 </div>
               ))}

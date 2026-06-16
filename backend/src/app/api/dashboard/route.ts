@@ -281,18 +281,25 @@ export async function GET() {
     const orderDeliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, orderTotalMinor - orderDeliveryFeeMinor);
   };
-  const bkashPaymentsMinor = completedPaymentOrders
-    .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
-    .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
-  const bankPaymentsMinor = completedPaymentOrders
-    .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
-    .reduce((sum, o) => sum + storeRevenueMinorForOrder(o), 0);
   const codPaymentsMinor = completedCodOrders.reduce((sum, o) => sum + codRevenueMinorForOrder(o), 0);
 
-  // Per-source withdrawable amounts: gross minus what is owed to bottle owners for personal_collection items
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Per-source withdrawable amounts: gross minus payouts for personal_collection items
+  // and minus store-owned item profit (already distributed to owners via owner accounts).
+  type RevenueDeductionItem = {
+    ownerName?: string;
+    totalPrice?: number;
+    costPrice?: number;
+    isPersonalCollection?: boolean;
+    quantity?: number;
+    ml?: number;
+    pricingSnapshot?: {
+      packagingCost?: number;
+      bottleCost?: number;
+      costPricePerMl?: number;
+    };
+  };
   const personalCollectionDeductionForOrder = (orderId: string): number => {
-    const items: any[] = itemsByOrder.get(orderId) || [];
+    const items = (itemsByOrder.get(orderId) || []) as RevenueDeductionItem[];
     let deductionMinor = 0;
     for (const item of items) {
       if (!item.isPersonalCollection || (item.ownerName || "Store") === "Store") continue;
@@ -308,15 +315,28 @@ export async function GET() {
     }
     return deductionMinor;
   };
+  const storeProfitDeductionForOrder = (orderId: string): number => {
+    const items = (itemsByOrder.get(orderId) || []) as RevenueDeductionItem[];
+    let deductionMinor = 0;
+    for (const item of items) {
+      if ((item.ownerName || "Store") !== "Store") continue;
+      const totalPriceMinor = toMinorUnits(Number(item.totalPrice ?? 0));
+      const costPriceMinor = toMinorUnits(Number(item.costPrice ?? 0));
+      deductionMinor += Math.max(0, totalPriceMinor - costPriceMinor);
+    }
+    return deductionMinor;
+  };
+  const totalRevenueDeductionForOrder = (orderId: string) =>
+    personalCollectionDeductionForOrder(orderId) + storeProfitDeductionForOrder(orderId);
   const bkashWithdrawableMinor = completedOrderList
     .filter((o) => String(o.paymentMethod || "") === "Bkash Manual")
-    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - totalRevenueDeductionForOrder(o.id)), 0);
   const bankWithdrawableMinor = completedOrderList
     .filter((o) => String(o.paymentMethod || "") === "Bank Manual")
-    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+    .reduce((sum, o) => sum + Math.max(0, storeRevenueMinorForOrder(o) - totalRevenueDeductionForOrder(o.id)), 0);
   const codWithdrawableMinor = completedOrderList
     .filter((o) => String(o.paymentMethod || "") === "Cash on Delivery")
-    .reduce((sum, o) => sum + Math.max(0, codRevenueMinorForOrder(o) - personalCollectionDeductionForOrder(o.id)), 0);
+    .reduce((sum, o) => sum + Math.max(0, codRevenueMinorForOrder(o) - totalRevenueDeductionForOrder(o.id)), 0);
 
   type RevenueWithdrawalDoc = {
     id: string;
@@ -518,7 +538,7 @@ export async function GET() {
       bankWithdrawable,
       lastUpdatedAmount: latestRevenueEvent ? Math.abs(latestRevenueEvent.amount) : 0,
       lastUpdatedAt: latestRevenueEvent ? latestRevenueEvent.createdAt.toISOString() : null,
-      lastUpdatedSource: latestRevenueEvent?.source || null,
+      lastUpdatedSource: latestRevenueEvent ? latestRevenueEvent.source : null,
       history: revenueWithdrawalDocs
         .sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime())
         .map((w) => serializeDoc(w)),

@@ -133,10 +133,23 @@ export async function POST(req: Request) {
     const deliveryFeeMinor = Number(order?.financialsMinor?.deliveryFeeMinor ?? toMinorUnits(order.deliveryFee ?? 0));
     return Math.max(0, totalMinor - deliveryFeeMinor);
   };
-  // Deduct bottle-owner earnings from store revenue for personal_collection items
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Deduct payouts from store revenue: personal_collection owner payouts
+  // and store-owned item profit (already distributed to owners).
+  type RevenueDeductionItem = {
+    ownerName?: string;
+    totalPrice?: number;
+    costPrice?: number;
+    isPersonalCollection?: boolean;
+    quantity?: number;
+    ml?: number;
+    pricingSnapshot?: {
+      packagingCost?: number;
+      bottleCost?: number;
+      costPricePerMl?: number;
+    };
+  };
   const personalCollectionDeductionMinor = (orderId: string): number => {
-    const items: any[] = itemsByOrder.get(orderId) || [];
+    const items = (itemsByOrder.get(orderId) || []) as RevenueDeductionItem[];
     let deductionMinor = 0;
     for (const item of items) {
       if (!item.isPersonalCollection || (item.ownerName || "Store") === "Store") continue;
@@ -152,10 +165,24 @@ export async function POST(req: Request) {
     }
     return deductionMinor;
   };
+  const storeProfitDeductionMinor = (orderId: string): number => {
+    const items = (itemsByOrder.get(orderId) || []) as RevenueDeductionItem[];
+    let deductionMinor = 0;
+    for (const item of items) {
+      if ((item.ownerName || "Store") !== "Store") continue;
+      const totalPriceMinor = toMinorUnits(Number(item.totalPrice ?? 0));
+      const costPriceMinor = toMinorUnits(Number(item.costPrice ?? 0));
+      const storeProfitMinor = Math.max(0, totalPriceMinor - costPriceMinor);
+      deductionMinor += storeProfitMinor;
+    }
+    return deductionMinor;
+  };
+  const totalRevenueDeductionMinor = (orderId: string) =>
+    personalCollectionDeductionMinor(orderId) + storeProfitDeductionMinor(orderId);
   const sourceTotalsMinor = {
-    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => sum + Math.max(0, storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
-    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => sum + Math.max(0, storeRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
-    COD: completedCodOrders.reduce((sum: number, order) => sum + Math.max(0, codRevenueMinorForOrder(order) - personalCollectionDeductionMinor(order.id)), 0),
+    Bkash: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bkash Manual").reduce((sum: number, order) => sum + Math.max(0, storeRevenueMinorForOrder(order) - totalRevenueDeductionMinor(order.id)), 0),
+    Bank: completedOrders.filter((order) => String(order.paymentMethod || "") === "Bank Manual").reduce((sum: number, order) => sum + Math.max(0, storeRevenueMinorForOrder(order) - totalRevenueDeductionMinor(order.id)), 0),
+    COD: completedCodOrders.reduce((sum: number, order) => sum + Math.max(0, codRevenueMinorForOrder(order) - totalRevenueDeductionMinor(order.id)), 0),
   };
 
   const revenueWithdrawalsSnap = await db.collection(Collections.withdrawals).get();
@@ -197,7 +224,6 @@ export async function POST(req: Request) {
       const doc = await docRef.get();
       if (!doc.exists) return NextResponse.json({ error: "Withdrawal request not found" }, { status: 404 });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const existing = doc.data() as PendingWithdrawalDoc;
       if ((existing.withdrawFrom ?? "Store Revenue") !== "Store Revenue" || String(existing.paymentSource || "") !== paymentSource) {
         return NextResponse.json({ error: "Not a store revenue withdrawal request for this payment source" }, { status: 400 });
