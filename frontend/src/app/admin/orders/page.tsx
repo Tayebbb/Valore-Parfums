@@ -21,6 +21,9 @@ interface OrderItem {
   unitPrice: number;
   totalPrice: number;
   costPrice?: number;
+  ownerName?: string;
+  ownerProfit?: number;
+  otherOwnerProfit?: number;
 }
 
 interface Order {
@@ -60,6 +63,9 @@ interface Order {
   subtotal: number;
   total: number;
   profit: number;
+  financialsMinor?: {
+    totalProfitMinor?: number;
+  };
   createdAt: string;
   items: OrderItem[];
 }
@@ -202,6 +208,15 @@ export default function OrdersPage() {
   }, []);
 
   const fmt = (n: number) => n.toLocaleString("en-BD");
+  const getOrderProfit = (order: Order) => {
+    const minorProfit = Number(order.financialsMinor?.totalProfitMinor);
+    if (Number.isFinite(minorProfit)) {
+      return minorProfit / 100;
+    }
+
+    const fallbackProfit = Number(order.profit ?? 0);
+    return Number.isFinite(fallbackProfit) ? fallbackProfit : 0;
+  };
   const statusClass = (s: string) => `status-${s.toLowerCase().replace(/ /g, "")}`;
 
   const updateOrderInState = (nextOrder: Order) => {
@@ -727,6 +742,7 @@ export default function OrdersPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
+                      <p className="text-[10px] text-[var(--success)] mt-1">Profit: {fmt(getOrderProfit(o))}</p>
                       {o.voucherCode && (o.discount ?? 0) > 0 && (
                         <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)}</p>
                       )}
@@ -804,11 +820,11 @@ export default function OrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order ID</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Items</th>
                   <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Payment</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Total</th>
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order Type</th>
                   <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Status</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Date</th>
@@ -828,12 +844,6 @@ export default function OrdersPage() {
                       className="border-b border-[var(--border)] hover:bg-[var(--gold-tint)] transition-colors cursor-pointer"
                       onClick={() => openOrderDetails(o)}
                     >
-                      <td className="py-3 px-4 font-mono text-xs text-[var(--text-secondary)]">
-                        <div className="inline-flex items-center gap-2">
-                          <span>{o.id}</span>
-                          <CopyOrderIdButton orderId={o.id} className="h-8 w-8 min-w-8" stopPropagation />
-                        </div>
-                      </td>
                       <td className="py-3 px-4">
                         <p className="text-sm">{o.customerName}</p>
                         <p className="text-xs text-[var(--text-muted)]">{o.customerPhone}</p>
@@ -861,6 +871,9 @@ export default function OrdersPage() {
                         {o.voucherCode && (o.discount ?? 0) > 0 && (
                           <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)} via {o.voucherCode}</p>
                         )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <p className="font-serif text-[var(--success)]">{fmt(getOrderProfit(o))}</p>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${String(o.pickupMethod || "Delivery") === "Pickup"
@@ -1114,11 +1127,16 @@ export default function OrdersPage() {
               <div className="gold-line my-3" />
               <h4 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Items</h4>
               {selectedOrder.items?.map((item) => (
-                <div key={item.id} className="flex justify-between py-1 gap-3">
-                  <span>
-                    {item.perfumeName} - {item.isFullBottle ? `Full Bottle (${item.fullBottleSize || "Custom"})` : `${item.ml}ml`} x {item.quantity}
-                  </span>
-                  <span className="font-serif text-[var(--gold)] whitespace-nowrap">{fmt(item.totalPrice ?? 0)} BDT</span>
+                <div key={item.id} className="py-1">
+                  <div className="flex justify-between gap-3">
+                    <span>
+                      {item.perfumeName} - {item.isFullBottle ? `Full Bottle (${item.fullBottleSize || "Custom"})` : `${item.ml}ml`} x {item.quantity}
+                    </span>
+                    <span className="font-serif text-[var(--gold)] whitespace-nowrap">{fmt(item.totalPrice ?? 0)} BDT</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                    Owner profit ({item.ownerName || "Owner"}): {fmt(Number(item.ownerProfit ?? 0))} BDT, Other owner: {fmt(Number(item.otherOwnerProfit ?? 0))} BDT
+                  </p>
                 </div>
               ))}
 
@@ -1205,6 +1223,10 @@ export default function OrdersPage() {
               <div className="flex justify-between text-base">
                 <span className="text-[var(--text-muted)]">Total</span>
                 <span className="font-serif text-[var(--gold)]">{fmt(selectedOrder.total ?? 0)} BDT</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Profit</span>
+                <span className="font-serif text-[var(--success)]">{fmt(getOrderProfit(selectedOrder))} BDT</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Order Type</span>
