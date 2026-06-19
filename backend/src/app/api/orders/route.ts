@@ -561,7 +561,8 @@ export async function POST(req: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const globalSettings = globalSettingsDoc.exists ? (globalSettingsDoc.data() as any) : null;
     const pickupContactNumber = pickupMethod === "Pickup" ? String(globalSettings?.pickup?.contactNumber || "") : "";
-    const estimatedPrepTime = pickupMethod === "Pickup" ? String(globalSettings?.pickup?.estimatedPrepTime || "") : "";
+    const configuredEstimatedPrepTime = String(globalSettings?.pickup?.estimatedPrepTime || "").trim();
+    const estimatedPrepTime = pickupMethod === "Pickup" ? (configuredEstimatedPrepTime || "1 day") : "";
 
     // Fetch pickup location address from DB
     let pickupLocationAddress = "";
@@ -693,7 +694,7 @@ export async function POST(req: Request) {
         ml: Number(it.ml || 0),
         unitPrice: Number(it.unitPrice || 0),
       }));
-      const emailNotification = pickupMethod === "Pickup" && pickupContactNumber && estimatedPrepTime
+      const emailNotification = pickupMethod === "Pickup" && pickupContactNumber
         ? generatePickupConfirmationEmail({
           orderId,
           customerName: String(orderData.customerName || "Customer"),
@@ -717,7 +718,7 @@ export async function POST(req: Request) {
           paymentMethod: normalizedPaymentMethod,
         });
       
-      const templateName = pickupMethod === "Pickup" && pickupContactNumber && estimatedPrepTime
+      const templateName = pickupMethod === "Pickup" && pickupContactNumber
         ? "generatePickupConfirmationEmail"
         : "generateOrderConfirmationEmail";
       

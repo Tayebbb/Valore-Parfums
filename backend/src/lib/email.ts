@@ -416,6 +416,7 @@ export function generatePickupConfirmationEmail(orderData: {
   pickupLocationName?: string;
   pickupLocationAddress?: string;
 }): EmailNotification {
+  const estimatedPrepTime = String(orderData.estimatedPrepTime || "").trim() || "1 day";
   const orderedItemsBlock = renderOrderedItemsBlock(orderData.items, orderData.total);
 
   const pickupDetailsBlock = `
@@ -431,9 +432,9 @@ export function generatePickupConfirmationEmail(orderData: {
       <p style="font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:4px;">Contact Number</p>
       <p style="font-family:'Cormorant Garamond',serif; font-size:19px; color:#c9a96e; margin-bottom:16px;">${orderData.pickupContactNumber}</p>
       <p style="font-family:'Montserrat',sans-serif; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:4px;">Estimated Ready In</p>
-      <p style="font-family:'Cormorant Garamond',serif; font-size:17px; color:#111; margin-bottom:16px;">${orderData.estimatedPrepTime}</p>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:17px; color:#111; margin-bottom:16px;">${estimatedPrepTime}</p>
       <p style="font-family:'Montserrat',sans-serif; font-size:11px; color:#555; line-height:1.8; border-top:1px solid #e0d8cb; padding-top:14px; margin-top:4px;">
-        Your order will be ready within <strong>${orderData.estimatedPrepTime}</strong>. Please contact <strong>${orderData.pickupContactNumber}</strong> before arriving to confirm availability.
+        Your order will be ready within <strong>${estimatedPrepTime}</strong>. Please contact <strong>${orderData.pickupContactNumber}</strong> before arriving to confirm availability.
       </p>
     </div>
   `;
@@ -459,7 +460,7 @@ export function generatePickupConfirmationEmail(orderData: {
     to: orderData.customerEmail,
     subject: `Your pickup order is confirmed (#${orderData.orderId})`,
     html,
-    text: `Dear ${orderData.customerName},\nYour pickup order #${orderData.orderId} is confirmed. Your order will be ready within ${orderData.estimatedPrepTime}. Please contact ${orderData.pickupContactNumber} before arriving.`,
+    text: `Dear ${orderData.customerName},\nYour pickup order #${orderData.orderId} is confirmed. Your order will be ready within ${estimatedPrepTime}. Please contact ${orderData.pickupContactNumber} before arriving.`,
   };
 }
 
