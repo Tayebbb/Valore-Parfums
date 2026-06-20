@@ -189,14 +189,26 @@ export default function OrdersPage() {
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editPickupMethod, setEditPickupMethod] = useState<"Delivery" | "Pickup">("Delivery");
+  const [editPickupLocationId, setEditPickupLocationId] = useState("");
+  const [editDeliveryZone, setEditDeliveryZone] = useState("Inside Dhaka");
   const [editDeliveryAddress, setEditDeliveryAddress] = useState("");
   const [editDeliveryArea, setEditDeliveryArea] = useState("");
   const [editDeliveryCity, setEditDeliveryCity] = useState("");
   const [editDeliveryNote, setEditDeliveryNote] = useState("");
   const [editDeliveryFee, setEditDeliveryFee] = useState("");
+  const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string; address: string; phone?: string }[]>([]);
   const [itemsMarkedForRemoval, setItemsMarkedForRemoval] = useState<Set<string>>(new Set());
-  const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; ml: string; quantity: string; unitPrice: string; costPrice: string }[]>([]);
+  const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; perfumeId?: string; ml: string; quantity: string; unitPrice: string; costPrice: string }[]>([]);
   const [savingOrderEdit, setSavingOrderEdit] = useState(false);
+  // Catalog browser
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [catalogPerfumes, setCatalogPerfumes] = useState<{ id: string; name: string; brand?: string; totalStockMl?: number }[]>([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogSizes, setCatalogSizes] = useState<{ id: string; ml: number }[]>([]);
+  const [expandedCatalogId, setExpandedCatalogId] = useState<string | null>(null);
+  const [addingCatalogKey, setAddingCatalogKey] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -421,6 +433,9 @@ export default function OrdersPage() {
     if (!selectedOrder) return;
     setEditName(selectedOrder.customerName);
     setEditPhone(selectedOrder.customerPhone);
+    setEditPickupMethod(selectedOrder.pickupMethod === "Pickup" ? "Pickup" : "Delivery");
+    setEditPickupLocationId(selectedOrder.pickupLocationId || "");
+    setEditDeliveryZone(selectedOrder.deliveryZone || "Inside Dhaka");
     if (selectedOrder.deliveryAddress) {
       const parts = selectedOrder.deliveryAddress.split(" | ");
       const addressLine = parts[0] || "";
@@ -441,7 +456,66 @@ export default function OrdersPage() {
     setEditDeliveryFee(String(selectedOrder.deliveryFee ?? ""));
     setItemsMarkedForRemoval(new Set());
     setNewItemDrafts([]);
+    setShowCatalog(false);
+    setCatalogSearch("");
+    setExpandedCatalogId(null);
     setIsEditingOrder(true);
+    if (pickupLocations.length === 0) {
+      void fetch("/api/pickup-locations").then((r) => r.json()).then((data) => {
+        if (Array.isArray(data)) setPickupLocations(data.filter((l: { active?: boolean }) => l.active !== false));
+      }).catch(() => {});
+    }
+  };
+
+  const openCatalog = async () => {
+    setShowCatalog(true);
+    if (catalogPerfumes.length > 0) return;
+    setCatalogLoading(true);
+    try {
+      const [perfRes, sizeRes] = await Promise.all([
+        fetch("/api/perfumes?active=true"),
+        fetch("/api/decant-sizes"),
+      ]);
+      if (perfRes.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await perfRes.json() as any;
+        const list = Array.isArray(data) ? data : (Array.isArray(data.perfumes) ? data.perfumes : []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setCatalogPerfumes(list.map((p: any) => ({ id: p.id, name: p.name, brand: p.brand, totalStockMl: p.totalStockMl || 0 })));
+      }
+      if (sizeRes.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sizes = await sizeRes.json() as any[];
+        setCatalogSizes((Array.isArray(sizes) ? sizes : []).filter((s: { enabled?: boolean }) => s.enabled !== false).map((s: { id: string; ml: number }) => ({ id: s.id, ml: s.ml })));
+      }
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const addSizeFromCatalog = async (perfumeId: string, perfumeName: string, ml: number) => {
+    const key = `${perfumeId}-${ml}`;
+    setAddingCatalogKey(key);
+    let unitPrice = 0;
+    let costPrice = 0;
+    try {
+      const res = await fetch(`/api/pricing?perfumeId=${encodeURIComponent(perfumeId)}`);
+      if (res.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await res.json() as any;
+        const prices = Array.isArray(data.prices) ? data.prices : (Array.isArray(data) ? data : []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const match = prices.find((p: any) => p.ml === ml);
+        if (match) {
+          unitPrice = Math.round(match.sellingPrice || 0);
+          costPrice = Math.round(match.totalCost || 0);
+        }
+      }
+    } catch { /* ignore */ }
+    setAddingCatalogKey(null);
+    setNewItemDrafts((prev) => [...prev, { perfumeName, perfumeId, ml: String(ml), quantity: "1", unitPrice: String(unitPrice), costPrice: String(costPrice) }]);
+    setShowCatalog(false);
+    setExpandedCatalogId(null);
   };
 
   const saveOrderEdit = async () => {
@@ -454,6 +528,7 @@ export default function OrdersPage() {
       .filter((d) => d.perfumeName.trim() && Number(d.ml) > 0)
       .map((d) => ({
         perfumeName: d.perfumeName.trim(),
+        ...(d.perfumeId ? { perfumeId: d.perfumeId } : {}),
         ml: Number(d.ml),
         quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
         unitPrice: Math.max(0, Math.round(Number(d.unitPrice) || 0)),
@@ -465,12 +540,25 @@ export default function OrdersPage() {
     const payload: Record<string, unknown> = {
       customerName: editName.trim() || selectedOrder.customerName,
       customerPhone: editPhone.trim() || selectedOrder.customerPhone,
+      pickupMethod: editPickupMethod,
     };
-    if (selectedOrder.pickupMethod === "Delivery") {
+
+    if (editPickupMethod === "Pickup") {
+      payload.pickupLocationId = editPickupLocationId;
+      const loc = pickupLocations.find((l) => l.id === editPickupLocationId);
+      payload.pickupLocationName = loc?.name || "";
+      payload.deliveryAddress = null;
+      payload.deliveryFee = 0;
+      payload.deliveryZone = null;
+    } else {
+      payload.deliveryZone = editDeliveryZone;
       if (deliveryAddress) payload.deliveryAddress = deliveryAddress;
       const parsedFee = Number(editDeliveryFee);
       if (Number.isFinite(parsedFee) && parsedFee >= 0) payload.deliveryFee = parsedFee;
+      payload.pickupLocationId = null;
+      payload.pickupLocationName = null;
     }
+
     if (toRemove.length > 0) payload.removeItemIds = toRemove;
     if (validNewItems.length > 0) payload.addItems = validNewItems;
 
@@ -1059,11 +1147,48 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
-                  {/* Delivery Address */}
-                  {selectedOrder.pickupMethod === "Delivery" && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Delivery Address</p>
+                  {/* Fulfillment Type */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Fulfillment</p>
+                    <div className="flex gap-2 mb-3">
+                      {(["Delivery", "Pickup"] as const).map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setEditPickupMethod(m)}
+                          className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded border transition-colors ${editPickupMethod === m ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"}`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+
+                    {editPickupMethod === "Pickup" ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">Location</span>
+                        <select
+                          value={editPickupLocationId}
+                          onChange={(e) => setEditPickupLocationId(e.target.value)}
+                          className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                        >
+                          <option value="">Select pickup location…</option>
+                          {pickupLocations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>{loc.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
                       <div className="space-y-2">
+                        <div className="flex gap-2">
+                          {(["Inside Dhaka", "Outside Dhaka"] as const).map((z) => (
+                            <button
+                              key={z}
+                              onClick={() => setEditDeliveryZone(z)}
+                              className={`px-2 py-1 text-[9px] uppercase tracking-wider rounded border transition-colors ${editDeliveryZone === z ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--gold)]"}`}
+                            >
+                              {z}
+                            </button>
+                          ))}
+                        </div>
                         {[
                           { label: "Address", value: editDeliveryAddress, setter: setEditDeliveryAddress, placeholder: "Road, block, sector…", max: 200 },
                           { label: "Area", value: editDeliveryArea, setter: setEditDeliveryArea, placeholder: "Gulshan, Dhanmondi…", max: 80 },
@@ -1092,8 +1217,8 @@ export default function OrdersPage() {
                           />
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Items */}
                   <div>
@@ -1127,9 +1252,74 @@ export default function OrdersPage() {
                       ))}
                     </div>
 
-                    {/* Add new items */}
+                    {/* Add new items — drafts + catalog */}
                     <div className="mt-3 space-y-2">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Add Items</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Add Items</p>
+                        <button
+                          onClick={openCatalog}
+                          className="px-2 py-1 text-[9px] uppercase tracking-wider border border-[var(--gold)] text-[var(--gold)] rounded hover:bg-[var(--gold-tint)] transition-colors"
+                        >
+                          {catalogLoading ? "Loading…" : "Browse Store"}
+                        </button>
+                      </div>
+
+                      {showCatalog && (
+                        <div className="border border-[var(--border)] rounded bg-[var(--bg-surface)] overflow-hidden">
+                          <div className="flex items-center gap-2 p-2 border-b border-[var(--border)]">
+                            <input
+                              autoFocus
+                              placeholder="Search perfumes…"
+                              value={catalogSearch}
+                              onChange={(e) => { setCatalogSearch(e.target.value); setExpandedCatalogId(null); }}
+                              className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                            />
+                            <button onClick={() => setShowCatalog(false)} className="text-[var(--text-muted)] text-xs hover:text-[var(--text-primary)] px-1">✕</button>
+                          </div>
+                          <div className="max-h-52 overflow-y-auto divide-y divide-[var(--border)]">
+                            {catalogLoading ? (
+                              <p className="text-xs text-[var(--text-muted)] p-3 text-center">Loading catalog…</p>
+                            ) : catalogPerfumes.filter((p) => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || (p.brand || "").toLowerCase().includes(catalogSearch.toLowerCase())).length === 0 ? (
+                              <p className="text-xs text-[var(--text-muted)] p-3 text-center">No perfumes found</p>
+                            ) : (
+                              catalogPerfumes
+                                .filter((p) => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()) || (p.brand || "").toLowerCase().includes(catalogSearch.toLowerCase()))
+                                .map((perfume) => (
+                                  <div key={perfume.id}>
+                                    <button
+                                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-[var(--gold-tint)] text-left transition-colors"
+                                      onClick={() => setExpandedCatalogId((prev) => prev === perfume.id ? null : perfume.id)}
+                                    >
+                                      <span className="text-xs">
+                                        <span className="font-medium">{perfume.name}</span>
+                                        {perfume.brand && <span className="text-[var(--text-muted)] ml-1 text-[10px]">{perfume.brand}</span>}
+                                      </span>
+                                      <span className="text-[10px] text-[var(--text-muted)]">{expandedCatalogId === perfume.id ? "▲" : "▶"}</span>
+                                    </button>
+                                    {expandedCatalogId === perfume.id && (
+                                      <div className="px-3 pb-2 flex flex-wrap gap-1.5 bg-[var(--bg-card)]">
+                                        {catalogSizes.map((size) => {
+                                          const key = `${perfume.id}-${size.ml}`;
+                                          return (
+                                            <button
+                                              key={size.id}
+                                              disabled={addingCatalogKey === key}
+                                              onClick={() => addSizeFromCatalog(perfume.id, perfume.name, size.ml)}
+                                              className="px-2 py-1 text-[9px] uppercase tracking-wider border border-[var(--border)] rounded hover:border-[var(--gold)] hover:text-[var(--gold)] transition-colors disabled:opacity-50"
+                                            >
+                                              {addingCatalogKey === key ? "…" : `${size.ml}ml`}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {newItemDrafts.map((draft, idx) => (
                         <div key={idx} className="border border-[var(--border)] rounded p-2 space-y-1.5 bg-[var(--bg-surface)]">
                           <div className="flex items-center gap-2">
@@ -1171,7 +1361,7 @@ export default function OrdersPage() {
                         onClick={() => setNewItemDrafts((prev) => [...prev, { perfumeName: "", ml: "", quantity: "1", unitPrice: "", costPrice: "" }])}
                         className="w-full py-1.5 text-[10px] uppercase tracking-wider border border-dashed border-[var(--border)] text-[var(--text-muted)] rounded hover:border-[var(--gold)] hover:text-[var(--gold)] transition-colors"
                       >
-                        + Add Item
+                        + Manual Entry
                       </button>
                     </div>
                   </div>

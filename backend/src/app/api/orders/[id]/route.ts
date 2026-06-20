@@ -130,7 +130,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { itemPriceUpdates, removeVoucher, addItems, removeItemIds, ...orderPatch } = body as {
     itemPriceUpdates?: { itemId: string; unitPrice: number; buyingPrice?: number }[];
     removeVoucher?: boolean;
-    addItems?: { perfumeName: string; ml: number; quantity: number; unitPrice: number; costPrice: number }[];
+    addItems?: { perfumeName: string; perfumeId?: string; ml: number; quantity: number; unitPrice: number; costPrice: number }[];
     removeItemIds?: string[];
     status?: string;
     [key: string]: unknown;
@@ -309,6 +309,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     for (const newItm of addItems) {
       const perfumeName = String(newItm.perfumeName || "").trim();
       if (!perfumeName) continue;
+      const addedPerfumeId = String(newItm.perfumeId || "").trim() || undefined;
       const ml = Number(newItm.ml);
       const quantity = Math.max(1, Math.floor(Number(newItm.quantity) || 1));
       const unitPrice = Math.max(0, Math.round(Number(newItm.unitPrice) || 0));
@@ -325,6 +326,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const split = splitProfit(itemProfit, "Store" as OwnerType, ownerProfitPercent, owner1Share);
       await itemsRef.doc(uuid()).set({
         perfumeName,
+        ...(addedPerfumeId ? { perfumeId: addedPerfumeId } : {}),
         ml,
         quantity,
         unitPrice,
@@ -339,6 +341,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         updatedAt: now,
       });
     }
+    await recomputeOrderTotals();
+  }
+
+  // Recalculate totals when only delivery fee changes (no item add/remove)
+  const deliveryFeeInPatch = typeof orderPatch.deliveryFee === "number";
+  const deliveryFeeChanged = deliveryFeeInPatch && Number(orderPatch.deliveryFee) !== Number(order.deliveryFee ?? 0);
+  const noItemChanges = !(Array.isArray(removeItemIds) && removeItemIds.length > 0) && !(Array.isArray(addItems) && addItems.length > 0);
+  if (deliveryFeeChanged && noItemChanges && !immutableFinancialStatuses.has(previousStatusDb)) {
     await recomputeOrderTotals();
   }
 
