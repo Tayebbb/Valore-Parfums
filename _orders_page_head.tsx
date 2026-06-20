@@ -1285,6 +1285,12 @@ export default function OrdersPage() {
                   </div>
                 </>
               )}
+              {selectedOrder.pickupMethod === "Delivery" && (selectedOrder.deliveryFee ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-muted)]">Delivery Fee</span>
+                  <span>+{fmt(selectedOrder.deliveryFee ?? 0)} BDT</span>
+                </div>
+              )}
               <div className="flex justify-between text-base">
                 <span className="text-[var(--text-muted)]">Total</span>
                 <span className="font-serif text-[var(--gold)]">{fmt(selectedOrder.total ?? 0)} BDT</span>
