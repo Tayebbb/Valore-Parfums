@@ -127,9 +127,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json();
-  const { itemPriceUpdates, removeVoucher, ...orderPatch } = body as {
+  const { itemPriceUpdates, removeVoucher, addItems, removeItemIds, ...orderPatch } = body as {
     itemPriceUpdates?: { itemId: string; unitPrice: number; buyingPrice?: number }[];
     removeVoucher?: boolean;
+    addItems?: { perfumeName: string; ml: number; quantity: number; unitPrice: number; costPrice: number }[];
+    removeItemIds?: string[];
     status?: string;
     [key: string]: unknown;
   };
@@ -213,10 +215,132 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
   const immutableFinancialStatuses = new Set(["Dispatched", "Delivered", "Cancelled"]);
 
-  if (immutableFinancialStatuses.has(previousStatusDb) && (Boolean(removeVoucher) || (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0))) {
+  if (immutableFinancialStatuses.has(previousStatusDb) && (Boolean(removeVoucher) || (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0) || (Array.isArray(removeItemIds) && removeItemIds.length > 0) || (Array.isArray(addItems) && addItems.length > 0))) {
     return NextResponse.json({ error: `Financial fields are locked for ${previousStatusDb} orders` }, { status: 409 });
   }
   const now = Timestamp.now();
+
+  // Helper: recompute order-level subtotal/total/profit from all item rows
+  const recomputeOrderTotals = async () => {
+    const itemsRef2 = db.collection(Collections.orders).doc(id).collection("items");
+    const snap2 = await itemsRef2.get();
+    let subtotalMinor2 = 0;
+    let totalCostMinor2 = 0;
+    for (const d of snap2.docs) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const itm = d.data() as any;
+      const bd = itm.financialBreakdown;
+      if (bd && Number.isFinite(bd.totalRevenueMinor) && Number.isFinite(bd.totalCostMinor)) {
+        subtotalMinor2 += Number(bd.totalRevenueMinor || 0);
+        totalCostMinor2 += Number(bd.totalCostMinor || 0);
+      } else {
+        subtotalMinor2 += toMinorUnits(Number(itm.totalPrice ?? 0));
+        totalCostMinor2 += toMinorUnits(Number(itm.costPrice ?? 0));
+      }
+    }
+    const keepVoucher = !Boolean(removeVoucher) && Boolean(order.voucherCode);
+    const discountMinor2 = keepVoucher ? toMinorUnits(Number(order.discount ?? 0)) : 0;
+    const newDeliveryFee = typeof orderPatch.deliveryFee === "number" ? Number(orderPatch.deliveryFee) : Number(order.deliveryFee ?? 0);
+    const snap2r = buildOrderPricingSnapshot({ subtotalMinor: subtotalMinor2, discountMinor: discountMinor2, deliveryFeeMinor: toMinorUnits(newDeliveryFee), totalCostMinor: totalCostMinor2 });
+    const dist2 = distributeOrderProfit({
+      items: snap2.docs.map((d) => {
+        const itm = d.data() as Record<string, unknown>;
+        const bd = (itm.financialBreakdown || {}) as { computedProfitMinor?: number };
+        return {
+          ownerName: String(itm.ownerName || "Store"),
+          computedProfitMinor: Number(bd.computedProfitMinor ?? toMinorUnits(Number(itm.totalPrice || 0) - Number(itm.costPrice || 0))),
+          ownerProfitMinor: toMinorUnits(Number(itm.ownerProfit || 0)),
+          otherOwnerProfitMinor: toMinorUnits(Number(itm.otherOwnerProfit || 0)),
+        };
+      }),
+      owner1Name,
+      owner2Name,
+      owner1Share,
+    });
+    await db.collection(Collections.orders).doc(id).update({
+      subtotal: fromMinorUnits(snap2r.subtotalMinor),
+      total: fromMinorUnits(snap2r.totalMinor),
+      profit: fromMinorUnits(snap2r.totalProfitMinor),
+      discount: fromMinorUnits(snap2r.discountMinor),
+      pricingSnapshot: { ...snap2r, generatedAt: now },
+      financialsMinor: {
+        subtotalMinor: snap2r.subtotalMinor,
+        discountMinor: snap2r.discountMinor,
+        deliveryFeeMinor: snap2r.deliveryFeeMinor,
+        totalMinor: snap2r.totalMinor,
+        totalCostMinor: snap2r.totalCostMinor,
+        totalProfitMinor: snap2r.totalProfitMinor,
+      },
+      profitDistribution: dist2,
+      updatedAt: now,
+    });
+  };
+
+  // Handle item removals requested by admin
+  if (Array.isArray(removeItemIds) && removeItemIds.length > 0) {
+    const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
+    for (const rawId of removeItemIds) {
+      const itemId = String(rawId || "").trim();
+      if (!itemId) continue;
+      const itemDoc = await itemsRef.doc(itemId).get();
+      if (!itemDoc.exists) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const itm = itemDoc.data() as any;
+      // Restore stock for decant items
+      if (!itm.isFullBottle && itm.perfumeId && Number(itm.ml) > 0 && Number(itm.quantity) > 0) {
+        await db.collection(Collections.perfumes).doc(String(itm.perfumeId)).update({
+          totalStockMl: FieldValue.increment(Number(itm.ml) * Number(itm.quantity)),
+        });
+        const bottleSnap = await db.collection(Collections.bottles).where("ml", "==", itm.ml).limit(1).get();
+        if (!bottleSnap.empty) {
+          await db.collection(Collections.bottles).doc(bottleSnap.docs[0].id).update({
+            availableCount: FieldValue.increment(Number(itm.quantity)),
+          });
+        }
+      }
+      await itemsRef.doc(itemId).delete();
+    }
+    await recomputeOrderTotals();
+  }
+
+  // Handle admin-added items
+  if (Array.isArray(addItems) && addItems.length > 0) {
+    const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
+    for (const newItm of addItems) {
+      const perfumeName = String(newItm.perfumeName || "").trim();
+      if (!perfumeName) continue;
+      const ml = Number(newItm.ml);
+      const quantity = Math.max(1, Math.floor(Number(newItm.quantity) || 1));
+      const unitPrice = Math.max(0, Math.round(Number(newItm.unitPrice) || 0));
+      const costPricePerUnit = Math.max(0, Math.round(Number(newItm.costPrice) || 0));
+      if (!Number.isFinite(ml) || ml <= 0) continue;
+      const breakdown = computeItemBreakdown({
+        unitCostMinor: toMinorUnits(costPricePerUnit),
+        unitSellingPriceMinor: toMinorUnits(unitPrice),
+        quantity,
+      });
+      const totalPrice = fromMinorUnits(breakdown.totalRevenueMinor);
+      const costPrice = fromMinorUnits(breakdown.totalCostMinor);
+      const itemProfit = totalPrice - costPrice;
+      const split = splitProfit(itemProfit, "Store" as OwnerType, ownerProfitPercent, owner1Share);
+      await itemsRef.doc(uuid()).set({
+        perfumeName,
+        ml,
+        quantity,
+        unitPrice,
+        totalPrice,
+        costPrice,
+        ownerName: "Store",
+        ownerProfit: split.ownerProfit,
+        otherOwnerProfit: split.otherOwnerProfit,
+        financialBreakdown: breakdown,
+        addedByAdmin: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    await recomputeOrderTotals();
+  }
 
   // Apply admin manual unit price updates for Full Bottle items, then recompute order totals/profit.
   if (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0) {

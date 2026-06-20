@@ -185,6 +185,19 @@ export default function OrdersPage() {
   const [cancellationNote, setCancellationNote] = useState("");
   const [submittingCancellation, setSubmittingCancellation] = useState(false);
 
+  // Order edit mode state
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editDeliveryAddress, setEditDeliveryAddress] = useState("");
+  const [editDeliveryArea, setEditDeliveryArea] = useState("");
+  const [editDeliveryCity, setEditDeliveryCity] = useState("");
+  const [editDeliveryNote, setEditDeliveryNote] = useState("");
+  const [editDeliveryFee, setEditDeliveryFee] = useState("");
+  const [itemsMarkedForRemoval, setItemsMarkedForRemoval] = useState<Set<string>>(new Set());
+  const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; ml: string; quantity: string; unitPrice: string; costPrice: string }[]>([]);
+  const [savingOrderEdit, setSavingOrderEdit] = useState(false);
+
   const load = async () => {
     setLoading(true);
     const [ordersRes, procurementRes] = await Promise.all([
@@ -402,6 +415,83 @@ export default function OrdersPage() {
     const updated = await res.json();
     updateOrderInState(updated);
     toast("Voucher removed for this order", "success");
+  };
+
+  const openEditOrder = () => {
+    if (!selectedOrder) return;
+    setEditName(selectedOrder.customerName);
+    setEditPhone(selectedOrder.customerPhone);
+    if (selectedOrder.deliveryAddress) {
+      const parts = selectedOrder.deliveryAddress.split(" | ");
+      const addressLine = parts[0] || "";
+      const notePart = parts.find((p) => p.startsWith("Note: "));
+      const note = notePart ? notePart.replace(/^Note: /, "") : "";
+      const areaCity = parts.find((p, i) => i > 0 && !p.startsWith("Note: ")) || "";
+      const [area, ...cityParts] = areaCity.split(", ");
+      setEditDeliveryAddress(addressLine);
+      setEditDeliveryArea(area || "");
+      setEditDeliveryCity(cityParts.join(", "));
+      setEditDeliveryNote(note);
+    } else {
+      setEditDeliveryAddress("");
+      setEditDeliveryArea("");
+      setEditDeliveryCity("");
+      setEditDeliveryNote("");
+    }
+    setEditDeliveryFee(String(selectedOrder.deliveryFee ?? ""));
+    setItemsMarkedForRemoval(new Set());
+    setNewItemDrafts([]);
+    setIsEditingOrder(true);
+  };
+
+  const saveOrderEdit = async () => {
+    if (!selectedOrder) return;
+    const areaCity = [editDeliveryArea.trim(), editDeliveryCity.trim()].filter(Boolean).join(", ");
+    const noteText = editDeliveryNote.trim() ? `Note: ${editDeliveryNote.trim()}` : "";
+    const deliveryAddress = [editDeliveryAddress.trim(), areaCity, noteText].filter(Boolean).join(" | ");
+
+    const validNewItems = newItemDrafts
+      .filter((d) => d.perfumeName.trim() && Number(d.ml) > 0)
+      .map((d) => ({
+        perfumeName: d.perfumeName.trim(),
+        ml: Number(d.ml),
+        quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
+        unitPrice: Math.max(0, Math.round(Number(d.unitPrice) || 0)),
+        costPrice: Math.max(0, Math.round(Number(d.costPrice) || 0)),
+      }));
+
+    const toRemove = Array.from(itemsMarkedForRemoval);
+
+    const payload: Record<string, unknown> = {
+      customerName: editName.trim() || selectedOrder.customerName,
+      customerPhone: editPhone.trim() || selectedOrder.customerPhone,
+    };
+    if (selectedOrder.pickupMethod === "Delivery") {
+      if (deliveryAddress) payload.deliveryAddress = deliveryAddress;
+      const parsedFee = Number(editDeliveryFee);
+      if (Number.isFinite(parsedFee) && parsedFee >= 0) payload.deliveryFee = parsedFee;
+    }
+    if (toRemove.length > 0) payload.removeItemIds = toRemove;
+    if (validNewItems.length > 0) payload.addItems = validNewItems;
+
+    setSavingOrderEdit(true);
+    const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setSavingOrderEdit(false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to save order changes", "error");
+      return;
+    }
+
+    const updated = await res.json();
+    updateOrderInState(updated);
+    setIsEditingOrder(false);
+    toast("Order updated", "success");
   };
 
   const updateProcurementStatus = async (id: string, status: string) => {
@@ -923,14 +1013,190 @@ export default function OrdersPage() {
 
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedOrder(null); setIsEditingOrder(false); }} />
           <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-lg p-6 animate-fade-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-serif text-xl font-light">Order Details</h2>
-              <button onClick={() => setSelectedOrder(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+              <h2 className="font-serif text-xl font-light">{isEditingOrder ? "Edit Order" : "Order Details"}</h2>
+              <div className="flex items-center gap-2">
+                {!isEditingOrder && !["Dispatched", "Delivered", "Cancelled"].includes(selectedOrder.status) && (
+                  <button
+                    onClick={openEditOrder}
+                    className="px-3 py-1 text-[10px] uppercase tracking-wider border border-[var(--gold)] text-[var(--gold)] rounded hover:bg-[var(--gold-tint)] transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
+                <button onClick={() => { setSelectedOrder(null); setIsEditingOrder(false); }} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+              </div>
             </div>
 
             <div className="space-y-3 text-sm">
+              {isEditingOrder ? (
+                /* ── Edit Mode ── */
+                <div className="space-y-5">
+                  {/* Customer Info */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Customer Info</p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">Name</span>
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          maxLength={120}
+                          className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">Phone</span>
+                        <input
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          maxLength={20}
+                          className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delivery Address */}
+                  {selectedOrder.pickupMethod === "Delivery" && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Delivery Address</p>
+                      <div className="space-y-2">
+                        {[
+                          { label: "Address", value: editDeliveryAddress, setter: setEditDeliveryAddress, placeholder: "Road, block, sector…", max: 200 },
+                          { label: "Area", value: editDeliveryArea, setter: setEditDeliveryArea, placeholder: "Gulshan, Dhanmondi…", max: 80 },
+                          { label: "City", value: editDeliveryCity, setter: setEditDeliveryCity, placeholder: "Dhaka", max: 80 },
+                          { label: "Note", value: editDeliveryNote, setter: setEditDeliveryNote, placeholder: "Timing, landmark…", max: 200 },
+                        ].map(({ label, value, setter, placeholder, max }) => (
+                          <div key={label} className="flex items-center gap-3">
+                            <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">{label}</span>
+                            <input
+                              value={value}
+                              onChange={(e) => setter(e.target.value)}
+                              placeholder={placeholder}
+                              maxLength={max}
+                              className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                            />
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">Fee (BDT)</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={editDeliveryFee}
+                            onChange={(e) => setEditDeliveryFee(e.target.value)}
+                            className="w-28 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Items */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Items</p>
+                    <div className="space-y-1">
+                      {selectedOrder.items?.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between gap-2 py-1.5 px-2 rounded border ${itemsMarkedForRemoval.has(item.id) ? "border-[var(--error)] opacity-50 line-through" : "border-[var(--border)]"}`}
+                        >
+                          <span className="text-xs flex-1 min-w-0 truncate">
+                            {item.perfumeName} – {item.isFullBottle ? `Full Bottle (${item.fullBottleSize || "Custom"})` : `${item.ml}ml`} ×{item.quantity}
+                          </span>
+                          <span className="text-xs text-[var(--gold)] whitespace-nowrap">{fmt(item.totalPrice)} BDT</span>
+                          {itemsMarkedForRemoval.has(item.id) ? (
+                            <button
+                              onClick={() => setItemsMarkedForRemoval((prev) => { const n = new Set(prev); n.delete(item.id); return n; })}
+                              className="text-[9px] text-[var(--text-muted)] uppercase hover:text-[var(--text-primary)] whitespace-nowrap"
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setItemsMarkedForRemoval((prev) => new Set([...prev, item.id]))}
+                              className="text-[9px] text-[var(--error)] uppercase hover:opacity-70 whitespace-nowrap"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add new items */}
+                    <div className="mt-3 space-y-2">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Add Items</p>
+                      {newItemDrafts.map((draft, idx) => (
+                        <div key={idx} className="border border-[var(--border)] rounded p-2 space-y-1.5 bg-[var(--bg-surface)]">
+                          <div className="flex items-center gap-2">
+                            <input
+                              placeholder="Perfume name"
+                              value={draft.perfumeName}
+                              onChange={(e) => setNewItemDrafts((prev) => prev.map((d, i) => i === idx ? { ...d, perfumeName: e.target.value } : d))}
+                              maxLength={120}
+                              className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                            />
+                            <button
+                              onClick={() => setNewItemDrafts((prev) => prev.filter((_, i) => i !== idx))}
+                              className="text-[var(--error)] text-xs px-1 hover:opacity-70"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {([
+                              { key: "ml" as const, placeholder: "ML", type: "number" },
+                              { key: "quantity" as const, placeholder: "Qty", type: "number" },
+                              { key: "unitPrice" as const, placeholder: "Sell (BDT)", type: "number" },
+                              { key: "costPrice" as const, placeholder: "Cost (BDT)", type: "number" },
+                            ] as const).map(({ key, placeholder, type }) => (
+                              <input
+                                key={key}
+                                type={type}
+                                min={0}
+                                placeholder={placeholder}
+                                value={draft[key]}
+                                onChange={(e) => setNewItemDrafts((prev) => prev.map((d, i) => i === idx ? { ...d, [key]: e.target.value } : d))}
+                                className="bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none w-full"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setNewItemDrafts((prev) => [...prev, { perfumeName: "", ml: "", quantity: "1", unitPrice: "", costPrice: "" }])}
+                        className="w-full py-1.5 text-[10px] uppercase tracking-wider border border-dashed border-[var(--border)] text-[var(--text-muted)] rounded hover:border-[var(--gold)] hover:text-[var(--gold)] transition-colors"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={saveOrderEdit}
+                      disabled={savingOrderEdit}
+                      className="flex-1 py-2 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
+                    >
+                      {savingOrderEdit ? "Saving…" : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={() => setIsEditingOrder(false)}
+                      disabled={savingOrderEdit}
+                      className="px-4 py-2 text-[10px] uppercase tracking-wider border border-[var(--border)] rounded hover:border-[var(--gold)] transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              /* ── View Mode ── */
+              <>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Order ID</span>
                 <span className="inline-flex items-center gap-2">
@@ -1234,6 +1500,8 @@ export default function OrdersPage() {
                 <span className="text-[var(--text-muted)]">Order Type</span>
                 <span className="font-serif text-[var(--gold)]">{String(selectedOrder.pickupMethod || "Delivery")}</span>
               </div>
+              </>
+              )} {/* end ternary */}
             </div>
           </div>
         </div>
