@@ -22,25 +22,6 @@ interface OrderDoc {
   };
 }
 
-interface ApprovalEntry {
-  name: string;
-  email: string;
-  approvedAt: Timestamp;
-}
-
-interface PendingWithdrawalDoc {
-  amount?: number;
-  withdrawFrom?: string;
-  withdrawalType?: string;
-  paymentSource?: string;
-  note?: string;
-  processedBy?: string;
-  completedAt?: Timestamp | null;
-  balanceAfter?: number | null;
-  approvals?: ApprovalEntry[];
-  [key: string]: unknown;
-}
-
 // GET all withdrawals — admin only
 // Supports ?ownerName=Tayeb filter
 export async function GET(req: Request) {
@@ -80,8 +61,6 @@ export async function POST(req: Request) {
     ? "Store Revenue"
     : "Owner's Profit";
   const paymentSource = paymentSourceInput === "Bkash" || paymentSourceInput === "Bank" || paymentSourceInput === "COD" ? paymentSourceInput : "";
-  const action = body.action === "approve" ? "approve" : "request";
-  const withdrawalId = typeof body.withdrawalId === "string" ? body.withdrawalId : "";
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
@@ -218,70 +197,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Insufficient ${paymentSource} balance. Available: ${Math.round(fromMinorUnits(paymentSourceBalance))} BDT` }, { status: 400 });
     }
 
-    if (action === "approve") {
-      if (!withdrawalId) return NextResponse.json({ error: "withdrawalId is required" }, { status: 400 });
-      const docRef = db.collection(Collections.withdrawals).doc(withdrawalId);
-      const doc = await docRef.get();
-      if (!doc.exists) return NextResponse.json({ error: "Withdrawal request not found" }, { status: 404 });
-
-      const existing = doc.data() as PendingWithdrawalDoc;
-      if ((existing.withdrawFrom ?? "Store Revenue") !== "Store Revenue" || String(existing.paymentSource || "") !== paymentSource) {
-        return NextResponse.json({ error: "Not a store revenue withdrawal request for this payment source" }, { status: 400 });
-      }
-
-      const approvals: ApprovalEntry[] = Array.isArray(existing.approvals) ? [...existing.approvals] : [];
-      if (approvals.some((approval) => String(approval.email || "").toLowerCase() === admin.email.toLowerCase())) {
-        return NextResponse.json({ error: "You have already approved this request" }, { status: 400 });
-      }
-
-      const now = Timestamp.now();
-      approvals.push({ name: admin.name, email: admin.email, approvedAt: now });
-      const completed = approvals.length >= 2;
-      const remainingBalance = fromMinorUnits(Math.max(0, paymentSourceBalance - toMinorUnits(Number(existing.amount || amount))));
-      await docRef.set(
-        {
-          ...existing,
-          withdrawFrom: "Store Revenue",
-          paymentSource,
-          approvals,
-          approvedBy: approvals.map((approval) => approval.name),
-          status: completed ? "Completed" : "Pending Approval",
-          updatedAt: now,
-          completedAt: completed ? now : existing.completedAt ?? null,
-          processedBy: completed ? admin.name : existing.processedBy ?? null,
-          balanceAfter: completed ? remainingBalance : existing.balanceAfter ?? null,
-        },
-        { merge: true },
-      );
-
-      if (completed) {
-        const txId = uuid();
-        await db.collection(Collections.profitTransactions).doc(txId).set({
-          orderId: null,
-          ownerName: "Store",
-          type: "revenue-withdrawal",
-          amount: -Number(existing.amount || amount),
-          paymentSource,
-          withdrawFrom: "Store Revenue",
-          description: `Store revenue withdrawal for ${String(existing.note || note || "business expense").slice(0, 200)}`,
-          createdAt: now,
-        });
-      }
-
-      return NextResponse.json(serializeDoc({ id: withdrawalId, ...(await docRef.get()).data() }), { status: 200 });
-    }
-
-    const pendingSnap = await db.collection(Collections.withdrawals)
-      .where("withdrawFrom", "==", "Store Revenue")
-      .where("paymentSource", "==", paymentSource)
-      .where("status", "==", "Pending Approval")
-      .get();
-    if (!pendingSnap.empty) {
-      return NextResponse.json({ error: `There is already a pending ${paymentSource} revenue withdrawal` }, { status: 400 });
-    }
-
     const id = uuid();
     const now = Timestamp.now();
+    const balanceAfter = fromMinorUnits(Math.max(0, paymentSourceBalance - toMinorUnits(amount)));
     const data = {
       amount,
       ownerName: "Store",
@@ -293,14 +211,28 @@ export async function POST(req: Request) {
       withdrawnBy: admin.name,
       approvals: [{ name: admin.name, email: admin.email, approvedAt: now }],
       approvedBy: [admin.name],
-      status: "Pending Approval",
+      status: "Completed",
       balanceBefore: fromMinorUnits(paymentSourceBalance),
-      balanceAfter: fromMinorUnits(Math.max(0, paymentSourceBalance - toMinorUnits(amount))),
+      balanceAfter,
       createdAt: now,
       updatedAt: now,
+      completedAt: now,
     };
 
     await db.collection(Collections.withdrawals).doc(id).set(data);
+
+    const txId = uuid();
+    await db.collection(Collections.profitTransactions).doc(txId).set({
+      orderId: null,
+      ownerName: "Store",
+      type: "revenue-withdrawal",
+      amount: -amount,
+      paymentSource,
+      withdrawFrom: "Store Revenue",
+      description: `Store revenue withdrawal for ${String(note || "business expense").slice(0, 200)}`,
+      createdAt: now,
+    });
+
     return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   }
 

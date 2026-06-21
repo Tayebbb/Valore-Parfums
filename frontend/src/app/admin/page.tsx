@@ -303,7 +303,6 @@ export default function AdminDashboard() {
             <StoreRevenueWithdrawalSection
               storeRevenue={data.storeRevenue}
               codBalance={data.codBalance}
-              currentAdmin={myAccount}
               canAct
               onChange={loadDashboard}
             />
@@ -655,22 +654,17 @@ function WithdrawalsSection({ account, canWithdraw, onWithdraw }: { account: Own
 interface StoreRevenueWithdrawalProps {
   storeRevenue: DashboardData["storeRevenue"];
   codBalance: DashboardData["codBalance"];
-  currentAdmin: OwnerAccount;
   canAct: boolean;
   onChange?: () => void;
 }
 
-function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin, canAct, onChange }: StoreRevenueWithdrawalProps) {
+function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, canAct, onChange }: StoreRevenueWithdrawalProps) {
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [paymentSource, setPaymentSource] = useState("Bkash");
   const [submitting, setSubmitting] = useState(false);
 
   const history = storeRevenue.history || [];
-  const pendingRequest = history.find((item) => (item.status ?? "Pending Approval") === "Pending Approval");
-  const currentAlreadyApproved = Boolean(
-    pendingRequest?.approvals?.some((approval) => String(approval.email || "").toLowerCase() === currentAdmin.email.toLowerCase())
-  );
 
   const fmt = (n: number) => n.toLocaleString("en-BD");
   const selectedBalance = paymentSource === "Bank"
@@ -700,41 +694,13 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
     });
 
     if (res.ok) {
-      toast("Store revenue withdrawal requested", "success");
+      toast("Store revenue withdrawal completed", "success");
       setAmount("");
       setPurpose("");
       onChange?.();
     } else {
       const err = await res.json().catch(() => ({}));
       toast(err.error || "Failed to request revenue withdrawal", "error");
-    }
-    setSubmitting(false);
-  };
-
-  const approveRequest = async () => {
-    if (!pendingRequest) return;
-    setSubmitting(true);
-    const res = await fetch("/api/withdrawals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ownerName: "Store",
-        withdrawFrom: "Store Revenue",
-        paymentSource: pendingRequest.paymentSource || paymentSource,
-        withdrawalType: "revenue",
-        action: "approve",
-        withdrawalId: pendingRequest.id,
-        amount: pendingRequest.amount,
-        note: pendingRequest.note || "",
-      }),
-    });
-
-    if (res.ok) {
-      toast("Store revenue withdrawal approved", "success");
-      onChange?.();
-    } else {
-      const err = await res.json().catch(() => ({}));
-      toast(err.error || "Failed to approve revenue withdrawal", "error");
     }
     setSubmitting(false);
   };
@@ -776,7 +742,7 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
         </div>
       </div>
 
-      {canAct && !pendingRequest && (
+      {canAct && (
         <form onSubmit={submitRequest} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 mb-6">
           <div className="flex-1 w-full">
             <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Amount (BDT)</label>
@@ -822,39 +788,6 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
         </form>
       )}
 
-      {pendingRequest && (
-        <div className="mb-6 bg-[var(--bg-surface)] border border-[var(--border)] rounded p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <p className="text-sm font-serif text-[var(--gold)]">Pending Revenue Withdrawal</p>
-              <p className="text-xs text-[var(--text-secondary)]">{pendingRequest.note || "No purpose provided"}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-serif text-lg text-[var(--gold)]">{fmt(pendingRequest.amount)} BDT</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Amount</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-            <span>Status: {pendingRequest.status || "Pending Approval"}</span>
-            <span>From: {pendingRequest.withdrawFrom || "Store Revenue"}</span>
-            <span>Source: {pendingRequest.paymentSource || "Bkash"}</span>
-            <span>Approved by: {pendingRequest.approvedBy?.join(", ") || "None yet"}</span>
-          </div>
-          {canAct && !currentAlreadyApproved ? (
-            <button
-              type="button"
-              onClick={approveRequest}
-              disabled={submitting}
-              className="px-5 py-2 bg-[var(--success)] text-black text-[10px] uppercase tracking-wider rounded hover:opacity-90 transition-colors disabled:opacity-50"
-            >
-              {submitting ? "Processing..." : "Approve Revenue Withdrawal"}
-            </button>
-          ) : (
-            <p className="text-xs text-[var(--text-muted)]">Waiting for the second admin approval.</p>
-          )}
-        </div>
-      )}
-
       <div className="space-y-3">
         <h4 className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Revenue Withdrawal History</h4>
         {history.length === 0 ? (
@@ -869,7 +802,7 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
                     <p className="text-xs text-[var(--text-secondary)]">{item.note || "No purpose provided"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{item.status || "Pending Approval"}</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">{item.status || "Completed"}</p>
                     <p className="text-xs text-[var(--text-secondary)]">{new Date(item.createdAt).toLocaleString()}</p>
                   </div>
                 </div>
@@ -878,7 +811,7 @@ function StoreRevenueWithdrawalSection({ storeRevenue, codBalance, currentAdmin,
                   <span>From: {item.withdrawFrom || "Store Revenue"}</span>
                   <span>Source: {item.paymentSource || "—"}</span>
                   <span>Approved by: {item.approvedBy?.join(", ") || "—"}</span>
-                  <span>Completed: {item.completedAt ? new Date(item.completedAt).toLocaleString() : "Pending"}</span>
+                  <span>Completed: {item.completedAt ? new Date(item.completedAt).toLocaleString() : "—"}</span>
                 </div>
               </div>
             ))}
