@@ -350,6 +350,25 @@ export async function GET() {
     updatedAt?: unknown;
     completedAt?: unknown;
     note?: string;
+    approvedBy?: string[];
+    approvals?: unknown[];
+  };
+
+  const normalizeRevenueWithdrawal = (withdrawal: RevenueWithdrawalDoc): RevenueWithdrawalDoc => {
+    const status = String(withdrawal.status ?? "Pending Approval");
+    const hasAtLeastOneApproval =
+      (Array.isArray(withdrawal.approvedBy) && withdrawal.approvedBy.length > 0)
+      || (Array.isArray(withdrawal.approvals) && withdrawal.approvals.length > 0);
+
+    if (status === "Completed" || (status === "Pending Approval" && hasAtLeastOneApproval)) {
+      return {
+        ...withdrawal,
+        status: "Completed",
+        completedAt: withdrawal.completedAt ?? withdrawal.updatedAt ?? withdrawal.createdAt,
+      };
+    }
+
+    return withdrawal;
   };
 
   type RevenueEvent = {
@@ -361,7 +380,8 @@ export async function GET() {
 
   const revenueWithdrawalDocs = withdrawalsSnap.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
-    .filter((w) => w.withdrawFrom === "Store Revenue" || w.withdrawalType === "revenue" || w.withdrawFrom === "COD Balance" || w.withdrawalType === "cod" || w.ownerName === "Store");
+    .filter((w) => w.withdrawFrom === "Store Revenue" || w.withdrawalType === "revenue" || w.withdrawFrom === "COD Balance" || w.withdrawalType === "cod" || w.ownerName === "Store")
+    .map(normalizeRevenueWithdrawal);
   const completedRevenueWithdrawals = revenueWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
 
   const bkashWithdrawnMinor = completedRevenueWithdrawals
@@ -374,7 +394,8 @@ export async function GET() {
 
   const codWithdrawalDocs = withdrawalsSnap.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<RevenueWithdrawalDoc, "id">) }))
-    .filter((w) => String(w.paymentSource || "") === "COD");
+    .filter((w) => String(w.paymentSource || "") === "COD")
+    .map(normalizeRevenueWithdrawal);
   const completedCodWithdrawals = codWithdrawalDocs.filter((w) => (w.status ?? "Pending Approval") === "Completed");
   const codWithdrawnMinor = completedRevenueWithdrawals
     .filter((w) => String(w.paymentSource || "") === "COD")
