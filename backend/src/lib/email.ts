@@ -145,11 +145,10 @@ function getItemSizeLabel(item: {
 
   const sizeText = String(item.fullBottleSize || "").trim() || (Number(item.ml || 0) > 0 ? `${Number(item.ml || 0)}ml` : "");
   const conditionLabel = getFullBottleConditionLabel(item.fullBottleCondition);
+  const bottleLabel = conditionLabel === "Partial" ? "Partial Bottle" : "Full Bottle";
 
-  if (conditionLabel && sizeText) return `Full Bottle (${conditionLabel}, ${sizeText})`;
-  if (conditionLabel) return `Full Bottle (${conditionLabel})`;
-  if (sizeText) return `Full Bottle (${sizeText})`;
-  return "Full Bottle";
+  if (sizeText) return `${bottleLabel} (${sizeText})`;
+  return bottleLabel;
 }
 
 function renderOrderedItemsBlock(
