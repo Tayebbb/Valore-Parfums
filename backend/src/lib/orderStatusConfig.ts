@@ -5,6 +5,7 @@ export type FulfillmentType = "Pickup" | "Delivery";
 export type EmailTemplateKey =
   | "orderPlaced"
   | "orderConfirmed"
+  | "orderPaid"
   | "readyForPickup"
   | "outForDelivery"
   | "completed"
@@ -61,7 +62,7 @@ export const STATUS_CONFIG: Record<OrderStatusKey, StatusDefinition> = {
     label: "Paid",
     uiLabel: "Paid",
     adminLabel: "Paid",
-    emailTemplate: "orderConfirmed",
+    emailTemplate: "orderPaid",
     dbValues: ["Paid"],
   },
   ready_for_pickup: {

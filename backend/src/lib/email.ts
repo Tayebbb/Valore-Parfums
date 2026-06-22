@@ -321,6 +321,43 @@ export function generateOrderConfirmedEmail(orderData: {
   };
 }
 
+export function generateOrderPaidEmail(orderData: {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  items: EmailOrderItem[];
+  total: number;
+}): EmailNotification {
+  const orderedItemsBlock = renderOrderedItemsBlock(orderData.items, orderData.total);
+
+  const html = createEmailShell(`
+      <p style="font-family:'Cormorant Garamond',serif; font-size:11px; letter-spacing:4px; color:#c9a96e; text-transform:uppercase; margin-bottom:28px;">Payment Received</p>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400; color:#111; margin-bottom:24px; line-height:1.3;">Your Order<br><em>Is Confirmed</em></h2>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${orderData.customerName}</strong>,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">Thank you for your payment. We have successfully received it, and your order <strong>#${orderData.orderId}</strong> is now confirmed and entering our preparation stage. Below is a summary of what you have selected.</p>
+      <div style="background:#f0f8f5; border-left:3px solid #10b981; padding: 16px 20px; margin-bottom:28px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:2px; color:#059669; text-transform:uppercase; margin-bottom:6px;">✓ Payment Confirmed</p>
+        <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#047857; margin:0;">Your payment has been received and verified. Your order is confirmed.</p>
+      </div>
+      ${orderedItemsBlock}
+      <div style="background:#f5efe6; border:1px solid #e6d6c1; padding: 24px 28px; margin-bottom:32px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:9px; letter-spacing:3px; color:#8b6a3e; text-transform:uppercase; margin-bottom:8px;">Status</p>
+        <p style="font-family:'Cormorant Garamond',serif; font-size:20px; color:#2a1c14; margin:0;">Your order is being prepared for dispatch</p>
+      </div>
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">We are deeply grateful for your confidence in Valore Parfums. Craftsmanship and discretion are at the heart of everything we do and that begins the moment your order is placed.</p>
+      <div style="height:1px; background:#e8e4dc; margin: 36px 0 28px;"></div>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:16px; color:#111; font-style:italic;">With warm regards,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#c9a96e; text-transform:uppercase; margin-top:6px;">Valore Parfums</p>
+  `);
+
+  return {
+    to: orderData.customerEmail,
+    subject: `Payment received — your order is confirmed (#${orderData.orderId})`,
+    html,
+    text: `Dear ${orderData.customerName},\nYour payment has been received and your order #${orderData.orderId} is confirmed.`,
+  };
+}
+
 export function generateOrderDispatchedEmail(orderData: {
   orderId: string;
   customerName: string;

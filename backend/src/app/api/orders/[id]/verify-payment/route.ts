@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
-import { generateOrderConfirmedEmail, sendEmail } from "@/lib/email";
+import { generateOrderConfirmedEmail, generateOrderPaidEmail, sendEmail } from "@/lib/email";
 import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -107,10 +107,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!customerEmail) {
     console.log(`[EMAIL] Skipping order confirmed email for ${id}: missing customer email`);
   } else {
-    console.log(`[EMAIL] Sending generateOrderConfirmedEmail to ${customerEmail}`);
+    const emailGenerator = nextStatus === "Paid" ? generateOrderPaidEmail : generateOrderConfirmedEmail;
+    const templateName = nextStatus === "Paid" ? "orderPaid" : "orderConfirmed";
+    console.log(`[EMAIL] Sending ${templateName} to ${customerEmail}`);
     try {
       const result = await sendEmail(
-        generateOrderConfirmedEmail({
+        emailGenerator({
           customerName: String(updatedData.customerName || "Customer"),
           customerEmail,
           orderId: id,

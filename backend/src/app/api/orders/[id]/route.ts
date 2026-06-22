@@ -11,6 +11,7 @@ import {
   generateOrderCancelledEmail,
   generateOrderConfirmationEmail,
   generateOrderConfirmedEmail,
+  generateOrderPaidEmail,
   generateOrderDeliveredEmail,
   generateOrderDispatchedEmail,
   generatePickupConfirmationEmail,
@@ -1033,6 +1034,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             "generateOrderConfirmedEmail",
             customerEmail,
             generateOrderConfirmedEmail({
+              customerName: String(updatedData.customerName || "Customer"),
+              customerEmail,
+              orderId: id,
+              items: emailItems,
+              total: Number(updatedData.total ?? updatedData.subtotal ?? 0),
+            }),
+          );
+          break;
+        case "orderPaid":
+          await sendEmailSafe(
+            id,
+            "generateOrderPaidEmail",
+            customerEmail,
+            generateOrderPaidEmail({
               customerName: String(updatedData.customerName || "Customer"),
               customerEmail,
               orderId: id,
