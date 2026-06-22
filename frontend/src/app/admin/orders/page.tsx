@@ -209,6 +209,24 @@ export default function OrdersPage() {
   const [catalogSizes, setCatalogSizes] = useState<{ id: string; ml: number }[]>([]);
   const [expandedCatalogId, setExpandedCatalogId] = useState<string | null>(null);
   const [addingCatalogKey, setAddingCatalogKey] = useState<string | null>(null);
+  const [showManualFullBottleModal, setShowManualFullBottleModal] = useState(false);
+  const [manualFullBottleLoading, setManualFullBottleLoading] = useState(false);
+  const [manualFullBottleSubmitting, setManualFullBottleSubmitting] = useState(false);
+  const [manualFullBottlePerfumes, setManualFullBottlePerfumes] = useState<{ id: string; name: string; brand?: string }[]>([]);
+  const [manualFullBottleDraft, setManualFullBottleDraft] = useState({
+    customerName: "",
+    customerPhone: "",
+    customerEmail: "",
+    pickupMethod: "Delivery" as "Delivery" | "Pickup",
+    deliveryZone: "Inside Dhaka",
+    deliveryAddress: "",
+    deliveryFee: "",
+    perfumeId: "",
+    sizeMl: "100",
+    quantity: "1",
+    buyingPrice: "",
+    sellingPrice: "",
+  });
 
   const load = async () => {
     setLoading(true);
@@ -493,6 +511,146 @@ export default function OrdersPage() {
     }
   };
 
+  const openManualFullBottleModal = async () => {
+    setShowManualFullBottleModal(true);
+    if (manualFullBottlePerfumes.length > 0) return;
+
+    setManualFullBottleLoading(true);
+    try {
+      const res = await fetch("/api/perfumes?active=true");
+      if (!res.ok) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await res.json() as any;
+      const list = Array.isArray(data) ? data : (Array.isArray(data.perfumes) ? data.perfumes : []);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setManualFullBottlePerfumes(list.map((p: any) => ({ id: p.id, name: p.name, brand: p.brand })));
+    } finally {
+      setManualFullBottleLoading(false);
+    }
+  };
+
+  const closeManualFullBottleModal = () => {
+    if (manualFullBottleSubmitting) return;
+    setShowManualFullBottleModal(false);
+    setManualFullBottleDraft({
+      customerName: "",
+      customerPhone: "",
+      customerEmail: "",
+      pickupMethod: "Delivery",
+      deliveryZone: "Inside Dhaka",
+      deliveryAddress: "",
+      deliveryFee: "",
+      perfumeId: "",
+      sizeMl: "100",
+      quantity: "1",
+      buyingPrice: "",
+      sellingPrice: "",
+    });
+  };
+
+  const submitManualFullBottleOrder = async () => {
+    const perfume = manualFullBottlePerfumes.find((entry) => entry.id === manualFullBottleDraft.perfumeId);
+    const customerName = manualFullBottleDraft.customerName.trim();
+    const customerPhone = manualFullBottleDraft.customerPhone.trim();
+    const customerEmail = manualFullBottleDraft.customerEmail.trim();
+    const pickupMethod = manualFullBottleDraft.pickupMethod;
+    const deliveryZone = manualFullBottleDraft.deliveryZone;
+    const deliveryAddress = manualFullBottleDraft.deliveryAddress.trim();
+    const deliveryFee = Math.max(0, Math.round(Number(manualFullBottleDraft.deliveryFee) || 0));
+    const sizeMl = Math.max(0, Math.round(Number(manualFullBottleDraft.sizeMl) || 0));
+    const quantity = Math.max(1, Math.floor(Number(manualFullBottleDraft.quantity) || 1));
+    const buyingPrice = Math.max(0, Math.round(Number(manualFullBottleDraft.buyingPrice) || 0));
+    const sellingPrice = Math.max(0, Math.round(Number(manualFullBottleDraft.sellingPrice) || 0));
+
+    if (!customerName) {
+      toast("Customer name is required", "error");
+      return;
+    }
+    if (!/^01\d{9}$/.test(customerPhone)) {
+      toast("Customer phone must be 11 digits starting with 01", "error");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      toast("Enter a valid customer email", "error");
+      return;
+    }
+    if (!perfume) {
+      toast("Select a perfume", "error");
+      return;
+    }
+    if (!sizeMl) {
+      toast("Enter a valid bottle size", "error");
+      return;
+    }
+    if (pickupMethod === "Delivery" && !deliveryAddress) {
+      toast("Delivery address is required", "error");
+      return;
+    }
+    if (!Number.isFinite(buyingPrice) || !Number.isFinite(sellingPrice)) {
+      toast("Enter valid buying and selling prices", "error");
+      return;
+    }
+
+    setManualFullBottleSubmitting(true);
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        manualAdminOrder: true,
+        customerName,
+        customerPhone,
+        customerEmail,
+        recipientEmail: customerEmail,
+        pickupMethod,
+        deliveryZone: pickupMethod === "Delivery" ? deliveryZone : undefined,
+        deliveryAddress: pickupMethod === "Delivery" ? deliveryAddress : undefined,
+        deliveryFee: pickupMethod === "Delivery" ? deliveryFee : 0,
+        paymentMethod: "Cash on Delivery",
+        items: [
+          {
+            perfumeId: perfume.id,
+            perfumeName: perfume.name,
+            ml: sizeMl,
+            fullBottleSize: `${sizeMl}ml`,
+            isFullBottle: true,
+            quantity,
+            unitPrice: sellingPrice,
+            costPrice: buyingPrice,
+          },
+        ],
+      }),
+    });
+    setManualFullBottleSubmitting(false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to create manual full bottle order", "error");
+      return;
+    }
+
+    const created = await res.json();
+    toast("Manual full bottle order created", "success");
+    setShowManualFullBottleModal(false);
+    setManualFullBottleDraft({
+      customerName: "",
+      customerPhone: "",
+      customerEmail: "",
+      pickupMethod: "Delivery",
+      deliveryZone: "Inside Dhaka",
+      deliveryAddress: "",
+      deliveryFee: "",
+      perfumeId: "",
+      sizeMl: "100",
+      quantity: "1",
+      buyingPrice: "",
+      sellingPrice: "",
+    });
+    await load();
+    if (created && typeof created === "object") {
+      setSelectedOrder(created as Order);
+    }
+  };
+
   const addSizeFromCatalog = async (perfumeId: string, perfumeName: string, ml: number) => {
     const key = `${perfumeId}-${ml}`;
     setAddingCatalogKey(key);
@@ -747,6 +905,17 @@ export default function OrdersPage() {
           </button>
         ))}
       </div>
+
+      {activeTab === "orders" && (
+        <div className="flex justify-end">
+          <button
+            onClick={openManualFullBottleModal}
+            className="px-3 py-1.5 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-light)] transition-colors"
+          >
+            Manual Full Bottle Order
+          </button>
+        </div>
+      )}
 
       <div className={activeTab === "orders" ? "space-y-2" : "hidden"}>
         <div className="flex items-center gap-2 flex-wrap">
@@ -1693,6 +1862,195 @@ export default function OrdersPage() {
               </>
               )} {/* end ternary */}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showManualFullBottleModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeManualFullBottleModal} />
+          <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-2xl p-6 animate-fade-up max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-serif text-xl font-light">Manual Full Bottle Order</h2>
+              <button onClick={closeManualFullBottleModal} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+            </div>
+
+            {manualFullBottleLoading ? (
+              <div className="space-y-2">
+                <div className="skeleton h-10 rounded" />
+                <div className="skeleton h-10 rounded" />
+                <div className="skeleton h-10 rounded" />
+              </div>
+            ) : (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Customer Name</label>
+                    <input
+                      value={manualFullBottleDraft.customerName}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, customerName: e.target.value }))}
+                      maxLength={120}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Customer Phone</label>
+                    <input
+                      value={manualFullBottleDraft.customerPhone}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, customerPhone: e.target.value }))}
+                      placeholder="01XXXXXXXXX"
+                      maxLength={20}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Customer Email</label>
+                    <input
+                      type="email"
+                      value={manualFullBottleDraft.customerEmail}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, customerEmail: e.target.value }))}
+                      placeholder="customer@example.com"
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Fulfillment Method</label>
+                    <div className="flex gap-2">
+                      {(["Delivery", "Pickup"] as const).map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setManualFullBottleDraft((prev) => ({ ...prev, pickupMethod: method }))}
+                          className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded border transition-colors ${manualFullBottleDraft.pickupMethod === method ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"}`}
+                        >
+                          {method}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {manualFullBottleDraft.pickupMethod === "Delivery" && (
+                    <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Delivery Zone</label>
+                        <select
+                          value={manualFullBottleDraft.deliveryZone}
+                          onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, deliveryZone: e.target.value }))}
+                          className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                        >
+                          <option value="Inside Dhaka">Inside Dhaka</option>
+                          <option value="Outside Dhaka">Outside Dhaka</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Delivery Fee (BDT)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={manualFullBottleDraft.deliveryFee}
+                          onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, deliveryFee: e.target.value }))}
+                          className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Delivery Address</label>
+                        <textarea
+                          value={manualFullBottleDraft.deliveryAddress}
+                          onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, deliveryAddress: e.target.value }))}
+                          placeholder="Road, block, sector, landmark"
+                          rows={3}
+                          className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Perfume</label>
+                    <select
+                      value={manualFullBottleDraft.perfumeId}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, perfumeId: e.target.value }))}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    >
+                      <option value="">Select a perfume…</option>
+                      {manualFullBottlePerfumes.map((perfume) => (
+                        <option key={perfume.id} value={perfume.id}>
+                          {perfume.name}{perfume.brand ? ` - ${perfume.brand}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle Size (ML)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={manualFullBottleDraft.sizeMl}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, sizeMl: e.target.value }))}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Quantity</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={manualFullBottleDraft.quantity}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, quantity: e.target.value }))}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Buying Price (BDT)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={manualFullBottleDraft.buyingPrice}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, buyingPrice: e.target.value }))}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Selling Price (BDT)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={manualFullBottleDraft.sellingPrice}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, sellingPrice: e.target.value }))}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="border border-[var(--border)] rounded p-4 bg-[var(--bg-surface)] flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Auto Calculated Profit</p>
+                    <p className="font-serif text-2xl text-[var(--success)] mt-1">
+                      {fmt((Math.max(0, Math.round(Number(manualFullBottleDraft.sellingPrice) || 0)) - Math.max(0, Math.round(Number(manualFullBottleDraft.buyingPrice) || 0))) * Math.max(1, Math.floor(Number(manualFullBottleDraft.quantity) || 1)))} BDT
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-[var(--text-muted)]">
+                    <p>Profit = Selling - Buying</p>
+                    <p>Applied to the full bottle line total</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={submitManualFullBottleOrder}
+                    disabled={manualFullBottleSubmitting}
+                    className="flex-1 py-2 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
+                  >
+                    {manualFullBottleSubmitting ? "Creating..." : "Create Order"}
+                  </button>
+                  <button
+                    onClick={closeManualFullBottleModal}
+                    disabled={manualFullBottleSubmitting}
+                    className="px-4 py-2 text-[10px] uppercase tracking-wider border border-[var(--border)] rounded hover:border-[var(--gold)] transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

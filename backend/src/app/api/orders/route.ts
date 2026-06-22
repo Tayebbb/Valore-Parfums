@@ -5,7 +5,7 @@ import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
-import { validateBatch, validateEmail, validateOrderData, validateString } from "@/lib/validation";
+import { validateBatch, validateEmail, validatePhone, validateString } from "@/lib/validation";
 import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, generateAdminNewOrderAlertEmail, sendEmail } from "@/lib/email";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
 import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
@@ -178,22 +178,36 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { items, voucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
     const sessionUser = await getSessionUser();
+    const manualAdminOrder = Boolean(orderData.manualAdminOrder);
+
+    if (manualAdminOrder) {
+      const admin = await requireAdmin();
+      if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const pickupMethod = String(orderData.pickupMethod || "Pickup");
     const isDelivery = pickupMethod === "Delivery";
     const deliveryZone = String(orderData.deliveryZone || "");
     const normalizedPaymentMethod = String(paymentMethod || "Cash on Delivery");
     const isBkashManualPayment = normalizedPaymentMethod === "Bkash Manual";
     const isBankManualPayment = normalizedPaymentMethod === "Bank Manual";
-    const recipientEmail = String(orderData.recipientEmail || orderData.customerEmail || sessionUser?.email || "")
+    const recipientEmail = String(
+      orderData.recipientEmail ||
+      orderData.customerEmail ||
+      (!manualAdminOrder ? sessionUser?.email : "") ||
+      "",
+    )
       .trim()
       .toLowerCase();
 
-    const orderValidation = validateOrderData({
-      customerName: orderData.customerName,
-      customerEmail: recipientEmail,
-      customerPhone: orderData.customerPhone,
-      deliveryAddress: isDelivery ? orderData.deliveryAddress : undefined,
-    });
+    const orderValidation = validateBatch([
+      validateString(orderData.customerName, "customerName", { minLength: 2, maxLength: 100 }),
+      validateEmail(recipientEmail, "customerEmail"),
+      validatePhone(orderData.customerPhone, "customerPhone"),
+      ...(isDelivery
+        ? [validateString(orderData.deliveryAddress, "deliveryAddress", { minLength: 10, maxLength: 300 })]
+        : []),
+    ]);
     const pickupValidation = validateString(orderData.pickupMethod, "pickupMethod", {
       minLength: 4,
       maxLength: 20,
@@ -201,13 +215,6 @@ export async function POST(req: Request) {
     const validation = validateBatch([orderValidation, pickupValidation]);
     if (!validation.valid) {
       return NextResponse.json({ error: "Invalid order input", errors: validation.errors }, { status: 400 });
-    }
-
-    if (recipientEmail) {
-      const emailValidation = validateEmail(recipientEmail, "recipientEmail");
-      if (!emailValidation.valid) {
-        return NextResponse.json({ error: "Invalid recipient email", errors: emailValidation.errors }, { status: 400 });
-      }
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -406,7 +413,7 @@ export async function POST(req: Request) {
     const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
 
     let unitPrice = isFullBottleItem
-      ? 0
+      ? Math.max(0, Math.round(Number(item.unitPrice ?? item.sellingPrice ?? 0)))
       : isPartialDeal
         ? Math.ceil(Math.max(0, partialSellingPrice))
         : calculateSellingPrice(
@@ -425,8 +432,14 @@ export async function POST(req: Request) {
     }
 
     const unitCost = isFullBottleItem
-      ? 0
+      ? Math.max(0, Math.round(Number(item.costPrice ?? item.buyingPrice ?? 0)))
       : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + packagingCost + bottleCost);
+
+    if (isFullBottleItem && manualAdminOrder) {
+      if (!Number.isFinite(Number(item.unitPrice ?? item.sellingPrice ?? NaN)) || !Number.isFinite(Number(item.costPrice ?? item.buyingPrice ?? NaN))) {
+        return NextResponse.json({ error: "Buying and selling prices are required for manual full bottle orders" }, { status: 400 });
+      }
+    }
     const itemBreakdown = computeItemBreakdown({
       unitCostMinor: toMinorUnits(unitCost),
       unitSellingPriceMinor: toMinorUnits(unitPrice),
@@ -435,7 +448,7 @@ export async function POST(req: Request) {
     const totalPrice = fromMinorUnits(itemBreakdown.totalRevenueMinor);
     const costPrice = fromMinorUnits(itemBreakdown.totalCostMinor);
     const itemProfitMinor = itemBreakdown.computedProfitMinor;
-    const owner = (perfume.owner || "Store") as OwnerType;
+    const owner = (manualAdminOrder && isFullBottleItem ? "Store" : (perfume.owner || "Store")) as OwnerType;
     const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
     const { ownerProfitMinor, otherOwnerProfitMinor } = splitProfitMinor(itemProfitMinor, ownerProfitPercent);
     let ownerProfit: number;
@@ -579,6 +592,7 @@ export async function POST(req: Request) {
     const orderDoc = {
     ...orderData,
     entryType: "order",
+    manualAdminOrder,
     userId: sessionUser?.id ?? null,
     isGuestOrder: !sessionUser,
     placedByEmail: sessionUser?.email || "",
