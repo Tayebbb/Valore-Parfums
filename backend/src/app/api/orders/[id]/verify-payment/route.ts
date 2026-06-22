@@ -86,11 +86,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const emailItems = items.map((item) => {
     const row = item as Record<string, unknown>;
+    const isFullBottle = Boolean(row.isFullBottle);
+    const conditionFromItem = String(row.fullBottleCondition || "").trim().toLowerCase();
+    const conditionFromSnapshot = String((row.pricingSnapshot as { partialDealType?: unknown } | undefined)?.partialDealType || "").trim().toLowerCase();
     return {
       perfumeName: String(row.perfumeName || "Perfume"),
       quantity: Number(row.quantity || 0),
       ml: Number(row.ml || 0),
       unitPrice: Number(row.unitPrice || 0),
+      isFullBottle,
+      fullBottleSize: String(row.fullBottleSize || "").trim() || undefined,
+      fullBottleCondition: isFullBottle
+        ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
+        : undefined,
     };
   });
   const updatedData = updatedOrderDoc.data() || {};

@@ -85,6 +85,7 @@ interface ManualFullBottleItemDraft {
   useCustomName: boolean;
   perfumeId: string;
   customPerfumeName: string;
+  fullBottleCondition: "new" | "partial";
   sizeMl: string;
   quantity: string;
   buyingPrice: string;
@@ -174,6 +175,7 @@ const createManualFullBottleItemDraft = (): ManualFullBottleItemDraft => ({
   useCustomName: false,
   perfumeId: "",
   customPerfumeName: "",
+  fullBottleCondition: "new",
   sizeMl: "100",
   quantity: "1",
   buyingPrice: "",
@@ -592,6 +594,7 @@ export default function OrdersPage() {
         useCustomName: draft.useCustomName,
         perfume,
         customPerfumeName,
+        fullBottleCondition: draft.fullBottleCondition,
         sizeMl,
         quantity,
         buyingPrice,
@@ -636,6 +639,7 @@ export default function OrdersPage() {
           perfumeName: item.useCustomName ? item.customPerfumeName : item.perfume!.name,
           ml: item.sizeMl,
           fullBottleSize: `${item.sizeMl}ml`,
+          fullBottleCondition: item.fullBottleCondition,
           isFullBottle: true,
           quantity: item.quantity,
           unitPrice: item.sellingPrice,
@@ -2049,7 +2053,24 @@ export default function OrdersPage() {
                             )}
                           </div>
 
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle Type</label>
+                              <select
+                                value={item.fullBottleCondition}
+                                onChange={(e) => setManualFullBottleDraft((prev) => ({
+                                  ...prev,
+                                  items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
+                                    ...draft,
+                                    fullBottleCondition: e.target.value === "partial" ? "partial" : "new",
+                                  } : draft),
+                                }))}
+                                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                              >
+                                <option value="new">New</option>
+                                <option value="partial">Partial</option>
+                              </select>
+                            </div>
                             <div className="space-y-1.5">
                               <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle Size (ML)</label>
                               <input

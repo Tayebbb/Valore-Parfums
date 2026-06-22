@@ -258,6 +258,7 @@ export async function POST(req: Request) {
     ml: number;
     isFullBottle?: boolean;
     fullBottleSize?: string;
+    fullBottleCondition?: "new" | "partial";
     quantity: number;
     unitPrice: number;
     totalPrice: number;
@@ -365,6 +366,7 @@ export async function POST(req: Request) {
     for (const item of items) {
       const isFullBottleItem = Boolean(item.isFullBottle);
       const requestedFullBottleSize = String(item.fullBottleSize || "").trim();
+      const requestedFullBottleConditionRaw = String(item.fullBottleCondition || "").trim().toLowerCase();
       const requestedFullBottleMl = isFullBottleItem
         ? Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || 0
         : Number(item.ml || 0);
@@ -372,6 +374,10 @@ export async function POST(req: Request) {
 
       if (manualAdminOrder && isFullBottleItem && !customPerfumeName) {
         return NextResponse.json({ error: "Perfume name is required for manual full bottle orders" }, { status: 400 });
+      }
+
+      if (isFullBottleItem && requestedFullBottleConditionRaw && !["new", "partial"].includes(requestedFullBottleConditionRaw)) {
+        return NextResponse.json({ error: "Full bottle condition must be either new or partial" }, { status: 400 });
       }
 
       if (!isFullBottleItem && !(requestedFullBottleMl > 0)) {
@@ -423,6 +429,9 @@ export async function POST(req: Request) {
     const partialDealType = String(perfume?.partialDealType || "").toLowerCase();
     const isPartialDeal = partialDealType === "decant" || partialDealType === "full_bottle";
     const partialSellingPrice = Number(perfume?.partialSellingPrice ?? perfume?.partialSellingPricePerMl ?? 0);
+    const inferredFullBottleCondition: "new" | "partial" = requestedFullBottleConditionRaw
+      ? (requestedFullBottleConditionRaw as "new" | "partial")
+      : (isFullBottleItem && partialDealType === "full_bottle" ? "partial" : "new");
 
     let unitPrice = isFullBottleItem
       ? Math.max(0, Math.round(Number(item.unitPrice ?? item.sellingPrice ?? 0)))
@@ -504,6 +513,7 @@ export async function POST(req: Request) {
         ml: requestedFullBottleMl,
         isFullBottle: isFullBottleItem,
         ...(isFullBottleItem ? { fullBottleSize: requestedFullBottleSize } : {}),
+        ...(isFullBottleItem ? { fullBottleCondition: inferredFullBottleCondition } : {}),
         quantity,
         unitPrice,
         totalPrice,
@@ -716,12 +726,22 @@ export async function POST(req: Request) {
     // Send confirmation email (awaited to prevent function termination in serverless environment)
     const customerEmail = String(orderDoc.customerEmail || "").trim();
     if (customerEmail) {
-      const emailItems = createdItems.map((it) => ({
+      const emailItems = createdItems.map((it) => {
+        const isFullBottle = Boolean(it.isFullBottle);
+        const conditionFromItem = String(it.fullBottleCondition || "").trim().toLowerCase();
+        const conditionFromSnapshot = String((it.pricingSnapshot as { partialDealType?: unknown } | undefined)?.partialDealType || "").trim().toLowerCase();
+        return {
         perfumeName: String(it.perfumeName || "Perfume"),
         quantity: Number(it.quantity || 0),
         ml: Number(it.ml || 0),
         unitPrice: Number(it.unitPrice || 0),
-      }));
+        isFullBottle,
+        fullBottleSize: String(it.fullBottleSize || "").trim() || undefined,
+        fullBottleCondition: isFullBottle
+          ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
+          : undefined,
+        };
+      });
       const emailNotification = pickupMethod === "Pickup" && pickupContactNumber
         ? generatePickupConfirmationEmail({
           orderId,
@@ -759,12 +779,22 @@ export async function POST(req: Request) {
     }
 
     // Send admin alert email
-    const adminAlertItems = createdItems.map((it) => ({
+    const adminAlertItems = createdItems.map((it) => {
+      const isFullBottle = Boolean(it.isFullBottle);
+      const conditionFromItem = String(it.fullBottleCondition || "").trim().toLowerCase();
+      const conditionFromSnapshot = String((it.pricingSnapshot as { partialDealType?: unknown } | undefined)?.partialDealType || "").trim().toLowerCase();
+      return {
       perfumeName: String(it.perfumeName || "Perfume"),
       quantity: Number(it.quantity || 0),
       ml: Number(it.ml || 0),
       unitPrice: Number(it.unitPrice || 0),
-    }));
+      isFullBottle,
+      fullBottleSize: String(it.fullBottleSize || "").trim() || undefined,
+      fullBottleCondition: isFullBottle
+        ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
+        : undefined,
+      };
+    });
     try {
       await sendEmail(generateAdminNewOrderAlertEmail({
         orderId,

@@ -85,17 +85,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .get();
 
     let refundAmount = 0;
-    const cancelledItems: Array<{ perfumeName: string; quantity: number; ml: number; totalPrice: number }> = [];
+    const cancelledItems: Array<{
+      perfumeName: string;
+      quantity: number;
+      ml: number;
+      totalPrice: number;
+      isFullBottle?: boolean;
+      fullBottleSize?: string;
+      fullBottleCondition?: "new" | "partial";
+    }> = [];
 
     // Restore inventory for all items
     for (const itemDoc of itemsSnap.docs) {
       const item = itemDoc.data();
       refundAmount += item.totalPrice || 0;
+      const isFullBottle = Boolean(item.isFullBottle);
+      const conditionFromItem = String(item.fullBottleCondition || "").trim().toLowerCase();
+      const conditionFromSnapshot = String((item.pricingSnapshot as { partialDealType?: unknown } | undefined)?.partialDealType || "").trim().toLowerCase();
       cancelledItems.push({
         perfumeName: String(item.perfumeName || "Perfume"),
         quantity: Number(item.quantity || 0),
         ml: Number(item.ml || 0),
         totalPrice: Number(item.totalPrice || 0),
+        isFullBottle,
+        fullBottleSize: String(item.fullBottleSize || "").trim() || undefined,
+        fullBottleCondition: isFullBottle
+          ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
+          : undefined,
       });
 
       // Only restore decant items (full bottles are not stock-managed the same way)

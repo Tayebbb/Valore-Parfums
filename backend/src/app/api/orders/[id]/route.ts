@@ -940,11 +940,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const updatedData = updatedDoc.data()!;
   const emailItems = items.map((item) => {
     const row = item as Record<string, unknown>;
+    const isFullBottle = Boolean(row.isFullBottle);
+    const conditionFromItem = String(row.fullBottleCondition || "").trim().toLowerCase();
+    const conditionFromSnapshot = String((row.pricingSnapshot as { partialDealType?: unknown } | undefined)?.partialDealType || "").trim().toLowerCase();
     return {
       perfumeName: String(row.perfumeName || "Perfume"),
       quantity: Number(row.quantity || 0),
       ml: Number(row.ml || 0),
       unitPrice: Number(row.unitPrice || 0),
+      isFullBottle,
+      fullBottleSize: String(row.fullBottleSize || "").trim() || undefined,
+      fullBottleCondition: isFullBottle
+        ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
+        : undefined,
     };
   });
 
@@ -1091,11 +1099,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             const row = item as Record<string, unknown>;
             const quantity = Number(row.quantity || 0);
             const unitPrice = Number(row.unitPrice || 0);
+            const isFullBottle = Boolean(row.isFullBottle);
+            const conditionFromItem = String(row.fullBottleCondition || "").trim().toLowerCase();
+            const conditionFromSnapshot = String((row.pricingSnapshot as { partialDealType?: unknown } | undefined)?.partialDealType || "").trim().toLowerCase();
             return {
               perfumeName: String(row.perfumeName || "Perfume"),
               quantity,
               ml: Number(row.ml || 0),
               totalPrice: Number(row.totalPrice || quantity * unitPrice),
+              isFullBottle,
+              fullBottleSize: String(row.fullBottleSize || "").trim() || undefined,
+              fullBottleCondition: isFullBottle
+                ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
+                : undefined,
             };
           });
           await sendEmailSafe(

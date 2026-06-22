@@ -12,6 +12,26 @@ export interface EmailProvider {
   send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
+interface EmailOrderItem {
+  perfumeName: string;
+  quantity: number;
+  ml: number;
+  unitPrice: number;
+  isFullBottle?: boolean;
+  fullBottleSize?: string;
+  fullBottleCondition?: string;
+}
+
+interface EmailCancelledItem {
+  perfumeName: string;
+  quantity: number;
+  ml: number;
+  totalPrice: number;
+  isFullBottle?: boolean;
+  fullBottleSize?: string;
+  fullBottleCondition?: string;
+}
+
 class ResendEmailProvider implements EmailProvider {
   private client: Resend;
   private fromAddress: string;
@@ -105,8 +125,35 @@ function createEmailShell(content: string): string {
   return makeHtmlDarkModeSafe(rawHtml);
 }
 
+function getFullBottleConditionLabel(condition?: string): string {
+  const normalized = String(condition || "").trim().toLowerCase();
+  if (normalized === "partial") return "Partial";
+  if (normalized === "new") return "New";
+  return "";
+}
+
+function getItemSizeLabel(item: {
+  ml?: number;
+  isFullBottle?: boolean;
+  fullBottleSize?: string;
+  fullBottleCondition?: string;
+}): string {
+  const isFullBottle = Boolean(item.isFullBottle);
+  if (!isFullBottle) {
+    return `${Number(item.ml || 0)}ml Decant`;
+  }
+
+  const sizeText = String(item.fullBottleSize || "").trim() || (Number(item.ml || 0) > 0 ? `${Number(item.ml || 0)}ml` : "");
+  const conditionLabel = getFullBottleConditionLabel(item.fullBottleCondition);
+
+  if (conditionLabel && sizeText) return `Full Bottle (${conditionLabel}, ${sizeText})`;
+  if (conditionLabel) return `Full Bottle (${conditionLabel})`;
+  if (sizeText) return `Full Bottle (${sizeText})`;
+  return "Full Bottle";
+}
+
 function renderOrderedItemsBlock(
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>,
+  items?: EmailOrderItem[],
   totalOverride?: number,
 ): string {
   const rows = items && items.length > 0
@@ -115,7 +162,7 @@ function renderOrderedItemsBlock(
         <tr style="border-bottom:1px solid #f0ece4;">
           <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#333; padding:14px 0 14px;">
             ${item.perfumeName}<br>
-            <span style="font-size:10px; color:#999;">${item.ml}ml Decant</span>
+            <span style="font-size:10px; color:#999;">${getItemSizeLabel(item)}</span>
           </td>
           <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#333; text-align:center; padding:14px 0;">${item.quantity}</td>
           <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#111; text-align:right; padding:14px 0;">৳ ${item.unitPrice * item.quantity}</td>
@@ -157,7 +204,7 @@ function renderOrderedItemsBlock(
 }
 
 function renderCancelledItemsBlock(
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; totalPrice: number }>,
+  items?: EmailCancelledItem[],
   refundAmount?: number,
   refundApplicable: boolean = true,
 ): string {
@@ -167,7 +214,7 @@ function renderCancelledItemsBlock(
         <tr style="border-bottom:1px solid #f0ece4;">
           <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; padding:14px 0; text-decoration:line-through;">
             ${item.perfumeName}<br>
-            <span style="font-size:10px; color:#8f887f;">${item.ml}ml Decant</span>
+            <span style="font-size:10px; color:#8f887f;">${getItemSizeLabel(item)}</span>
           </td>
           <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; text-align:center; padding:14px 0; text-decoration:line-through;">${item.quantity}</td>
           <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#6f6b66; text-align:right; padding:14px 0; text-decoration:line-through;">৳ ${item.totalPrice}</td>
@@ -209,7 +256,7 @@ export function generateOrderConfirmationEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items: EmailOrderItem[];
   subtotal: number;
   discount: number;
   deliveryFee: number;
@@ -246,7 +293,7 @@ export function generateOrderConfirmedEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items: EmailOrderItem[];
   total: number;
 }): EmailNotification {
   const orderedItemsBlock = renderOrderedItemsBlock(orderData.items, orderData.total);
@@ -279,7 +326,7 @@ export function generateOrderDispatchedEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items?: EmailOrderItem[];
   trackingNumber?: string;
   estimatedDelivery?: string;
 }): EmailNotification {
@@ -322,7 +369,7 @@ export function generateOrderDeliveredEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items?: EmailOrderItem[];
 }): EmailNotification {
   const orderedItemsBlock = renderOrderedItemsBlock(orderData.items);
   const html = createEmailShell(`
@@ -356,7 +403,7 @@ export function generateOrderCancelledEmail(orderData: {
   cancelReason: string;
   refundAmount: number;
   isPaid: boolean;
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; totalPrice: number }>;
+  items?: EmailCancelledItem[];
 }): EmailNotification {
   const refundApplicable = Boolean(orderData.isPaid) && Number(orderData.refundAmount || 0) > 0;
   const effectiveRefundAmount = refundApplicable ? Number(orderData.refundAmount || 0) : 0;
@@ -409,7 +456,7 @@ export function generatePickupConfirmationEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items: EmailOrderItem[];
   total: number;
   pickupContactNumber: string;
   estimatedPrepTime: string;
@@ -468,7 +515,7 @@ export function generatePickupReadyEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items?: EmailOrderItem[];
   pickupContactNumber: string;
   pickupLocationName?: string;
   pickupLocationAddress?: string;
@@ -520,7 +567,7 @@ export function generateOrderReceivedEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items: EmailOrderItem[];
 }): EmailNotification {
   return generateOrderConfirmationEmail({
     orderId: orderData.orderId,
@@ -539,7 +586,7 @@ export function generateOrderShippedEmail(orderData: {
   customerName: string;
   customerEmail: string;
   orderId: string;
-  items?: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items?: EmailOrderItem[];
   trackingNumber?: string;
   estimatedDelivery?: string;
 }): EmailNotification {
@@ -582,7 +629,7 @@ export function generateAdminNewOrderAlertEmail(orderData: {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  items: Array<{ perfumeName: string; quantity: number; ml: number; unitPrice: number }>;
+  items: EmailOrderItem[];
   total: number;
   paymentMethod: string;
   pickupMethod: string;
@@ -591,7 +638,7 @@ export function generateAdminNewOrderAlertEmail(orderData: {
 }): EmailNotification {
   const itemRows = orderData.items.map((item) => `
     <tr>
-      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:10px 0;border-bottom:1px solid #f0ece4;">${item.perfumeName} — ${item.ml}ml</td>
+      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:10px 0;border-bottom:1px solid #f0ece4;">${item.perfumeName} — ${getItemSizeLabel(item)}</td>
       <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;text-align:center;padding:10px 0;border-bottom:1px solid #f0ece4;">×${item.quantity}</td>
       <td style="font-family:'Cormorant Garamond',serif;font-size:14px;color:#111;text-align:right;padding:10px 0;border-bottom:1px solid #f0ece4;">৳ ${item.unitPrice * item.quantity}</td>
     </tr>
