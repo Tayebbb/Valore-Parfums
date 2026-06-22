@@ -252,7 +252,7 @@ export async function POST(req: Request) {
 
     const orderCountByPerfume = new Map<string, number>();
     const orderItems: {
-    perfumeId: string;
+    perfumeId?: string;
     perfumeName: string;
     perfumeImage?: string;
     ml: number;
@@ -363,32 +363,44 @@ export async function POST(req: Request) {
     const bulkRules = bulkSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r: any) => r.isActive === true).sort((a: any, b: any) => b.minQuantity - a.minQuantity) as any[];
 
     for (const item of items) {
-    // Fetch perfume (replaces prisma.perfume.findUnique)
-      const perfumeId = String(item.perfumeId || "").trim();
-      if (!perfumeId) continue;
-      const quantity = Math.floor(Number(item.quantity));
-      if (!Number.isFinite(quantity) || quantity <= 0) continue;
-      const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
-    if (!perfumeDoc.exists) continue;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const perfume = { id: perfumeDoc.id, ...perfumeDoc.data() } as any;
-    const perfumeImages: string[] = (() => {
-      try {
-        return JSON.parse(perfume.images || "[]");
-      } catch {
-        return [];
-      }
-    })();
-    const perfumeImage = normalizeOrderImagePath(perfumeImages[0]);
-
       const isFullBottleItem = Boolean(item.isFullBottle);
       const requestedFullBottleSize = String(item.fullBottleSize || "").trim();
       const requestedFullBottleMl = isFullBottleItem
         ? Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || 0
         : Number(item.ml || 0);
+      const customPerfumeName = String(item.perfumeName || "").trim();
+
+      if (manualAdminOrder && isFullBottleItem && !customPerfumeName) {
+        return NextResponse.json({ error: "Perfume name is required for manual full bottle orders" }, { status: 400 });
+      }
 
       if (!isFullBottleItem && !(requestedFullBottleMl > 0)) {
         return NextResponse.json({ error: "A valid ml value (greater than 0) is required for decant items" }, { status: 400 });
+      }
+
+      // Fetch perfume (replaces prisma.perfume.findUnique)
+      const perfumeId = String(item.perfumeId || "").trim();
+      const quantity = Math.floor(Number(item.quantity));
+      if (!Number.isFinite(quantity) || quantity <= 0) continue;
+      let perfume: ({ id: string } & Record<string, unknown>) | null = null;
+      let perfumeImage = "";
+      if (perfumeId) {
+        const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
+        if (!perfumeDoc.exists) {
+          if (!manualAdminOrder || !isFullBottleItem) continue;
+        } else {
+          perfume = { id: perfumeDoc.id, ...perfumeDoc.data() };
+          const perfumeImages: string[] = (() => {
+            try {
+              return JSON.parse(String(perfume.images || "[]"));
+            } catch {
+              return [];
+            }
+          })();
+          perfumeImage = normalizeOrderImagePath(perfumeImages[0]);
+        }
+      } else if (!manualAdminOrder || !isFullBottleItem) {
+        continue;
       }
 
     // Fetch bottle (replaces prisma.bottleInventory.findUnique by ml)
@@ -400,17 +412,17 @@ export async function POST(req: Request) {
     const bottleCost = isFullBottleItem ? 0 : (bottle?.costPerBottle ?? 0);
 
     // Personal collection: market price = purchase price
-    const isPersonalCollection = Boolean(perfume.isPersonalCollection);
-    const effectiveMarketPricePerMl = perfume.isPersonalCollection
-      ? perfume.purchasePricePerMl
-      : perfume.marketPricePerMl;
+    const isPersonalCollection = Boolean(perfume?.isPersonalCollection);
+    const effectiveMarketPricePerMl = isPersonalCollection
+      ? Number(perfume?.purchasePricePerMl || 0)
+      : Number(perfume?.marketPricePerMl || 0);
 
-    const fullBottlePrice = effectiveMarketPricePerMl * 100;
+    const fullBottlePrice = Number(effectiveMarketPricePerMl || 0) * 100;
     const tier = getBrandTier(fullBottlePrice);
     const profitMargin = getTierProfitMargin(tier, requestedFullBottleMl || item.ml, margins);
-    const partialDealType = String(perfume.partialDealType || "").toLowerCase();
+    const partialDealType = String(perfume?.partialDealType || "").toLowerCase();
     const isPartialDeal = partialDealType === "decant" || partialDealType === "full_bottle";
-    const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
+    const partialSellingPrice = Number(perfume?.partialSellingPrice ?? perfume?.partialSellingPricePerMl ?? 0);
 
     let unitPrice = isFullBottleItem
       ? Math.max(0, Math.round(Number(item.unitPrice ?? item.sellingPrice ?? 0)))
@@ -433,7 +445,7 @@ export async function POST(req: Request) {
 
     const unitCost = isFullBottleItem
       ? Math.max(0, Math.round(Number(item.costPrice ?? item.buyingPrice ?? 0)))
-      : ((perfume.purchasePricePerMl || 0) * requestedFullBottleMl + packagingCost + bottleCost);
+      : ((Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl + packagingCost + bottleCost);
 
     if (isFullBottleItem && manualAdminOrder) {
       if (!Number.isFinite(Number(item.unitPrice ?? item.sellingPrice ?? NaN)) || !Number.isFinite(Number(item.costPrice ?? item.buyingPrice ?? NaN))) {
@@ -448,7 +460,7 @@ export async function POST(req: Request) {
     const totalPrice = fromMinorUnits(itemBreakdown.totalRevenueMinor);
     const costPrice = fromMinorUnits(itemBreakdown.totalCostMinor);
     const itemProfitMinor = itemBreakdown.computedProfitMinor;
-    const owner = (manualAdminOrder && isFullBottleItem ? "Store" : (perfume.owner || "Store")) as OwnerType;
+    const owner = (manualAdminOrder && isFullBottleItem ? "Store" : (perfume?.owner || "Store")) as OwnerType;
     const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
     const { ownerProfitMinor, otherOwnerProfitMinor } = splitProfitMinor(itemProfitMinor, ownerProfitPercent);
     let ownerProfit: number;
@@ -457,7 +469,7 @@ export async function POST(req: Request) {
       const earningsResult = calculatePersonalBottleEarnings({
         sellingPrice: totalPrice,
         packagingCost: (packagingCost + bottleCost) * quantity,
-        productCost: (perfume.purchasePricePerMl || 0) * requestedFullBottleMl * quantity,
+        productCost: (Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl * quantity,
       });
       ownerProfit = earningsResult.bottleOwnerEarnings;
       otherOwnerProfit = earningsResult.otherOwnerEarnings;
@@ -486,8 +498,8 @@ export async function POST(req: Request) {
     }
 
       orderItems.push({
-        perfumeId,
-        perfumeName: perfume.name,
+        ...(perfumeId ? { perfumeId } : {}),
+        perfumeName: customPerfumeName || String(perfume?.name || "Custom Perfume"),
         perfumeImage,
         ml: requestedFullBottleMl,
         isFullBottle: isFullBottleItem,
@@ -502,7 +514,7 @@ export async function POST(req: Request) {
         otherOwnerProfit,
         financialBreakdown: itemBreakdown,
         pricingSnapshot: {
-          costPricePerMl: Number(perfume.purchasePricePerMl || 0),
+          costPricePerMl: Number(perfume?.purchasePricePerMl || 0),
           marketPricePerMl: Number(effectiveMarketPricePerMl || 0),
           bottleCost: Number(bottleCost || 0),
           packagingCost: Number(packagingCost || 0),
@@ -514,7 +526,9 @@ export async function POST(req: Request) {
         },
       });
 
-      orderCountByPerfume.set(perfumeId, (orderCountByPerfume.get(perfumeId) || 0) + quantity);
+      if (perfumeId) {
+        orderCountByPerfume.set(perfumeId, (orderCountByPerfume.get(perfumeId) || 0) + quantity);
+      }
     }
 
     if (orderItems.length === 0) {
