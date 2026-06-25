@@ -9,6 +9,15 @@ import {
   getStatusLabelFromValue,
   isStatusAllowedForFulfillment,
 } from "@/lib/orderStatusConfig";
+import {
+  PAYMENT_TYPES,
+  type PaymentType,
+  DEFAULT_PAYMENT_TYPE,
+  inferPaymentTypeFromMethod,
+  normalizePaymentType,
+} from "@/types/payment";
+import { CourierSlipModal } from "@/components/admin/CourierSlipModal";
+import type { CourierSlipData } from "@/components/admin/CourierSlip";
 
 interface OrderItem {
   id: string;
@@ -36,6 +45,7 @@ interface Order {
   pickupLocationId?: string;
   pickupLocationName?: string;
   paymentMethod?: string;
+  paymentType?: PaymentType;
   bkashPayment?: {
     customerName?: string;
     paidFromNumber?: string;
@@ -190,8 +200,61 @@ const createManualFullBottleOrderDraft = () => ({
   deliveryZone: "Inside Dhaka",
   deliveryAddress: "",
   deliveryFee: "",
+  paymentType: DEFAULT_PAYMENT_TYPE as PaymentType,
   items: [createManualFullBottleItemDraft()],
 });
+
+const getEffectivePaymentType = (order: Pick<Order, "paymentType" | "paymentMethod">): PaymentType => {
+  if (order.paymentType) return normalizePaymentType(order.paymentType);
+  return inferPaymentTypeFromMethod(order.paymentMethod);
+};
+
+const orderToCourierSlipData = (order: Order): CourierSlipData => {
+  // Address is stored as "Address | Area, City | Note: ...". Split it back.
+  let addressLine = "";
+  let area = "";
+  let city = "";
+  let deliveryNote = "";
+  if (order.deliveryAddress) {
+    const parts = order.deliveryAddress.split(" | ");
+    addressLine = parts[0] || "";
+    const areaCity = parts[1] && !parts[1].startsWith("Note:") ? parts[1] : "";
+    const notePart = parts.find((p) => p.startsWith("Note: "));
+    deliveryNote = notePart ? notePart.replace(/^Note: /, "") : "";
+    const [areaPart, ...cityParts] = areaCity.split(", ");
+    area = areaPart || "";
+    city = cityParts.join(", ");
+  }
+
+  const paymentType = getEffectivePaymentType(order);
+  const total = Number(order.total ?? 0);
+  const deliveryFee = Number(order.deliveryFee ?? 0);
+  const isCOD = paymentType === "COD";
+  const amountToCollect = isCOD ? total : 0;
+
+  return {
+    orderId: order.id,
+    createdAt: order.createdAt,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    deliveryAddress: addressLine,
+    area,
+    city,
+    deliveryNote: deliveryNote || undefined,
+    paymentType,
+    total,
+    deliveryFee,
+    amountToCollect,
+    isCOD,
+    items: (order.items || []).map((i) => ({
+      perfumeName: i.perfumeName,
+      ml: i.ml,
+      isFullBottle: Boolean(i.isFullBottle),
+      fullBottleSize: i.fullBottleSize,
+      quantity: i.quantity,
+    })),
+  };
+};
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -230,6 +293,8 @@ export default function OrdersPage() {
   const [editDeliveryCity, setEditDeliveryCity] = useState("");
   const [editDeliveryNote, setEditDeliveryNote] = useState("");
   const [editDeliveryFee, setEditDeliveryFee] = useState("");
+  const [editPaymentType, setEditPaymentType] = useState<PaymentType>(DEFAULT_PAYMENT_TYPE);
+  const [courierSlipOrder, setCourierSlipOrder] = useState<Order | null>(null);
   const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string; address: string; phone?: string }[]>([]);
   const [itemsMarkedForRemoval, setItemsMarkedForRemoval] = useState<Set<string>>(new Set());
   const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; perfumeId?: string; ml: string; quantity: string; unitPrice: string; costPrice: string }[]>([]);
@@ -492,6 +557,7 @@ export default function OrdersPage() {
       setEditDeliveryNote("");
     }
     setEditDeliveryFee(String(selectedOrder.deliveryFee ?? ""));
+    setEditPaymentType(getEffectivePaymentType(selectedOrder));
     setItemsMarkedForRemoval(new Set());
     setNewItemDrafts([]);
     setShowCatalog(false);
@@ -656,6 +722,32 @@ export default function OrdersPage() {
     }
 
     const created = await res.json();
+
+    // Persist paymentType separately: the POST /api/orders endpoint constructs
+    // the order document explicitly and does not pass arbitrary fields through.
+    if (created && typeof created === "object" && typeof (created as { id?: unknown }).id === "string") {
+      const newId = (created as { id: string }).id;
+      try {
+        const ptRes = await fetch(`/api/orders/${newId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentType: manualFullBottleDraft.paymentType }),
+        });
+        if (ptRes.ok) {
+          const updated = await ptRes.json().catch(() => null);
+          if (updated && typeof updated === "object") {
+            Object.assign(created as Record<string, unknown>, updated);
+          } else {
+            (created as Record<string, unknown>).paymentType = manualFullBottleDraft.paymentType;
+          }
+        } else {
+          (created as Record<string, unknown>).paymentType = manualFullBottleDraft.paymentType;
+        }
+      } catch {
+        (created as Record<string, unknown>).paymentType = manualFullBottleDraft.paymentType;
+      }
+    }
+
     toast("Manual full bottle order created", "success");
     setShowManualFullBottleModal(false);
     setManualFullBottleDraft(createManualFullBottleOrderDraft());
@@ -713,6 +805,7 @@ export default function OrdersPage() {
       customerName: editName.trim() || selectedOrder.customerName,
       customerPhone: editPhone.trim() || selectedOrder.customerPhone,
       pickupMethod: editPickupMethod,
+      paymentType: editPaymentType,
     };
 
     if (editPickupMethod === "Pickup") {
@@ -1289,6 +1382,14 @@ export default function OrdersPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-serif text-xl font-light">{isEditingOrder ? "Edit Order" : "Order Details"}</h2>
               <div className="flex items-center gap-2">
+                {!isEditingOrder && (
+                  <button
+                    onClick={() => setCourierSlipOrder(selectedOrder)}
+                    className="px-3 py-1 text-[10px] uppercase tracking-wider border border-[var(--gold)] text-[var(--gold)] rounded hover:bg-[var(--gold-tint)] transition-colors"
+                  >
+                    Generate Courier Slip
+                  </button>
+                )}
                 {!isEditingOrder && !["Dispatched", "Delivered", "Cancelled"].includes(selectedOrder.status) && (
                   <button
                     onClick={openEditOrder}
@@ -1401,6 +1502,23 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  {/* Payment */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Payment</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[var(--text-muted)] w-16 shrink-0">Type</span>
+                      <select
+                        value={editPaymentType}
+                        onChange={(e) => setEditPaymentType(normalizePaymentType(e.target.value))}
+                        className="flex-1 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs focus:border-[var(--gold)] outline-none"
+                      >
+                        {PAYMENT_TYPES.map((pt) => (
+                          <option key={pt} value={pt}>{pt}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   {/* Items */}
@@ -1643,6 +1761,10 @@ export default function OrdersPage() {
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Payment Method</span>
                 <span>{selectedOrder.paymentMethod || "Cash on Delivery"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Payment Type</span>
+                <span className="font-medium">{getEffectivePaymentType(selectedOrder)}</span>
               </div>
               {selectedOrder.pickupMethod === "Delivery" && (
                 <>
@@ -1977,6 +2099,18 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   )}
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Payment Type</label>
+                    <select
+                      value={manualFullBottleDraft.paymentType}
+                      onChange={(e) => setManualFullBottleDraft((prev) => ({ ...prev, paymentType: normalizePaymentType(e.target.value) }))}
+                      className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                    >
+                      {PAYMENT_TYPES.map((pt) => (
+                        <option key={pt} value={pt}>{pt}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="space-y-3 md:col-span-2">
                     <div className="flex items-center justify-between gap-3">
                       <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Full Bottle Items</label>
@@ -2347,6 +2481,12 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      <CourierSlipModal
+        open={Boolean(courierSlipOrder)}
+        data={courierSlipOrder ? orderToCourierSlipData(courierSlipOrder) : null}
+        onClose={() => setCourierSlipOrder(null)}
+      />
 
     </div>
   );
