@@ -165,8 +165,10 @@ export const CourierSlip = forwardRef<HTMLDivElement, CourierSlipProps>(function
         </table>
       </div>
 
-      {/* ── COD highlight (must be the most visually dominant block) ── */}
-      {isCOD && (
+      {/* ── COD highlight (must be the most visually dominant block when there
+              is anything to collect — for COD this is the default, but admin
+              can also force a non-zero collect amount on a prepaid order). ── */}
+      {amountToCollect > 0 && (
         <div
           style={{
             marginTop: 22,
@@ -180,7 +182,7 @@ export const CourierSlip = forwardRef<HTMLDivElement, CourierSlipProps>(function
           }}
         >
           <p style={{ margin: 0, fontSize: 13, letterSpacing: 4, textTransform: "uppercase", color: "#f0c674" }}>
-            Cash on Delivery
+            {isCOD ? "Cash on Delivery" : `Collect on Delivery · ${paymentType}`}
           </p>
           <p
             style={{
@@ -225,7 +227,7 @@ export const CourierSlip = forwardRef<HTMLDivElement, CourierSlipProps>(function
               margin: "4px 0 0",
               fontSize: 18,
               fontWeight: 800,
-              color: isCOD ? "#000" : "#444",
+              color: amountToCollect > 0 ? "#000" : "#888",
             }}
           >
             ৳{fmt(amountToCollect)}

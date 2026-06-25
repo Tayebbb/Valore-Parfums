@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CourierSlip, type CourierSlipData } from "./CourierSlip";
 
 interface CourierSlipModalProps {
@@ -18,9 +18,28 @@ export function CourierSlipModal({ open, data, onClose }: CourierSlipModalProps)
   const slipRef = useRef<HTMLDivElement | null>(null);
   const [busy, setBusy] = useState<"pdf" | "print" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [amountInput, setAmountInput] = useState<string>("0");
+
+  // Re-seed the editable amount whenever a new order is opened. Defaults
+  // follow the spec: COD orders show the full total, every other payment
+  // type starts at 0 (couriers do not collect anything for prepaid orders).
+  useEffect(() => {
+    if (!data) return;
+    const initial = data.isCOD ? data.amountToCollect : 0;
+    setAmountInput(String(Math.max(0, Math.round(initial))));
+  }, [data]);
+
+  const parsedAmount = (() => {
+    const n = Number(amountInput);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+  })();
+
+  const slipData: CourierSlipData | null = data
+    ? { ...data, amountToCollect: parsedAmount }
+    : null;
 
   const handleDownload = useCallback(async () => {
-    if (!data) return;
+    if (!slipData) return;
     const node = slipRef.current;
     if (!node) return;
 
@@ -65,14 +84,14 @@ export function CourierSlipModal({ open, data, onClose }: CourierSlipModalProps)
         }
       }
 
-      pdf.save(`courier-slip-${data.orderId}.pdf`);
+      pdf.save(`courier-slip-${slipData.orderId}.pdf`);
     } catch (err) {
       console.error("[CourierSlip] PDF generation failed", err);
       setError("Failed to generate PDF. Please try again or use Print.");
     } finally {
       setBusy(null);
     }
-  }, [data]);
+  }, [slipData]);
 
   const handlePrint = useCallback(() => {
     const node = slipRef.current;
@@ -90,7 +109,7 @@ export function CourierSlipModal({ open, data, onClose }: CourierSlipModalProps)
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>courier-slip-${data?.orderId ?? ""}</title>
+  <title>courier-slip-${slipData?.orderId ?? ""}</title>
   <style>
     @page { size: A4 portrait; margin: 0; }
     html, body { margin: 0; padding: 0; background: #fff; }
@@ -135,9 +154,9 @@ export function CourierSlipModal({ open, data, onClose }: CourierSlipModalProps)
     } finally {
       setBusy(null);
     }
-  }, [data]);
+  }, [slipData]);
 
-  if (!open || !data) return null;
+  if (!open || !data || !slipData) return null;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
@@ -184,9 +203,36 @@ export function CourierSlipModal({ open, data, onClose }: CourierSlipModalProps)
           </div>
         )}
 
+        {/* Editable amount-to-collect.
+            For non-COD payment types (bKash, Bank Transfer, etc.) the courier
+            does not collect anything by default, but admin can override per
+            order — e.g. partial COD on a bank-paid order. */}
+        <div className="mb-3 flex flex-wrap items-end gap-3 px-3 py-3 border border-[var(--border)] rounded bg-[var(--bg-surface)]">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+              Amount to Collect (BDT)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={amountInput}
+              onChange={(e) => setAmountInput(e.target.value)}
+              className="w-40 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-sm focus:border-[var(--gold)] outline-none"
+            />
+          </div>
+          <p className="text-[10px] text-[var(--text-muted)] flex-1 min-w-[200px]">
+            Payment Type: <span className="text-[var(--text-secondary)] font-medium">{data.paymentType}</span>
+            {" \u00b7 "}
+            {data.isCOD
+              ? "Defaulted to order total (COD). Edit if a partial amount is being collected."
+              : "Defaulted to 0 (prepaid). Edit if courier must still collect a balance."}
+          </p>
+        </div>
+
         <div className="bg-[#1a1a1a] p-3 sm:p-6 rounded overflow-x-auto">
           <div className="mx-auto shadow-2xl" style={{ width: "794px", maxWidth: "100%" }}>
-            <CourierSlip ref={slipRef} data={data} />
+            <CourierSlip ref={slipRef} data={slipData} />
           </div>
         </div>
       </div>
