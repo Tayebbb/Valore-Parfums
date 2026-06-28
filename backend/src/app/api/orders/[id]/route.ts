@@ -131,7 +131,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { itemPriceUpdates, removeVoucher, addItems, removeItemIds, ...orderPatch } = body as {
     itemPriceUpdates?: { itemId: string; unitPrice: number; buyingPrice?: number }[];
     removeVoucher?: boolean;
-    addItems?: { perfumeName: string; perfumeId?: string; ml: number; quantity: number; unitPrice: number; costPrice: number }[];
+    addItems?: {
+      perfumeName: string;
+      perfumeId?: string;
+      ml: number;
+      quantity: number;
+      unitPrice: number;
+      costPrice: number;
+      isFullBottle?: boolean;
+      fullBottleSize?: string;
+      fullBottleCondition?: "new" | "partial";
+    }[];
     removeItemIds?: string[];
     status?: string;
     [key: string]: unknown;
@@ -311,11 +321,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const perfumeName = String(newItm.perfumeName || "").trim();
       if (!perfumeName) continue;
       const addedPerfumeId = String(newItm.perfumeId || "").trim() || undefined;
-      const ml = Number(newItm.ml);
+      const isFullBottleItem = Boolean(newItm.isFullBottle);
+      const requestedFullBottleSize = String(newItm.fullBottleSize || "").trim();
+      const requestedFullBottleConditionRaw = String(newItm.fullBottleCondition || "").trim().toLowerCase();
+      const fullBottleCondition: "new" | "partial" = requestedFullBottleConditionRaw === "partial" ? "partial" : "new";
+      const ml = isFullBottleItem
+        ? (Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || Number(newItm.ml) || 0)
+        : Number(newItm.ml);
       const quantity = Math.max(1, Math.floor(Number(newItm.quantity) || 1));
       const unitPrice = Math.max(0, Math.round(Number(newItm.unitPrice) || 0));
       const costPricePerUnit = Math.max(0, Math.round(Number(newItm.costPrice) || 0));
-      if (!Number.isFinite(ml) || ml <= 0) continue;
+      if (isFullBottleItem) {
+        if (!requestedFullBottleSize) {
+          return NextResponse.json({ error: "Full bottle size is required for full bottle items" }, { status: 400 });
+        }
+      } else {
+        if (!Number.isFinite(ml) || ml <= 0) continue;
+      }
       const breakdown = computeItemBreakdown({
         unitCostMinor: toMinorUnits(costPricePerUnit),
         unitSellingPriceMinor: toMinorUnits(unitPrice),
@@ -333,6 +355,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         unitPrice,
         totalPrice,
         costPrice,
+        isFullBottle: isFullBottleItem,
+        ...(isFullBottleItem ? { fullBottleSize: requestedFullBottleSize } : {}),
+        ...(isFullBottleItem ? { fullBottleCondition } : {}),
         ownerName: "Store",
         ownerProfit: split.ownerProfit,
         otherOwnerProfit: split.otherOwnerProfit,

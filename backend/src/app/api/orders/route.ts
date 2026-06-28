@@ -433,20 +433,29 @@ export async function POST(req: Request) {
       ? (requestedFullBottleConditionRaw as "new" | "partial")
       : (isFullBottleItem && partialDealType === "full_bottle" ? "partial" : "new");
 
+    const adminProvidedUnitPrice = Number(item.unitPrice ?? item.sellingPrice ?? NaN);
+    const adminProvidedUnitCost = Number(item.costPrice ?? item.buyingPrice ?? NaN);
+    const hasAdminUnitPrice = manualAdminOrder && Number.isFinite(adminProvidedUnitPrice);
+    const hasAdminUnitCost = manualAdminOrder && Number.isFinite(adminProvidedUnitCost);
+
     let unitPrice = isFullBottleItem
       ? Math.max(0, Math.round(Number(item.unitPrice ?? item.sellingPrice ?? 0)))
-      : isPartialDeal
-        ? Math.ceil(Math.max(0, partialSellingPrice))
-        : calculateSellingPrice(
-          effectiveMarketPricePerMl,
-          requestedFullBottleMl,
-          bottleCost,
-          packagingCost,
-          profitMargin,
-        );
+      : hasAdminUnitPrice
+        ? Math.max(0, Math.round(adminProvidedUnitPrice))
+        : isPartialDeal
+          ? Math.ceil(Math.max(0, partialSellingPrice))
+          : calculateSellingPrice(
+            effectiveMarketPricePerMl,
+            requestedFullBottleMl,
+            bottleCost,
+            packagingCost,
+            profitMargin,
+          );
 
-    // Apply bulk discount if applicable
-    const bulkRule = bulkRules.find((r: { minQuantity: number }) => quantity >= r.minQuantity);
+    // Apply bulk discount if applicable — skip when admin provided explicit pricing
+    const bulkRule = !hasAdminUnitPrice
+      ? bulkRules.find((r: { minQuantity: number }) => quantity >= r.minQuantity)
+      : undefined;
     const discountPercent = bulkRule ? Number(bulkRule.discountPercent || 0) : 0;
     if (bulkRule) {
       unitPrice = Math.ceil(unitPrice * (1 - discountPercent / 100));
@@ -454,7 +463,9 @@ export async function POST(req: Request) {
 
     const unitCost = isFullBottleItem
       ? Math.max(0, Math.round(Number(item.costPrice ?? item.buyingPrice ?? 0)))
-      : ((Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl + packagingCost + bottleCost);
+      : hasAdminUnitCost
+        ? Math.max(0, Math.round(adminProvidedUnitCost))
+        : ((Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl + packagingCost + bottleCost);
 
     if (isFullBottleItem && manualAdminOrder) {
       if (!Number.isFinite(Number(item.unitPrice ?? item.sellingPrice ?? NaN)) || !Number.isFinite(Number(item.costPrice ?? item.buyingPrice ?? NaN))) {

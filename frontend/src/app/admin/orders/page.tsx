@@ -92,6 +92,7 @@ interface StockRequest {
 }
 
 interface ManualFullBottleItemDraft {
+  itemType: "decant" | "full-bottle";
   useCustomName: boolean;
   perfumeId: string;
   customPerfumeName: string;
@@ -182,6 +183,7 @@ const normalizeProcurementStatus = (status?: string) => {
 };
 
 const createManualFullBottleItemDraft = (): ManualFullBottleItemDraft => ({
+  itemType: "full-bottle",
   useCustomName: false,
   perfumeId: "",
   customPerfumeName: "",
@@ -297,7 +299,7 @@ export default function OrdersPage() {
   const [courierSlipOrder, setCourierSlipOrder] = useState<Order | null>(null);
   const [pickupLocations, setPickupLocations] = useState<{ id: string; name: string; address: string; phone?: string }[]>([]);
   const [itemsMarkedForRemoval, setItemsMarkedForRemoval] = useState<Set<string>>(new Set());
-  const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; perfumeId?: string; ml: string; quantity: string; unitPrice: string; costPrice: string }[]>([]);
+  const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; perfumeId?: string; ml: string; quantity: string; unitPrice: string; costPrice: string; isFullBottle: boolean; fullBottleCondition: "new" | "partial" }[]>([]);
   const [savingOrderEdit, setSavingOrderEdit] = useState(false);
   // Catalog browser
   const [showCatalog, setShowCatalog] = useState(false);
@@ -657,6 +659,7 @@ export default function OrdersPage() {
 
       return {
         index,
+        itemType: draft.itemType,
         useCustomName: draft.useCustomName,
         perfume,
         customPerfumeName,
@@ -669,13 +672,19 @@ export default function OrdersPage() {
     });
 
     if (normalizedItems.length === 0) {
-      toast("Add at least one full bottle item", "error");
+      toast("Add at least one item", "error");
       return;
     }
 
     const invalidItem = normalizedItems.find((item) => (!item.useCustomName && !item.perfume) || (item.useCustomName && !item.customPerfumeName) || !item.sizeMl);
     if (invalidItem) {
-      toast(`Complete perfume/custom name and bottle size for item ${invalidItem.index + 1}`, "error");
+      toast(`Complete perfume/custom name and size for item ${invalidItem.index + 1}`, "error");
+      return;
+    }
+
+    const decantWithCustomName = normalizedItems.find((item) => item.itemType === "decant" && item.useCustomName);
+    if (decantWithCustomName) {
+      toast(`Decant item ${decantWithCustomName.index + 1} must use a store perfume`, "error");
       return;
     }
 
@@ -700,24 +709,28 @@ export default function OrdersPage() {
         deliveryAddress: pickupMethod === "Delivery" ? deliveryAddress : undefined,
         deliveryFee: pickupMethod === "Delivery" ? deliveryFee : 0,
         paymentMethod: "Cash on Delivery",
-        items: normalizedItems.map((item) => ({
-          ...(item.useCustomName ? {} : { perfumeId: item.perfume!.id }),
-          perfumeName: item.useCustomName ? item.customPerfumeName : item.perfume!.name,
-          ml: item.sizeMl,
-          fullBottleSize: `${item.sizeMl}ml`,
-          fullBottleCondition: item.fullBottleCondition,
-          isFullBottle: true,
-          quantity: item.quantity,
-          unitPrice: item.sellingPrice,
-          costPrice: item.buyingPrice,
-        })),
+        items: normalizedItems.map((item) => {
+          const isFullBottle = item.itemType === "full-bottle";
+          return {
+            ...(item.useCustomName ? {} : { perfumeId: item.perfume!.id }),
+            perfumeName: item.useCustomName ? item.customPerfumeName : item.perfume!.name,
+            ml: item.sizeMl,
+            isFullBottle,
+            ...(isFullBottle
+              ? { fullBottleSize: `${item.sizeMl}ml`, fullBottleCondition: item.fullBottleCondition }
+              : {}),
+            quantity: item.quantity,
+            unitPrice: item.sellingPrice,
+            costPrice: item.buyingPrice,
+          };
+        }),
       }),
     });
     setManualFullBottleSubmitting(false);
 
     if (!res.ok) {
       const err = await res.json().catch(() => null);
-      toast(err?.error || "Failed to create manual full bottle order", "error");
+      toast(err?.error || "Failed to create manual order", "error");
       return;
     }
 
@@ -748,7 +761,7 @@ export default function OrdersPage() {
       }
     }
 
-    toast("Manual full bottle order created", "success");
+    toast("Manual order created", "success");
     setShowManualFullBottleModal(false);
     setManualFullBottleDraft(createManualFullBottleOrderDraft());
     await load();
@@ -777,7 +790,7 @@ export default function OrdersPage() {
       }
     } catch { /* ignore */ }
     setAddingCatalogKey(null);
-    setNewItemDrafts((prev) => [...prev, { perfumeName, perfumeId, ml: String(ml), quantity: "1", unitPrice: String(unitPrice), costPrice: String(costPrice) }]);
+    setNewItemDrafts((prev) => [...prev, { perfumeName, perfumeId, ml: String(ml), quantity: "1", unitPrice: String(unitPrice), costPrice: String(costPrice), isFullBottle: false, fullBottleCondition: "new" }]);
     setShowCatalog(false);
     setExpandedCatalogId(null);
   };
@@ -790,14 +803,22 @@ export default function OrdersPage() {
 
     const validNewItems = newItemDrafts
       .filter((d) => d.perfumeName.trim() && Number(d.ml) > 0)
-      .map((d) => ({
-        perfumeName: d.perfumeName.trim(),
-        ...(d.perfumeId ? { perfumeId: d.perfumeId } : {}),
-        ml: Number(d.ml),
-        quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
-        unitPrice: Math.max(0, Math.round(Number(d.unitPrice) || 0)),
-        costPrice: Math.max(0, Math.round(Number(d.costPrice) || 0)),
-      }));
+      .map((d) => {
+        const ml = Number(d.ml);
+        const isFullBottle = Boolean(d.isFullBottle);
+        return {
+          perfumeName: d.perfumeName.trim(),
+          ...(d.perfumeId ? { perfumeId: d.perfumeId } : {}),
+          ml,
+          quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
+          unitPrice: Math.max(0, Math.round(Number(d.unitPrice) || 0)),
+          costPrice: Math.max(0, Math.round(Number(d.costPrice) || 0)),
+          isFullBottle,
+          ...(isFullBottle
+            ? { fullBottleSize: `${ml}ml`, fullBottleCondition: d.fullBottleCondition }
+            : {}),
+        };
+      });
 
     const toRemove = Array.from(itemsMarkedForRemoval);
 
@@ -1019,7 +1040,7 @@ export default function OrdersPage() {
             onClick={openManualFullBottleModal}
             className="px-3 py-1.5 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-light)] transition-colors"
           >
-            Manual Full Bottle Order
+            Manual Order
           </button>
         </div>
       )}
@@ -1638,9 +1659,34 @@ export default function OrdersPage() {
                               ✕
                             </button>
                           </div>
+                          <div className="flex items-center gap-1.5">
+                            {(["decant", "full-bottle"] as const).map((type) => {
+                              const active = (type === "full-bottle") === Boolean(draft.isFullBottle);
+                              return (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => setNewItemDrafts((prev) => prev.map((d, i) => i === idx ? { ...d, isFullBottle: type === "full-bottle" } : d))}
+                                  className={`px-2 py-0.5 text-[9px] uppercase tracking-wider rounded border transition-colors ${active ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--gold)]"}`}
+                                >
+                                  {type === "full-bottle" ? "Full Bottle" : "Decant"}
+                                </button>
+                              );
+                            })}
+                            {draft.isFullBottle && (
+                              <select
+                                value={draft.fullBottleCondition}
+                                onChange={(e) => setNewItemDrafts((prev) => prev.map((d, i) => i === idx ? { ...d, fullBottleCondition: e.target.value === "partial" ? "partial" : "new" } : d))}
+                                className="ml-auto bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-0.5 text-[10px] focus:border-[var(--gold)] outline-none"
+                              >
+                                <option value="new">New</option>
+                                <option value="partial">Partial</option>
+                              </select>
+                            )}
+                          </div>
                           <div className="grid grid-cols-4 gap-1.5">
                             {([
-                              { key: "ml" as const, placeholder: "ML", type: "number" },
+                              { key: "ml" as const, placeholder: draft.isFullBottle ? "Bottle ML" : "ML", type: "number" },
                               { key: "quantity" as const, placeholder: "Qty", type: "number" },
                               { key: "unitPrice" as const, placeholder: "Sell (BDT)", type: "number" },
                               { key: "costPrice" as const, placeholder: "Cost (BDT)", type: "number" },
@@ -1659,7 +1705,7 @@ export default function OrdersPage() {
                         </div>
                       ))}
                       <button
-                        onClick={() => setNewItemDrafts((prev) => [...prev, { perfumeName: "", ml: "", quantity: "1", unitPrice: "", costPrice: "" }])}
+                        onClick={() => setNewItemDrafts((prev) => [...prev, { perfumeName: "", ml: "", quantity: "1", unitPrice: "", costPrice: "", isFullBottle: false, fullBottleCondition: "new" }])}
                         className="w-full py-1.5 text-[10px] uppercase tracking-wider border border-dashed border-[var(--border)] text-[var(--text-muted)] rounded hover:border-[var(--gold)] hover:text-[var(--gold)] transition-colors"
                       >
                         + Manual Entry
@@ -2007,7 +2053,7 @@ export default function OrdersPage() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeManualFullBottleModal} />
           <div className="relative bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg w-full max-w-2xl p-6 animate-fade-up max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-serif text-xl font-light">Manual Full Bottle Order</h2>
+              <h2 className="font-serif text-xl font-light">Manual Order</h2>
               <button onClick={closeManualFullBottleModal} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
             </div>
 
@@ -2113,13 +2159,13 @@ export default function OrdersPage() {
                   </div>
                   <div className="space-y-3 md:col-span-2">
                     <div className="flex items-center justify-between gap-3">
-                      <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Full Bottle Items</label>
+                      <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Items</label>
                       <button
                         type="button"
                         onClick={() => setManualFullBottleDraft((prev) => ({ ...prev, items: [...prev.items, createManualFullBottleItemDraft()] }))}
                         className="px-2 py-1 text-[10px] uppercase tracking-wider border border-[var(--gold)] text-[var(--gold)] rounded hover:bg-[var(--gold-tint)] transition-colors"
                       >
-                        Add Bottle
+                        Add Item
                       </button>
                     </div>
 
@@ -2127,7 +2173,7 @@ export default function OrdersPage() {
                       {manualFullBottleDraft.items.map((item, index) => (
                         <div key={index} className="border border-[var(--border)] rounded p-3 bg-[var(--bg-surface)] space-y-3">
                           <div className="flex items-center justify-between gap-3">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle {index + 1}</p>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Item {index + 1}</p>
                             {manualFullBottleDraft.items.length > 1 && (
                               <button
                                 type="button"
@@ -2140,23 +2186,50 @@ export default function OrdersPage() {
                           </div>
 
                           <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Type</label>
+                            <div className="flex gap-2">
+                              {(["full-bottle", "decant"] as const).map((type) => (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => setManualFullBottleDraft((prev) => ({
+                                    ...prev,
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
+                                      ...draft,
+                                      itemType: type,
+                                      // Decant items must use a store perfume
+                                      useCustomName: type === "decant" ? false : draft.useCustomName,
+                                      customPerfumeName: type === "decant" ? "" : draft.customPerfumeName,
+                                    } : draft),
+                                  }))}
+                                  className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded border transition-colors ${item.itemType === type ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"}`}
+                                >
+                                  {type === "full-bottle" ? "Full Bottle" : "Decant"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between gap-3">
                               <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Perfume</label>
-                              <button
-                                type="button"
-                                onClick={() => setManualFullBottleDraft((prev) => ({
-                                  ...prev,
-                                  items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
-                                    ...draft,
-                                    useCustomName: !draft.useCustomName,
-                                    perfumeId: !draft.useCustomName ? "" : draft.perfumeId,
-                                    customPerfumeName: draft.useCustomName ? "" : draft.customPerfumeName,
-                                  } : draft),
-                                }))}
-                                className="text-[10px] uppercase tracking-wider text-[var(--gold)] hover:underline"
-                              >
-                                {item.useCustomName ? "Use Store Perfume" : "Use Custom Name"}
-                              </button>
+                              {item.itemType === "full-bottle" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setManualFullBottleDraft((prev) => ({
+                                    ...prev,
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
+                                      ...draft,
+                                      useCustomName: !draft.useCustomName,
+                                      perfumeId: !draft.useCustomName ? "" : draft.perfumeId,
+                                      customPerfumeName: draft.useCustomName ? "" : draft.customPerfumeName,
+                                    } : draft),
+                                  }))}
+                                  className="text-[10px] uppercase tracking-wider text-[var(--gold)] hover:underline"
+                                >
+                                  {item.useCustomName ? "Use Store Perfume" : "Use Custom Name"}
+                                </button>
+                              )}
                             </div>
                             {item.useCustomName ? (
                               <input
@@ -2188,25 +2261,29 @@ export default function OrdersPage() {
                           </div>
 
                           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            {item.itemType === "full-bottle" && (
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle Type</label>
+                                <select
+                                  value={item.fullBottleCondition}
+                                  onChange={(e) => setManualFullBottleDraft((prev) => ({
+                                    ...prev,
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
+                                      ...draft,
+                                      fullBottleCondition: e.target.value === "partial" ? "partial" : "new",
+                                    } : draft),
+                                  }))}
+                                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                                >
+                                  <option value="new">New</option>
+                                  <option value="partial">Partial</option>
+                                </select>
+                              </div>
+                            )}
                             <div className="space-y-1.5">
-                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle Type</label>
-                              <select
-                                value={item.fullBottleCondition}
-                                onChange={(e) => setManualFullBottleDraft((prev) => ({
-                                  ...prev,
-                                  items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
-                                    ...draft,
-                                    fullBottleCondition: e.target.value === "partial" ? "partial" : "new",
-                                  } : draft),
-                                }))}
-                                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-                              >
-                                <option value="new">New</option>
-                                <option value="partial">Partial</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bottle Size (ML)</label>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                {item.itemType === "full-bottle" ? "Bottle Size (ML)" : "Decant Size (ML)"}
+                              </label>
                               <input
                                 type="number"
                                 min={1}
@@ -2282,7 +2359,7 @@ export default function OrdersPage() {
                   </div>
                   <div className="text-right text-xs text-[var(--text-muted)]">
                     <p>Profit = Selling - Buying</p>
-                    <p>Summed across all full bottle lines</p>
+                    <p>Summed across all order items</p>
                   </div>
                 </div>
 
