@@ -313,6 +313,8 @@ export default function OrdersPage() {
   const [manualFullBottleLoading, setManualFullBottleLoading] = useState(false);
   const [manualFullBottleSubmitting, setManualFullBottleSubmitting] = useState(false);
   const [manualFullBottlePerfumes, setManualFullBottlePerfumes] = useState<{ id: string; name: string; brand?: string }[]>([]);
+  const [manualDecantSizes, setManualDecantSizes] = useState<{ id: string; ml: number }[]>([]);
+  const [manualPricingLoading, setManualPricingLoading] = useState<Record<number, boolean>>({});
   const [manualFullBottleDraft, setManualFullBottleDraft] = useState(createManualFullBottleOrderDraft);
 
   const load = async () => {
@@ -601,20 +603,65 @@ export default function OrdersPage() {
 
   const openManualFullBottleModal = async () => {
     setShowManualFullBottleModal(true);
-    if (manualFullBottlePerfumes.length > 0) return;
+    if (manualFullBottlePerfumes.length > 0 && manualDecantSizes.length > 0) return;
 
     setManualFullBottleLoading(true);
     try {
-      const res = await fetch("/api/perfumes?active=true");
-      if (!res.ok) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = await res.json() as any;
-      const list = Array.isArray(data) ? data : (Array.isArray(data.perfumes) ? data.perfumes : []);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setManualFullBottlePerfumes(list.map((p: any) => ({ id: p.id, name: p.name, brand: p.brand })));
+      const [perfRes, sizeRes] = await Promise.all([
+        fetch("/api/perfumes?active=true"),
+        fetch("/api/decant-sizes"),
+      ]);
+      if (perfRes.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await perfRes.json() as any;
+        const list = Array.isArray(data) ? data : (Array.isArray(data.perfumes) ? data.perfumes : []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setManualFullBottlePerfumes(list.map((p: any) => ({ id: p.id, name: p.name, brand: p.brand })));
+      }
+      if (sizeRes.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sizes = await sizeRes.json() as any[];
+        setManualDecantSizes(
+          (Array.isArray(sizes) ? sizes : [])
+            .filter((s: { enabled?: boolean }) => s.enabled !== false)
+            .map((s: { id: string; ml: number }) => ({ id: s.id, ml: s.ml })),
+        );
+      }
     } finally {
       setManualFullBottleLoading(false);
     }
+  };
+
+  const fetchDecantPricingForItem = async (itemIndex: number, perfumeId: string, ml: number) => {
+    if (!perfumeId || !(ml > 0)) return;
+    setManualPricingLoading((prev) => ({ ...prev, [itemIndex]: true }));
+    let unitPrice = 0;
+    let costPrice = 0;
+    try {
+      const res = await fetch(`/api/pricing?perfumeId=${encodeURIComponent(perfumeId)}`);
+      if (res.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await res.json() as any;
+        const prices = Array.isArray(data.prices) ? data.prices : (Array.isArray(data) ? data : []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const match = prices.find((p: any) => Number(p.ml) === Number(ml));
+        if (match) {
+          unitPrice = Math.round(Number(match.sellingPrice) || 0);
+          costPrice = Math.round(Number(match.totalCost) || 0);
+        }
+      }
+    } catch { /* ignore */ }
+    setManualFullBottleDraft((prev) => ({
+      ...prev,
+      items: prev.items.map((draft, idx) => idx === itemIndex && draft.itemType === "decant"
+        ? { ...draft, sellingPrice: String(unitPrice), buyingPrice: String(costPrice) }
+        : draft),
+    }));
+    setManualPricingLoading((prev) => {
+      const next = { ...prev };
+      delete next[itemIndex];
+      return next;
+    });
   };
 
   const closeManualFullBottleModal = () => {
@@ -2197,9 +2244,12 @@ export default function OrdersPage() {
                                     items: prev.items.map((draft, itemIndex) => itemIndex === index ? {
                                       ...draft,
                                       itemType: type,
-                                      // Decant items must use a store perfume
+                                      // Decant items must use a store perfume + store size + fetched price
                                       useCustomName: type === "decant" ? false : draft.useCustomName,
                                       customPerfumeName: type === "decant" ? "" : draft.customPerfumeName,
+                                      sizeMl: type === "decant" ? "" : draft.sizeMl,
+                                      buyingPrice: type === "decant" ? "" : draft.buyingPrice,
+                                      sellingPrice: type === "decant" ? "" : draft.sellingPrice,
                                     } : draft),
                                   }))}
                                   className={`px-3 py-1.5 text-[10px] uppercase tracking-wider rounded border transition-colors ${item.itemType === type ? "bg-[var(--gold)] text-black border-[var(--gold)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"}`}
@@ -2244,10 +2294,16 @@ export default function OrdersPage() {
                             ) : (
                               <select
                                 value={item.perfumeId}
-                                onChange={(e) => setManualFullBottleDraft((prev) => ({
-                                  ...prev,
-                                  items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, perfumeId: e.target.value } : draft),
-                                }))}
+                                onChange={(e) => {
+                                  const nextPerfumeId = e.target.value;
+                                  setManualFullBottleDraft((prev) => ({
+                                    ...prev,
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, perfumeId: nextPerfumeId } : draft),
+                                  }));
+                                  if (item.itemType === "decant" && nextPerfumeId && Number(item.sizeMl) > 0) {
+                                    void fetchDecantPricingForItem(index, nextPerfumeId, Number(item.sizeMl));
+                                  }
+                                }}
                                 className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
                               >
                                 <option value="">Select a perfume…</option>
@@ -2284,16 +2340,38 @@ export default function OrdersPage() {
                               <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
                                 {item.itemType === "full-bottle" ? "Bottle Size (ML)" : "Decant Size (ML)"}
                               </label>
-                              <input
-                                type="number"
-                                min={1}
-                                value={item.sizeMl}
-                                onChange={(e) => setManualFullBottleDraft((prev) => ({
-                                  ...prev,
-                                  items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, sizeMl: e.target.value } : draft),
-                                }))}
-                                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
-                              />
+                              {item.itemType === "decant" ? (
+                                <select
+                                  value={item.sizeMl}
+                                  onChange={(e) => {
+                                    const nextSize = e.target.value;
+                                    setManualFullBottleDraft((prev) => ({
+                                      ...prev,
+                                      items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, sizeMl: nextSize } : draft),
+                                    }));
+                                    if (item.perfumeId && Number(nextSize) > 0) {
+                                      void fetchDecantPricingForItem(index, item.perfumeId, Number(nextSize));
+                                    }
+                                  }}
+                                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                                >
+                                  <option value="">Select size…</option>
+                                  {manualDecantSizes.map((size) => (
+                                    <option key={size.id} value={String(size.ml)}>{size.ml}ml</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={item.sizeMl}
+                                  onChange={(e) => setManualFullBottleDraft((prev) => ({
+                                    ...prev,
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, sizeMl: e.target.value } : draft),
+                                  }))}
+                                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                                />
+                              )}
                             </div>
                             <div className="space-y-1.5">
                               <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Quantity</label>
@@ -2309,29 +2387,37 @@ export default function OrdersPage() {
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Buying Price (BDT)</label>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                Buying Price (BDT){item.itemType === "decant" ? " — Auto" : ""}
+                              </label>
                               <input
                                 type="number"
                                 min={0}
                                 value={item.buyingPrice}
+                                readOnly={item.itemType === "decant"}
+                                placeholder={item.itemType === "decant" && manualPricingLoading[index] ? "Loading…" : undefined}
                                 onChange={(e) => setManualFullBottleDraft((prev) => ({
                                   ...prev,
                                   items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, buyingPrice: e.target.value } : draft),
                                 }))}
-                                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                                className={`w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none ${item.itemType === "decant" ? "opacity-70 cursor-not-allowed" : ""}`}
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Selling Price (BDT)</label>
+                              <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                                Selling Price (BDT){item.itemType === "decant" ? " — Auto" : ""}
+                              </label>
                               <input
                                 type="number"
                                 min={0}
                                 value={item.sellingPrice}
+                                readOnly={item.itemType === "decant"}
+                                placeholder={item.itemType === "decant" && manualPricingLoading[index] ? "Loading…" : undefined}
                                 onChange={(e) => setManualFullBottleDraft((prev) => ({
                                   ...prev,
                                   items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, sellingPrice: e.target.value } : draft),
                                 }))}
-                                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                                className={`w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none ${item.itemType === "decant" ? "opacity-70 cursor-not-allowed" : ""}`}
                               />
                             </div>
                           </div>
