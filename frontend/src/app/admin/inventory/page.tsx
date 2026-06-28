@@ -605,6 +605,35 @@ export default function InventoryPage() {
     setDeleteId(null);
   };
 
+  const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
+  const toggleActive = async (p: Perfume) => {
+    if (togglingActiveId) return;
+    const nextActive = !p.isActive;
+    setTogglingActiveId(p.id);
+    // Optimistic update
+    setPerfumes((prev) => prev.map((row) => row.id === p.id ? { ...row, isActive: nextActive } : row));
+    try {
+      const res = await fetch(`/api/perfumes/${p.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: nextActive }),
+      });
+      if (!res.ok) {
+        // Revert on failure
+        setPerfumes((prev) => prev.map((row) => row.id === p.id ? { ...row, isActive: p.isActive } : row));
+        const err = await res.json().catch(() => null);
+        toast(err?.error || "Failed to update status", "error");
+        return;
+      }
+      toast(nextActive ? "Perfume activated" : "Perfume deactivated", "success");
+    } catch {
+      setPerfumes((prev) => prev.map((row) => row.id === p.id ? { ...row, isActive: p.isActive } : row));
+      toast("Failed to update status", "error");
+    } finally {
+      setTogglingActiveId(null);
+    }
+  };
+
   const filtered = perfumes.filter(
     (p) =>
       (p.name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -665,9 +694,15 @@ export default function InventoryPage() {
                     <p className="font-serif text-base">{p.name}</p>
                     <p className="text-xs text-[var(--text-muted)]">{p.brand}</p>
                   </div>
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"}`}>
-                    {p.isActive ? "Active" : "Inactive"}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(p)}
+                    disabled={togglingActiveId === p.id}
+                    title={p.isActive ? "Click to deactivate" : "Click to activate"}
+                    className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full transition-colors disabled:opacity-50 ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)] hover:bg-[rgba(74,222,128,0.2)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)] hover:bg-[rgba(248,113,113,0.2)]"}`}
+                  >
+                    {togglingActiveId === p.id ? "…" : (p.isActive ? "Active" : "Inactive")}
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)]">
@@ -744,9 +779,15 @@ export default function InventoryPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)]"}`}>
-                        {p.isActive ? "Active" : "Inactive"}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(p)}
+                        disabled={togglingActiveId === p.id}
+                        title={p.isActive ? "Click to deactivate" : "Click to activate"}
+                        className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full transition-colors disabled:opacity-50 ${p.isActive ? "bg-[rgba(74,222,128,0.1)] text-[var(--success)] hover:bg-[rgba(74,222,128,0.2)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--error)] hover:bg-[rgba(248,113,113,0.2)]"}`}
+                      >
+                        {togglingActiveId === p.id ? "…" : (p.isActive ? "Active" : "Inactive")}
+                      </button>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
