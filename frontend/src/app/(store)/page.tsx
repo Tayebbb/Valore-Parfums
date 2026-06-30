@@ -68,21 +68,16 @@ function PerfumeCard({ perfume, prices, priority }: { perfume: PerfumeDocument; 
 export default async function HomePage() {
   const perfumes = await getActivePerfumes();
 
-  const BEST_SELLER_LIMIT = 9;
-  // Admin-pinned best sellers come first (preserve their natural order), then fill
-  // the remaining slots with organic best sellers (highest totalOrders first).
-  const adminPicks = perfumes.filter((p) => p.isBestSeller);
-  const adminPickIds = new Set(adminPicks.map((p) => p.id));
-  const organicBestSellers = perfumes
-    .filter((p) => !adminPickIds.has(p.id) && Number(p.totalOrders ?? 0) > 0)
-    .sort((a, b) => Number(b.totalOrders ?? 0) - Number(a.totalOrders ?? 0));
-  const bestSellers = [...adminPicks, ...organicBestSellers].slice(0, BEST_SELLER_LIMIT);
+  const bestSellers = [...perfumes]
+    .filter((p) => Number(p.totalOrders ?? 0) > 0)
+    .sort((a, b) => Number(b.totalOrders ?? 0) - Number(a.totalOrders ?? 0))
+    .slice(0, 4);
   const newArrivals = perfumes.slice(0, 8);
 
-  // Deduplicated set for pricing — bestSellers first, then fill from newArrivals.
+  // Deduplicated top-12 for pricing — bestSellers first, then fill from newArrivals.
   // getPricingConfig is now cached (unstable_cache + React cache) so these parallel
   // calls hit Firestore only once per 300 s instead of N×3 reads.
-  const top12 = [...new Map([...bestSellers, ...newArrivals].map((p) => [p.id, p])).values()].slice(0, BEST_SELLER_LIMIT + 8);
+  const top12 = [...new Map([...bestSellers, ...newArrivals].map((p) => [p.id, p])).values()].slice(0, 12);
   const pricingEntries = await Promise.all(
     top12.map(async (perfume) => {
       const offers = await getPerfumeOffers(perfume);
@@ -146,7 +141,7 @@ export default async function HomePage() {
               View All <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {bestSellers.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
                 <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} priority={i === 0} />
