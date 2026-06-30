@@ -273,7 +273,8 @@ export async function GET(req: Request) {
     });
   }
   if (bestSeller === "true") {
-    perfumes = perfumes.filter((p) => Number(p.totalOrders || 0) > 0);
+    // Include admin-pinned best sellers and organically-earned best sellers (have orders).
+    perfumes = perfumes.filter((p) => Boolean(p.isBestSeller) || Number(p.totalOrders || 0) > 0);
   }
   if (brand) {
     perfumes = perfumes.filter((p) => {
@@ -316,10 +317,15 @@ export async function GET(req: Request) {
   // Sort (replaces Prisma orderBy)
   if (bestSeller === "true") {
     perfumes.sort((a, b) => {
+      // Admin-pinned best sellers always come first.
+      const pinnedDiff = Number(Boolean(b.isBestSeller)) - Number(Boolean(a.isBestSeller));
+      if (pinnedDiff !== 0) return pinnedDiff;
       const orderDiff = Number(b.totalOrders || 0) - Number(a.totalOrders || 0);
       if (orderDiff !== 0) return orderDiff;
       return asDate(b.createdAt).getTime() - asDate(a.createdAt).getTime();
     });
+    // Cap the Best Sellers view to a maximum of 9 perfumes.
+    perfumes = perfumes.slice(0, 9);
   } else if (sort === "name-asc") perfumes.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   else if (sort === "name-desc") perfumes.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
   else if (sort === "price-asc") perfumes.sort((a, b) => (a.marketPricePerMl || 0) - (b.marketPricePerMl || 0));
