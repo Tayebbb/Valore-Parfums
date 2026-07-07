@@ -403,6 +403,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
       const itemsSnap = await itemsRef.get();
 
+      // Owner voucher: manual full-bottle prices are forced to cost (zero profit).
+      const isOwnerVoucherOrder = String(order.voucherCode || "").trim().toUpperCase() === "VALORE1290";
+
       for (const itemDoc of itemsSnap.docs) {
         const itemUpdate = updatesMap.get(itemDoc.id);
         if (!itemUpdate) continue;
@@ -414,7 +417,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const quantity = Number(item.quantity ?? 0);
-        const nextUnitPrice = itemUpdate.unitPrice;
         const unitCost = itemUpdate.buyingPrice !== undefined
           ? itemUpdate.buyingPrice
           : Number(
@@ -425,6 +427,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                     : (quantity > 0 ? Number(item.costPrice ?? 0) / quantity : 0)
                 ),
             );
+        const nextUnitPrice = isOwnerVoucherOrder
+          ? Math.max(0, Math.round(unitCost))
+          : itemUpdate.unitPrice;
         const breakdown = computeItemBreakdown({
           unitCostMinor: toMinorUnits(unitCost),
           unitSellingPriceMinor: toMinorUnits(nextUnitPrice),

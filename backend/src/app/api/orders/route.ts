@@ -176,9 +176,15 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { items, voucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
+    const { items, voucherCode: rawVoucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
     const sessionUser = await getSessionUser();
     const manualAdminOrder = Boolean(orderData.manualAdminOrder);
+
+    // Owner-only hardcoded voucher: sells at cost price (zero profit)
+    const OWNER_VOUCHER_CODE = "VALORE1290";
+    const normalizedVoucherCode = String(rawVoucherCode || "").trim();
+    const isOwnerVoucher = normalizedVoucherCode.toUpperCase() === OWNER_VOUCHER_CODE;
+    const voucherCode = isOwnerVoucher ? OWNER_VOUCHER_CODE : normalizedVoucherCode;
 
     if (manualAdminOrder) {
       const admin = await requireAdmin();
@@ -467,6 +473,13 @@ export async function POST(req: Request) {
         ? Math.max(0, Math.round(adminProvidedUnitCost))
         : ((Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl + packagingCost + bottleCost);
 
+    // Owner voucher override: sell at cost price (no profit).
+    // Applied after bulk discount and cost calculation, but skipped for full-bottle
+    // orders where the admin still needs to manually confirm final pricing later.
+    if (isOwnerVoucher && !isFullBottleItem) {
+      unitPrice = Math.max(0, Math.round(unitCost));
+    }
+
     if (isFullBottleItem && manualAdminOrder) {
       if (!Number.isFinite(Number(item.unitPrice ?? item.sellingPrice ?? NaN)) || !Number.isFinite(Number(item.costPrice ?? item.buyingPrice ?? NaN))) {
         return NextResponse.json({ error: "Buying and selling prices are required for manual full bottle orders" }, { status: 400 });
@@ -559,7 +572,7 @@ export async function POST(req: Request) {
     // Apply voucher (replaces prisma.voucher.findUnique + update)
     let discountMinor = 0;
     const subtotalMinor = orderItems.reduce((sum, item) => sum + item.financialBreakdown.totalRevenueMinor, 0);
-    if (voucherCode) {
+    if (voucherCode && !isOwnerVoucher) {
     const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
     if (!voucherSnap.empty) {
       const voucherDoc = voucherSnap.docs[0];

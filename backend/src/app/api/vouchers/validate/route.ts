@@ -1,9 +1,24 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 
+// Hardcoded owner voucher: prices every item at cost (zero profit). Applied server-side
+// in /api/orders POST, so we short-circuit validation here and don't require a DB record.
+const OWNER_VOUCHER_CODE = "VALORE1290";
+
 // POST validate voucher code (replaces prisma.voucher.findUnique)
 export async function POST(req: Request) {
   const { code, orderTotal, hasFullBottle, customerEmail } = await req.json();
+
+  if (String(code || "").trim().toUpperCase() === OWNER_VOUCHER_CODE) {
+    return NextResponse.json({
+      valid: true,
+      discount: 0,
+      discountType: "owner",
+      discountValue: 0,
+      code: OWNER_VOUCHER_CODE,
+      message: "Owner voucher applied — items will be billed at cost price.",
+    });
+  }
 
   // Firestore: query vouchers by code (replaces prisma.voucher.findUnique({ where: { code } }))
   const snap = await db.collection(Collections.vouchers).where("code", "==", code).limit(1).get();
