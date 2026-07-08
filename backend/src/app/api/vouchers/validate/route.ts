@@ -2,21 +2,66 @@ import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 
 // Hardcoded owner voucher: prices every item at cost (zero profit). Applied server-side
-// in /api/orders POST, so we short-circuit validation here and don't require a DB record.
+// in /api/orders POST; here we preview the equivalent discount so the checkout summary
+// shows the reduced total. Full-bottle lines are excluded (same rule as order creation).
 const OWNER_VOUCHER_CODE = "VALORE1290";
+
+type CartItem = {
+  perfumeId?: string;
+  ml?: number;
+  quantity?: number;
+  unitPrice?: number;
+  isFullBottle?: boolean;
+};
+
+async function computeOwnerVoucherDiscount(items: CartItem[]): Promise<number> {
+  if (!Array.isArray(items) || items.length === 0) return 0;
+
+  const settingsDoc = await db.collection(Collections.settings).doc("main").get();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
+  const packagingCost = Number(settings?.packagingCost ?? 20);
+
+  let totalDiscount = 0;
+  for (const item of items) {
+    if (item.isFullBottle) continue; // owner voucher skips full-bottle lines
+    const perfumeId = String(item.perfumeId || "").trim();
+    const ml = Number(item.ml || 0);
+    const quantity = Math.floor(Number(item.quantity || 0));
+    const unitPrice = Math.max(0, Math.round(Number(item.unitPrice || 0)));
+    if (!perfumeId || !(ml > 0) || !(quantity > 0)) continue;
+
+    const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
+    if (!perfumeDoc.exists) continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const perfume = perfumeDoc.data() as any;
+
+    const bottleSnap = await db.collection(Collections.bottles).where("ml", "==", ml).limit(1).get();
+    const bottleCost = bottleSnap.empty ? 0 : Number(bottleSnap.docs[0].data()?.costPerBottle || 0);
+
+    const purchasePricePerMl = Number(perfume?.purchasePricePerMl || 0);
+    const unitCost = Math.max(0, Math.round(purchasePricePerMl * ml + packagingCost + bottleCost));
+    const perLineDiscount = Math.max(0, (unitPrice - unitCost) * quantity);
+    totalDiscount += perLineDiscount;
+  }
+  return totalDiscount;
+}
 
 // POST validate voucher code (replaces prisma.voucher.findUnique)
 export async function POST(req: Request) {
-  const { code, orderTotal, hasFullBottle, customerEmail } = await req.json();
+  const { code, orderTotal, hasFullBottle, customerEmail, items } = await req.json();
 
   if (String(code || "").trim().toUpperCase() === OWNER_VOUCHER_CODE) {
+    const ownerDiscount = await computeOwnerVoucherDiscount(items as CartItem[]);
     return NextResponse.json({
       valid: true,
-      discount: 0,
+      discount: ownerDiscount,
       discountType: "owner",
-      discountValue: 0,
+      discountValue: ownerDiscount,
       code: OWNER_VOUCHER_CODE,
-      message: "Owner voucher applied — items will be billed at cost price.",
+      message: ownerDiscount > 0
+        ? `Owner voucher applied — items billed at cost price (-${ownerDiscount} BDT).`
+        : "Owner voucher applied — items will be billed at cost price on the final invoice.",
     });
   }
 

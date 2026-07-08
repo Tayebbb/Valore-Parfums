@@ -587,7 +587,19 @@ function CheckoutContent() {
       const res = await fetch("/api/vouchers/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: voucherCode, orderTotal: displaySubtotal, hasFullBottle, customerEmail: form.recipientEmail.trim() }),
+        body: JSON.stringify({
+          code: voucherCode,
+          orderTotal: displaySubtotal,
+          hasFullBottle,
+          customerEmail: form.recipientEmail.trim(),
+          items: displayItems.map((it) => ({
+            perfumeId: it.perfumeId,
+            ml: it.ml,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            isFullBottle: Boolean(it.isFullBottle),
+          })),
+        }),
       });
       const data = await res.json();
 
@@ -598,11 +610,19 @@ function CheckoutContent() {
 
       setDiscount(data.discount);
       setAppliedVoucher(data.code);
-      toast(`Voucher applied: -${data.discount} BDT`, "success");
+      if (data.discountType === "owner") {
+        toast(
+          data.message ||
+            "Owner voucher applied — items will be billed at cost price on the final invoice.",
+          "success",
+        );
+      } else {
+        toast(`Voucher applied: -${data.discount} BDT`, "success");
+      }
     } catch {
       toast("Could not validate voucher", "error");
     }
-  }, [displaySubtotal, hasFullBottle, voucherCode]);
+  }, [displayItems, displaySubtotal, form.recipientEmail, hasFullBottle, voucherCode]);
 
   const placeOrder = useCallback(async () => {
     if (placing) return;
