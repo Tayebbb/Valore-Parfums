@@ -172,6 +172,9 @@ export async function POST(req: Request) {
       fullBottlePrice: body.fullBottlePrice ?? null,
       partialDealType,
       partialSellingPrice: partialDealType ? (Number.isFinite(partialSellingPrice) ? partialSellingPrice : 0) : 0,
+      // Auto-flag personal-collection when the perfume has a non-Store owner so
+      // earnings splits (liquid cost + 85/15) apply automatically.
+      isPersonalCollection: String(body.owner || "Store") !== "Store",
       rating: Number(body.rating ?? 4.9),
       reviewCount: Number(body.reviewCount ?? 0),
       totalOrders: Number(body.totalOrders ?? 0),

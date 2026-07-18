@@ -58,6 +58,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         : 0;
     }
 
+    // Auto-flag personal-collection when the owner is not the Store, so the
+    // earnings-split logic (liquid cost + 85/15) applies automatically.
+    if (body.owner !== undefined) {
+      updatePayload.isPersonalCollection = String(body.owner || "Store") !== "Store";
+    }
+
     if (body.fragranceNotes || body.fragranceNoteIds || body.topNoteIds || body.middleNoteIds || body.baseNoteIds || body.topNotes || body.middleNotes || body.baseNotes) {
       const notes = buildStructuredNotes(body);
       updatePayload.fragranceNoteIds = notes.fragranceNoteIds;
