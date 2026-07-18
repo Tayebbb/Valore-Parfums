@@ -499,10 +499,17 @@ export async function POST(req: Request) {
     let ownerProfit: number;
     let otherOwnerProfit: number;
     if (owner !== "Store" && isPersonalCollection) {
+      // Derive the liquid/product cost from the actual unit cost minus packaging + bottle.
+      // For auto-priced decants, unitCost = purchasePricePerMl*ml + packaging + bottle, so this
+      // recovers purchasePricePerMl*ml. For manual admin orders (where perfume.purchasePricePerMl
+      // may be 0), this correctly credits the whole liquid portion of the admin-provided cost
+      // to the bottle owner instead of leaving them with only 85% of the profit.
+      const perUnitPackaging = packagingCost + bottleCost;
+      const perUnitProductCost = Math.max(0, unitCost - perUnitPackaging);
       const earningsResult = calculatePersonalBottleEarnings({
         sellingPrice: totalPrice,
-        packagingCost: (packagingCost + bottleCost) * quantity,
-        productCost: (Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl * quantity,
+        packagingCost: perUnitPackaging * quantity,
+        productCost: perUnitProductCost * quantity,
       });
       ownerProfit = earningsResult.bottleOwnerEarnings;
       otherOwnerProfit = earningsResult.otherOwnerEarnings;

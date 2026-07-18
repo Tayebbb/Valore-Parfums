@@ -444,10 +444,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (item.isPersonalCollection && ownerName !== "Store" && item.pricingSnapshot) {
           const snap = item.pricingSnapshot;
           const qty = Number(item.quantity ?? 1);
+          // Derive liquid/product cost from the actual unit cost minus packaging + bottle,
+          // so manual admin orders (where costPricePerMl may be 0) still credit the whole
+          // liquid portion to the bottle owner, not just 85% of the profit.
+          const perUnitPackaging = Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0);
+          const perUnitProductCost = Math.max(0, Number(unitCost) - perUnitPackaging);
           const earningsResult = calculatePersonalBottleEarnings({
             sellingPrice: nextTotalPrice,
-            packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
-            productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+            packagingCost: perUnitPackaging * qty,
+            productCost: perUnitProductCost * qty,
           });
           ownerProfit = earningsResult.bottleOwnerEarnings;
           otherOwnerProfit = earningsResult.otherOwnerEarnings;

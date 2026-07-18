@@ -135,10 +135,13 @@ export async function POST(req: Request) {
       const snap = item.pricingSnapshot;
       if (!snap) continue;
       const qty = Number(item.quantity ?? 1);
+      const packagingTotal = (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty;
+      const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
+      const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
       const result = calculatePersonalBottleEarnings({
         sellingPrice: Number(item.totalPrice ?? 0),
-        packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
-        productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+        packagingCost: packagingTotal,
+        productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
       });
       deductionMinor += toMinorUnits(result.bottleOwnerEarnings + result.otherOwnerEarnings);
     }

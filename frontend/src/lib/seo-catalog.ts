@@ -51,6 +51,7 @@ export interface PerfumeDocument {
   totalStockMl?: number;
   marketPricePerMl?: number;
   purchasePricePerMl?: number;
+  isPersonalCollection?: boolean;
   rating?: number;
   reviewCount?: number;
   reviews?: Array<{ rating: number }>;
@@ -432,8 +433,14 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
   const { sizes, bottles, packagingCost, margins } = await getPricingConfig();
   const marketPricePerMl = Number(perfume.marketPricePerMl || 0);
   const purchasePricePerMl = Number(perfume.purchasePricePerMl || marketPricePerMl || 0);
+  // Match /api/pricing: personal-collection perfumes price off purchasePricePerMl so that
+  // the storefront and admin manual order form show the same price.
+  const isPersonalCollection = Boolean(perfume.isPersonalCollection);
+  const effectiveMarketPricePerMl = isPersonalCollection
+    ? purchasePricePerMl
+    : (marketPricePerMl || purchasePricePerMl);
   const totalStockMl = Number(perfume.totalStockMl || 0);
-  const tier = getBrandTier(Math.max(1, marketPricePerMl) * 100);
+  const tier = getBrandTier(Math.max(1, effectiveMarketPricePerMl) * 100);
 
   const sizeBuckets = sizes.length > 0 ? sizes : DECANT_VARIANTS.map((ml) => ({ ml, enabled: true }));
 
@@ -446,7 +453,7 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
       // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
       const bottleAvailable = bottle === undefined || Number((bottle as { availableCount?: number }).availableCount ?? 0) > 0;
       const margin = getTierProfitMargin(tier, ml, margins);
-      const price = calculateSellingPrice(marketPricePerMl || purchasePricePerMl, ml, bottleCost, packagingCost, margin);
+      const price = calculateSellingPrice(effectiveMarketPricePerMl, ml, bottleCost, packagingCost, margin);
       const available = totalStockMl >= ml && bottleAvailable;
 
       return {

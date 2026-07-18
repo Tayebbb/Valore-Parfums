@@ -199,10 +199,15 @@ export async function GET() {
     if (item.isPersonalCollection && name !== "Store" && item.pricingSnapshot) {
       const snap = item.pricingSnapshot;
       const qty = Number(item.quantity ?? 1);
+      const packagingTotal = (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty;
+      // Prefer deriving productCost from the stored total costPrice (works for manual admin
+      // orders where costPricePerMl may be 0) and fall back to purchasePricePerMl * ml.
+      const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
+      const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
       const earningsResult = calculatePersonalBottleEarnings({
         sellingPrice: Number(item.totalPrice ?? 0),
-        packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
-        productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+        packagingCost: packagingTotal,
+        productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
       });
       itemOwnerProfit = earningsResult.bottleOwnerEarnings;
       itemOtherOwnerProfit = earningsResult.otherOwnerEarnings;
@@ -306,10 +311,13 @@ export async function GET() {
       const snap = item.pricingSnapshot;
       if (!snap) continue;
       const qty = Number(item.quantity ?? 1);
+      const packagingTotal = (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty;
+      const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
+      const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
       const result = calculatePersonalBottleEarnings({
         sellingPrice: Number(item.totalPrice ?? 0),
-        packagingCost: (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty,
-        productCost: Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty,
+        packagingCost: packagingTotal,
+        productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
       });
       deductionMinor += toMinorUnits(result.bottleOwnerEarnings + result.otherOwnerEarnings);
     }
