@@ -10,7 +10,7 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-07-18
+- **Last updated:** 2026-07-31
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -408,6 +408,12 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 
 ## 11. Recent Changes Log (most recent first)
 
+- **2026-07-31** — Added `validFrom`, `hasMerchantReturnPolicy`, and `shippingDetails`
+  to every `Offer` node in product JSON-LD (both `frontend/src/lib/seo-catalog.ts`
+  and `backend/src/lib/seo-catalog.ts`) to resolve Google Search Console "Merchant
+  listings structured data" warnings. New shared exports: `OFFER_VALID_FROM`
+  (`"2024-01-01"`) and `buildOfferPolicyNodes()` (7-day BD return window, BDT 80
+  shipping, 0–1d handling + 1–3d transit). Update both copies when policy changes.
 - **2026-07-18** — Expanded this file to a full project state doc (routes, libs,
   env, scripts, conventions).
 - **2026-07-18** — Auto-derive `isPersonalCollection` from `owner` on perfume

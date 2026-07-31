@@ -32,6 +32,49 @@ function resolveSiteUrl(): string {
 
 export const SITE_URL = resolveSiteUrl();
 
+// Static past date so structured data stays valid without per-request recomputation.
+export const OFFER_VALID_FROM = "2024-01-01";
+
+export function buildOfferPolicyNodes() {
+  return {
+    hasMerchantReturnPolicy: {
+      "@type": "MerchantReturnPolicy",
+      applicableCountry: "BD",
+      returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+      merchantReturnDays: 7,
+      returnMethod: "https://schema.org/ReturnByMail",
+      returnFees: "https://schema.org/ReturnShippingFees",
+    },
+    shippingDetails: {
+      "@type": "OfferShippingDetails",
+      shippingRate: {
+        "@type": "MonetaryAmount",
+        value: "80",
+        currency: "BDT",
+      },
+      shippingDestination: {
+        "@type": "DefinedRegion",
+        addressCountry: "BD",
+      },
+      deliveryTime: {
+        "@type": "ShippingDeliveryTime",
+        handlingTime: {
+          "@type": "QuantitativeValue",
+          minValue: 0,
+          maxValue: 1,
+          unitCode: "DAY",
+        },
+        transitTime: {
+          "@type": "QuantitativeValue",
+          minValue: 1,
+          maxValue: 3,
+          unitCode: "DAY",
+        },
+      },
+    },
+  };
+}
+
 export const DECANT_VARIANTS = [3, 5, 10, 15, 30] as const;
 
 export type DecantVariant = (typeof DECANT_VARIANTS)[number];
@@ -515,6 +558,7 @@ export function buildProductJsonLd(
   aggregate: { ratingValue: number; reviewCount: number },
 ) {
   const images = parseImageList(perfume.images).map((img) => (img.startsWith("http") ? img : `${SITE_URL}${img}`));
+  const offerPolicy = buildOfferPolicyNodes();
 
   const offerNodes = [
     ...offers.decantOffers.map((offer) => ({
@@ -525,8 +569,11 @@ export function buildProductJsonLd(
       availability: offer.availability,
       url: offer.url,
       itemCondition: "https://schema.org/NewCondition",
+      validFrom: OFFER_VALID_FROM,
       priceValidUntil: "2027-12-31",
       category: "Perfume Decant",
+      hasMerchantReturnPolicy: offerPolicy.hasMerchantReturnPolicy,
+      shippingDetails: offerPolicy.shippingDetails,
     })),
     {
       "@type": "Offer",
@@ -536,7 +583,10 @@ export function buildProductJsonLd(
       availability: offers.fullBottleOffer.availability,
       url: offers.fullBottleOffer.url,
       itemCondition: "https://schema.org/NewCondition",
+      validFrom: OFFER_VALID_FROM,
       category: "Perfume Full Bottle",
+      hasMerchantReturnPolicy: offerPolicy.hasMerchantReturnPolicy,
+      shippingDetails: offerPolicy.shippingDetails,
     },
   ];
 
