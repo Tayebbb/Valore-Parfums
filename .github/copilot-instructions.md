@@ -139,16 +139,16 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 
 ### Catalog Support
 
-| Route                            | Methods          | Guard          | Notes                            |
-| -------------------------------- | ---------------- | -------------- | -------------------------------- |
-| `/api/bottles`, `/[id]`          | GET / POST / PUT | admin (writes) | Atomiser inventory by ml         |
-| `/api/decant-sizes`, `/[id]`     | GET / POST / PUT | admin (writes) | Enable / disable ml sizes        |
-| `/api/notes-library`             | GET              | none           | Canonical fragrance notes        |
-| `/api/reviews`                   | GET, POST        | POST session   | Product reviews                  |
-| `/api/pickup-locations`, `/[id]` | GET / POST / PUT | admin (writes) | Pickup points                    |
-| `/api/vouchers`, `/[id]`         | GET / POST / PUT | admin          | Discount codes                   |
-| `/api/vouchers/validate`         | POST             | none           | Applies at checkout              |
-| `/api/merchant/feed`             | GET              | none           | Google Merchant XML feed         |
+| Route                            | Methods          | Guard          | Notes                     |
+| -------------------------------- | ---------------- | -------------- | ------------------------- |
+| `/api/bottles`, `/[id]`          | GET / POST / PUT | admin (writes) | Atomiser inventory by ml  |
+| `/api/decant-sizes`, `/[id]`     | GET / POST / PUT | admin (writes) | Enable / disable ml sizes |
+| `/api/notes-library`             | GET              | none           | Canonical fragrance notes |
+| `/api/reviews`                   | GET, POST        | POST session   | Product reviews           |
+| `/api/pickup-locations`, `/[id]` | GET / POST / PUT | admin (writes) | Pickup points             |
+| `/api/vouchers`, `/[id]`         | GET / POST / PUT | admin          | Discount codes            |
+| `/api/vouchers/validate`         | POST             | none           | Applies at checkout       |
+| `/api/merchant/feed`             | GET              | none           | Google Merchant XML feed  |
 
 ### Requests, Uploads, Misc
 
@@ -352,20 +352,20 @@ header with curl. Rules:
 
 ### Backend (`backend/.env.local` + Render env in prod)
 
-| Key                                                                                          | Meaning                                              |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `FIREBASE_PROJECT_ID` (or `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT`)         | GCP / Firebase project                               |
-| `FIREBASE_CLIENT_EMAIL`                                                                      | Service account email                                |
-| `FIREBASE_PRIVATE_KEY`                                                                       | Service account key (`\\n` escaped)                  |
+| Key                                                                                          | Meaning                                                                                 |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `FIREBASE_PROJECT_ID` (or `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT`)         | GCP / Firebase project                                                                  |
+| `FIREBASE_CLIENT_EMAIL`                                                                      | Service account email                                                                   |
+| `FIREBASE_PRIVATE_KEY`                                                                       | Service account key (`\\n` escaped)                                                     |
 | `SESSION_SIGNING_KEY`                                                                        | HMAC key for session cookies. **Required in prod, ≥ 32 chars — app throws without it.** |
-| `CLOUDINARY_URL` or `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_API_KEY` + `CLOUDINARY_API_SECRET` | Cloudinary creds                                     |
-| `CLOUDINARY_FOLDER`                                                                          | Upload folder (default `valore-parfums`)             |
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                        | Preferred email provider                             |
-| `GMAIL_USER`, `GMAIL_PASS`                                                                   | Nodemailer / SMTP fallback                           |
-| `OWNER1_EMAIL`, `OWNER2_EMAIL`                                                               | Admin alert recipients                               |
-| `ADMIN_ALERT_WEBHOOK_URL`                                                                    | Slack / Discord webhook on new manual-payment orders |
-| `ALLOWED_ORIGINS` (or `ALLOWED_ORIGIN`)                                                      | CORS whitelist (comma-separated)                     |
-| `NODE_ENV`                                                                                   | Controls secure cookie flag + logs                   |
+| `CLOUDINARY_URL` or `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_API_KEY` + `CLOUDINARY_API_SECRET` | Cloudinary creds                                                                        |
+| `CLOUDINARY_FOLDER`                                                                          | Upload folder (default `valore-parfums`)                                                |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                        | Preferred email provider                                                                |
+| `GMAIL_USER`, `GMAIL_PASS`                                                                   | Nodemailer / SMTP fallback                                                              |
+| `OWNER1_EMAIL`, `OWNER2_EMAIL`                                                               | Admin alert recipients                                                                  |
+| `ADMIN_ALERT_WEBHOOK_URL`                                                                    | Slack / Discord webhook on new manual-payment orders                                    |
+| `ALLOWED_ORIGINS` (or `ALLOWED_ORIGIN`)                                                      | CORS whitelist (comma-separated)                                                        |
+| `NODE_ENV`                                                                                   | Controls secure cookie flag + logs                                                      |
 
 ### Frontend (`frontend/.env.local` + Netlify env)
 
@@ -479,7 +479,7 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
     the response and forwarded the request to the route handler, so the origin check
     never applied to `OPTIONS`. Added `terminalHeaders()` to both `proxy.ts` files.
   - **`/api/[...path]` 500 on null-body statuses.** It called `new NextResponse(buffer,
-    { status })` unconditionally; 204/205/304 throw `Invalid response status code`.
+{ status })` unconditionally; 204/205/304 throw `Invalid response status code`.
     Now sends `null` for those statuses.
   - **Same-origin CORS regression.** `frontend/.env.production` sets `ALLOWED_ORIGIN`
     to the apex domain only while the site serves `www`, and `.env.local` points at an
@@ -527,16 +527,16 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 
 ### Transport & browser hardening
 
-| Control                    | Frontend                                     | Backend (API-only)                 |
-| -------------------------- | -------------------------------------------- | ---------------------------------- |
-| CSP                        | full policy, `frame-ancestors 'none'`        | `default-src 'none'`               |
-| HSTS                       | 2 y, includeSubDomains, preload (prod)       | same                               |
-| `X-Frame-Options`          | `DENY`                                       | `DENY`                             |
-| `X-Content-Type-Options`   | `nosniff`                                    | `nosniff`                          |
-| `Referrer-Policy`          | `strict-origin-when-cross-origin`            | same                               |
-| COOP                       | `same-origin-allow-popups` (Google OAuth)    | n/a                                |
-| CORS                       | explicit allowlist + same-origin             | explicit allowlist + same-origin   |
-| `images.remotePatterns`    | Cloudinary / Google hosts only               | same                               |
+| Control                  | Frontend                                  | Backend (API-only)               |
+| ------------------------ | ----------------------------------------- | -------------------------------- |
+| CSP                      | full policy, `frame-ancestors 'none'`     | `default-src 'none'`             |
+| HSTS                     | 2 y, includeSubDomains, preload (prod)    | same                             |
+| `X-Frame-Options`        | `DENY`                                    | `DENY`                           |
+| `X-Content-Type-Options` | `nosniff`                                 | `nosniff`                        |
+| `Referrer-Policy`        | `strict-origin-when-cross-origin`         | same                             |
+| COOP                     | `same-origin-allow-popups` (Google OAuth) | n/a                              |
+| CORS                     | explicit allowlist + same-origin          | explicit allowlist + same-origin |
+| `images.remotePatterns`  | Cloudinary / Google hosts only            | same                             |
 
 ### CSRF
 
