@@ -1,5 +1,12 @@
 // ─── Authentication helpers (server-side only) ────────
 import { cookies } from "next/headers";
+import {
+  COOKIE_NAME,
+  COOKIE_MAX_AGE,
+  signSessionToken,
+  verifySessionToken,
+  type SessionUser,
+} from "./session-token";
 
 // ─── Password hashing with PBKDF2 ─────────────────────
 // Uses Web Crypto API (available in Node 18+ / Edge runtime)
@@ -29,12 +36,16 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  // Google-only accounts have an empty passwordHash and must never match.
+  if (!stored || typeof stored !== "string") return false;
   // Support legacy SHA-256 hashes (no colon separator) for backward compatibility
   if (!stored.includes(":")) {
     return verifyLegacyPassword(password, stored);
   }
   const [saltHex, hashHex] = stored.split(":");
-  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
+  const saltBytes = saltHex.match(/.{2}/g);
+  if (!saltBytes || !hashHex) return false;
+  const salt = new Uint8Array(saltBytes.map((h) => parseInt(h, 16)));
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -77,55 +88,8 @@ async function verifyLegacyPassword(password: string, storedHash: string): Promi
 }
 
 // ─── Session helpers ───────────────────────────────────
-export interface SessionUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-const COOKIE_NAME = "vp-session";
-const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
-const SESSION_SIGNING_KEY = process.env.SESSION_SIGNING_KEY || "default-insecure-key-change-in-production";
-
-// Create a signed session token (prevents tampering with role/email)
-async function signSessionToken(user: SessionUser): Promise<string> {
-  const data = JSON.stringify(user);
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(SESSION_SIGNING_KEY);
-  const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  const sigHex = Array.from(new Uint8Array(signature)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${data}.${sigHex}`;
-}
-
-// Verify and extract session data from signed token
-async function verifySessionToken(token: string): Promise<SessionUser | null> {
-  // The token format is `${JSON.stringify(user)}.${sigHex}`.
-  // The sigHex is a lowercase hex string (no dots), so the last "." is always
-  // the separator. We must NOT use split(".") because email addresses inside
-  // the JSON data contain dots (e.g. "user@gmail.com"), which would break
-  // split into more than 2 parts.
-  const lastDot = token.lastIndexOf(".");
-  if (lastDot === -1) return null;
-
-  const data = token.slice(0, lastDot);
-  const sigHex = token.slice(lastDot + 1);
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(SESSION_SIGNING_KEY);
-  const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
-  const signature = new Uint8Array(sigHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
-
-  try {
-    const valid = await crypto.subtle.verify("HMAC", key, signature, encoder.encode(data));
-    if (!valid) return null;
-    const user = JSON.parse(data) as SessionUser;
-    if (!user.id || !user.role || !user.email) return null;
-    return user;
-  } catch {
-    return null;
-  }
-}
+export type { SessionUser };
+export { verifySessionToken, signSessionToken };
 
 export async function setSessionCookie(user: SessionUser): Promise<void> {
   const cookieStore = await cookies();
@@ -134,7 +98,7 @@ export async function setSessionCookie(user: SessionUser): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: MAX_AGE,
+    maxAge: COOKIE_MAX_AGE,
     path: "/",
   });
 }
@@ -144,29 +108,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = cookieStore.get(COOKIE_NAME);
   if (!session?.value) return null;
 
-  // Primary: verify the HMAC-signed token.
-  const verified = await verifySessionToken(session.value);
-  if (verified) return verified;
-
-  // Fallback: the frontend may have signed with a different SESSION_SIGNING_KEY
-  // (e.g. env var set on backend but not on frontend). Parse the JSON payload
-  // directly. This is safe because the cookie is httpOnly — it cannot be read
-  // or forged by browser-side JavaScript.
-  try {
-    let raw = session.value;
-    const lastDot = raw.lastIndexOf(".");
-    if (lastDot !== -1) {
-      const possibleSig = raw.slice(lastDot + 1);
-      if (/^[0-9a-f]{64}$/.test(possibleSig)) {
-        raw = raw.slice(0, lastDot);
-      }
-    }
-    const user = JSON.parse(raw) as SessionUser;
-    if (!user.id || !user.role || !user.email) return null;
-    return user;
-  } catch {
-    return null;
-  }
+  // The HMAC signature is the ONLY thing that makes this cookie trustworthy.
+  // httpOnly does not help here: any client can send an arbitrary Cookie header.
+  return verifySessionToken(session.value);
 }
 
 export async function clearSessionCookie(): Promise<void> {

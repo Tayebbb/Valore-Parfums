@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/session-token";
 
 type RateEntry = { count: number; resetAt: number };
 const apiRateStore = new Map<string, RateEntry>();
-const VERCEL_PREVIEW_ORIGIN_PATTERN = /^https:\/\/valore-parfums(?:-[a-z0-9-]+)?\.vercel\.app$/i;
 
 function parseOrigins(rawValue?: string): string[] {
   return (rawValue || "")
@@ -33,11 +33,19 @@ function getAllowedOrigins(): string[] {
 }
 
 function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
-  if (allowedOrigins.includes(origin)) {
-    return true;
-  }
+  return allowedOrigins.includes(origin);
+}
 
-  return VERCEL_PREVIEW_ORIGIN_PATTERN.test(origin);
+// First-party requests are always allowed, regardless of how narrowly
+// ALLOWED_ORIGIN is configured (e.g. apex-only while the site serves www).
+function isSameOrigin(req: NextRequest, origin: string): boolean {
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
 }
 
 function getClientIp(req: NextRequest): string {
@@ -46,7 +54,19 @@ function getClientIp(req: NextRequest): string {
   return ip || req.headers.get("x-real-ip") || "unknown";
 }
 
-export function proxy(request: NextRequest) {
+// NextResponse.next() carries internal `x-middleware-*` markers that tell Next
+// to continue on to the route handler. When the middleware answers a request
+// itself, those markers must be stripped or the response is discarded and the
+// request falls through — which would silently bypass the checks below.
+function terminalHeaders(source: Headers): Headers {
+  const headers = new Headers(source);
+  for (const key of Array.from(headers.keys())) {
+    if (key.toLowerCase().startsWith("x-middleware-")) headers.delete(key);
+  }
+  return headers;
+}
+
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
   // Security headers
@@ -54,6 +74,11 @@ export function proxy(request: NextRequest) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // API-only server: no browser-rendered content, so lock the CSP down fully.
+  response.headers.set(
+    "Content-Security-Policy",
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  );
   response.headers.set(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()",
@@ -71,13 +96,13 @@ export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/api/")) {
     const requestOrigin = request.headers.get("origin");
     const allowedOrigins = getAllowedOrigins();
-    const originAllowed = requestOrigin ? isOriginAllowed(requestOrigin, allowedOrigins) : false;
+    const originAllowed = requestOrigin
+      ? isOriginAllowed(requestOrigin, allowedOrigins) || isSameOrigin(request, requestOrigin)
+      : false;
 
     if (requestOrigin && originAllowed) {
       response.headers.set("Access-Control-Allow-Origin", requestOrigin);
       response.headers.append("Vary", "Origin");
-    } else if (!requestOrigin && process.env.NODE_ENV !== "production") {
-      response.headers.set("Access-Control-Allow-Origin", "*");
     }
 
     response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
@@ -85,13 +110,18 @@ export function proxy(request: NextRequest) {
     response.headers.set("Access-Control-Allow-Credentials", "true");
 
     if (request.method === "OPTIONS") {
-      if (requestOrigin && !originAllowed && process.env.NODE_ENV === "production") {
+      if (requestOrigin && !originAllowed) {
         return NextResponse.json(
           { error: "Origin not allowed" },
-          { status: 403, headers: response.headers },
+          { status: 403, headers: terminalHeaders(response.headers) },
         );
       }
-      return new NextResponse(null, { status: 204, headers: response.headers });
+      return new NextResponse(null, { status: 204, headers: terminalHeaders(response.headers) });
+    }
+
+    // CSRF defence-in-depth: reject cross-origin state-changing requests.
+    if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && requestOrigin && !originAllowed) {
+      return NextResponse.json({ error: "Cross-origin request blocked." }, { status: 403 });
     }
 
     // In-memory API rate limiting
@@ -128,19 +158,19 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Protect admin routes — redirect to login if no session cookie
+  // Protect admin routes. The cookie is only trustworthy after its HMAC
+  // signature verifies — any client can send an arbitrary Cookie header.
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const session = request.cookies.get("vp-session");
     if (!session?.value) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    try {
-      const user = JSON.parse(session.value);
-      if (user.role !== "admin") {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-    } catch {
+    const user = await verifySessionToken(session.value);
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (user.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 

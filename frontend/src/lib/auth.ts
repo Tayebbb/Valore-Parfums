@@ -1,5 +1,12 @@
 // ─── Authentication helpers (server-side only) ────────
 import { cookies } from "next/headers";
+import {
+  COOKIE_NAME,
+  COOKIE_MAX_AGE,
+  signSessionToken,
+  verifySessionToken,
+  type SessionUser,
+} from "./session-token";
 
 // ─── Password hashing with PBKDF2 ─────────────────────
 // Uses Web Crypto API (available in Node 18+ / Edge runtime)
@@ -29,12 +36,16 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  // Google-only accounts have an empty passwordHash and must never match.
+  if (!stored || typeof stored !== "string") return false;
   // Support legacy SHA-256 hashes (no colon separator) for backward compatibility
   if (!stored.includes(":")) {
     return verifyLegacyPassword(password, stored);
   }
   const [saltHex, hashHex] = stored.split(":");
-  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
+  const saltBytes = saltHex.match(/.{2}/g);
+  if (!saltBytes || !hashHex) return false;
+  const salt = new Uint8Array(saltBytes.map((h) => parseInt(h, 16)));
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -77,37 +88,8 @@ async function verifyLegacyPassword(password: string, storedHash: string): Promi
 }
 
 // ─── Session helpers ───────────────────────────────────
-export interface SessionUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-export const COOKIE_NAME = "vp-session";
-export const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
-const SESSION_SIGNING_KEY =
-  process.env.SESSION_SIGNING_KEY || "default-insecure-key-change-in-production";
-
-// Sign a session token with HMAC-SHA256 — same algorithm and key as the
-// backend, so tokens created here are verifiable there and vice-versa.
-export async function signSessionToken(user: SessionUser): Promise<string> {
-  const data = JSON.stringify(user);
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(SESSION_SIGNING_KEY);
-  const key = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  const sigHex = Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `${data}.${sigHex}`;
-}
+export type { SessionUser };
+export { COOKIE_NAME, COOKIE_MAX_AGE, signSessionToken, verifySessionToken };
 
 export async function setSessionCookie(user: SessionUser): Promise<void> {
   const cookieStore = await cookies();
@@ -125,25 +107,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const session = cookieStore.get(COOKIE_NAME);
   if (!session?.value) return null;
-  try {
-    let raw = session.value;
-    // The backend stores a signed token: "{...json}.{64-char-hex-sig}".
-    // Because this is an httpOnly cookie read server-side we can trust the
-    // payload without re-verifying the HMAC (the httpOnly flag prevents
-    // client-side JS from forging the cookie).
-    const lastDot = raw.lastIndexOf(".");
-    if (lastDot !== -1) {
-      const possibleSig = raw.slice(lastDot + 1);
-      if (/^[0-9a-f]{64}$/.test(possibleSig)) {
-        raw = raw.slice(0, lastDot);
-      }
-    }
-    const user = JSON.parse(raw) as Record<string, unknown>;
-    if (!user.id || !user.role) return null;
-    return { id: String(user.id), name: String(user.name || ""), email: String(user.email || ""), role: String(user.role) };
-  } catch {
-    return null;
-  }
+  // The HMAC signature is the ONLY thing that makes this cookie trustworthy.
+  // httpOnly does not help: any client can send an arbitrary Cookie header.
+  return verifySessionToken(session.value);
 }
 
 export async function clearSessionCookie(): Promise<void> {

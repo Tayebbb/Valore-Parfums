@@ -8,16 +8,9 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
 
-  experimental: {
-    turbopackUseSystemTlsCerts: true,
-  },
-
   turbopack: {
     root: path.resolve(__dirname),
   },
-
-  // Allow Turbopack to use system TLS certificates so Google Fonts can be
-  // fetched during the build (required when the build host uses a custom CA).
 
   // API requests are handled by frontend route handlers under /api.
   async rewrites() {
@@ -36,8 +29,12 @@ const nextConfig: NextConfig = {
     dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production" && !isNetlify,
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    // Restricted to trusted hosts: a wildcard turns /_next/image into an open
+    // image proxy that can be pointed at arbitrary internal or external URLs.
     remotePatterns: [
-      { protocol: "https", hostname: "**" },
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "firebasestorage.googleapis.com" },
     ],
   },
 

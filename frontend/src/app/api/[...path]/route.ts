@@ -58,6 +58,11 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
   }
 
   const pathname = path.join("/");
+  // Prevent the caller from escaping the backend's /api namespace (SSRF / traversal).
+  if (path.some((segment) => segment === "." || segment === ".." || segment.includes("\\")) ||
+      /^https?:\/\//i.test(pathname)) {
+    return NextResponse.json({ error: "Invalid API path." }, { status: 400 });
+  }
   const query = req.nextUrl.search || "";
   const targetUrl = `${backendBaseUrl}/api/${pathname}${query}`;
   const method = req.method.toUpperCase();
@@ -73,6 +78,11 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
   headers.delete("host");
   headers.delete("content-length");
   headers.delete("connection");
+  // This is a server-to-server call, not a browser request. Forwarding the
+  // browser's Origin would make the backend re-run its own CORS allowlist
+  // against it; cross-origin writes are already rejected by the middleware.
+  headers.delete("origin");
+  headers.delete("referer");
   if (useCatalogCache) {
     headers.delete("cookie");
     headers.delete("authorization");
@@ -134,7 +144,9 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
     );
   }
 
-  const bodyBuffer = await upstream.arrayBuffer();
+  // 204/205/304 responses must not carry a body — passing one throws.
+  const isNullBodyStatus = upstream.status === 204 || upstream.status === 205 || upstream.status === 304;
+  const bodyBuffer = isNullBodyStatus ? null : await upstream.arrayBuffer();
 
   return new NextResponse(bodyBuffer, {
     status: upstream.status,

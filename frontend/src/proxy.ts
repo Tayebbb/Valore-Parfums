@@ -1,8 +1,41 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/session-token";
 
 type RateEntry = { count: number; resetAt: number };
 const apiRateStore = new Map<string, RateEntry>();
+
+function parseOrigins(rawValue?: string): string[] {
+  return (rawValue || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function getAllowedOrigins(): string[] {
+  const configured = [
+    ...parseOrigins(process.env.ALLOWED_ORIGINS),
+    ...parseOrigins(process.env.ALLOWED_ORIGIN),
+  ];
+  if (configured.length > 0) return Array.from(new Set(configured));
+
+  if (process.env.NODE_ENV === "production") {
+    return ["https://www.valoreparfums.app", "https://valoreparfums.app"];
+  }
+  return ["http://localhost:3000", "http://127.0.0.1:3000"];
+}
+
+// First-party requests are always allowed, regardless of how narrowly
+// ALLOWED_ORIGIN is configured (e.g. apex-only while the site serves www).
+function isSameOrigin(request: NextRequest, origin: string): boolean {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
 
 function getClientIp(req: NextRequest): string {
   const forwardedFor = req.headers.get("x-forwarded-for") || "";
@@ -10,7 +43,35 @@ function getClientIp(req: NextRequest): string {
   return ip || req.headers.get("x-real-ip") || "unknown";
 }
 
-export function proxy(request: NextRequest) {
+// NextResponse.next() carries internal `x-middleware-*` markers that tell Next
+// to continue on to the route handler. When the middleware answers a request
+// itself, those markers must be stripped or the response is discarded and the
+// request falls through — which would silently bypass the checks below.
+function terminalHeaders(source: Headers): Headers {
+  const headers = new Headers(source);
+  for (const key of Array.from(headers.keys())) {
+    if (key.toLowerCase().startsWith("x-middleware-")) headers.delete(key);
+  }
+  return headers;
+}
+
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  // Next.js injects inline bootstrap scripts; 'unsafe-inline' is required here.
+  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.googletagmanager.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://res.cloudinary.com",
+  "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
   // Security headers
@@ -18,6 +79,8 @@ export function proxy(request: NextRequest) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   response.headers.set(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()",
@@ -31,15 +94,38 @@ export function proxy(request: NextRequest) {
     );
   }
 
-  // CORS policy for API routes (restrict in production via env)
+  // CORS policy for API routes — strict allowlist, never a wildcard.
   if (request.nextUrl.pathname.startsWith("/api/")) {
-    const allowOrigin = process.env.ALLOWED_ORIGIN || "*";
-    response.headers.set("Access-Control-Allow-Origin", allowOrigin);
+    const requestOrigin = request.headers.get("origin");
+    const allowedOrigins = getAllowedOrigins();
+    const originAllowed = requestOrigin
+      ? allowedOrigins.includes(requestOrigin) || isSameOrigin(request, requestOrigin)
+      : false;
+
+    if (requestOrigin && originAllowed) {
+      response.headers.set("Access-Control-Allow-Origin", requestOrigin);
+      response.headers.append("Vary", "Origin");
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+    }
     response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-webhook-token");
 
     if (request.method === "OPTIONS") {
-      return new NextResponse(null, { status: 204, headers: response.headers });
+      if (requestOrigin && !originAllowed) {
+        return NextResponse.json(
+          { error: "Origin not allowed" },
+          { status: 403, headers: terminalHeaders(response.headers) },
+        );
+      }
+      return new NextResponse(null, { status: 204, headers: terminalHeaders(response.headers) });
+    }
+
+    // CSRF defence-in-depth: reject cross-origin state-changing requests.
+    if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && requestOrigin && !originAllowed) {
+      return NextResponse.json(
+        { error: "Cross-origin request blocked." },
+        { status: 403 },
+      );
     }
 
     // In-memory API rate limiting
@@ -76,30 +162,19 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Protect admin routes — redirect to login if no session cookie.
-  // NOTE: the cookie value is a SIGNED token of the form "{json}.{64-hex-hmac}".
-  // We must strip the trailing ".{hex}" suffix before JSON.parse, otherwise it
-  // throws and the catch redirects every admin request to /login.
+  // Protect admin routes. The cookie is only trustworthy after its HMAC
+  // signature verifies — any client can send an arbitrary Cookie header.
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const session = request.cookies.get("vp-session");
     if (!session?.value) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    try {
-      let raw = session.value;
-      const lastDot = raw.lastIndexOf(".");
-      if (lastDot !== -1) {
-        const possibleSig = raw.slice(lastDot + 1);
-        if (/^[0-9a-f]{64}$/.test(possibleSig)) {
-          raw = raw.slice(0, lastDot);
-        }
-      }
-      const user = JSON.parse(raw);
-      if (user.role !== "admin") {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-    } catch {
+    const user = await verifySessionToken(session.value);
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (user.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
