@@ -10,7 +10,7 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-02 (Google sign-in CSP + session-signing failure handling)
+- **Last updated:** 2026-08-02 (Google ID tokens verified with jose — firebase-admin/auth unusable on Vercel)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -444,10 +444,46 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 - **The frontend CSP is built at module load in `frontend/src/proxy.ts`.** Adding any
   new third-party host (analytics, payment widget, CDN) requires updating
   `buildContentSecurityPolicy()` or the browser silently blocks it.
+- **Node >= 22 is required in production** (`engines` in both `package.json` files) —
+  `firebase-admin` 14 refuses/breaks on older runtimes. Do not remove the pin when
+  upgrading dependencies.
+- **Never import `firebase-admin/auth` in backend code.** Its dependency chain is not
+  traced into Vercel function bundles; any route (or shared lib) importing it crashes
+  the whole function with an HTML 500. Google ID tokens are verified with `jose` in
+  `backend/src/app/api/auth/google/route.ts` — extend that pattern if more Firebase
+  Auth features are needed. `firebase-admin/app` and `firebase-admin/firestore` are fine.
+- **Do not set `outputFileTracingRoot` in either `next.config.ts`** — it breaks
+  Vercel output collection (`ENOENT .next/package.json`) and deployments fail while
+  production silently keeps serving the previous build. The
+  `outputFileTracingRoot`/`turbopack.root` mismatch warning in build logs is benign.
 
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-02 (3)** — **Google sign-in fixed end-to-end; `firebase-admin/auth` banned on Vercel.**
+  Even after the Node 22 pin, `/api/auth/google` returned an HTML 500: any function
+  whose bundle includes `firebase-admin/auth` fails to load on Vercel (untraced
+  transitive deps; importing it from `lib/firebase-admin.ts` broke login too —
+  proven empirically). The route now verifies Firebase ID tokens with **`jose`**
+  (`createRemoteJWKSet` against `securetoken@system.gserviceaccount.com`, RS256,
+  issuer/audience = project ID) — same checks the Admin SDK does. Verified in prod:
+  google → JSON `Invalid Compact JWS` for garbage tokens, login → 401 JSON, signup → 200.
+  Also: **do not set `outputFileTracingRoot`** — it made `vercel build` fail with
+  `ENOENT lstat '/vercel/path0/.next/package.json'` (three deployments failed silently
+  while production kept serving the old build; check the Deployments tab when “nothing
+  changes”). A leftover probe user `probe-new-user-98765@example.com` exists in `users`.
+
+- **2026-08-02 (2)** — **Production auth-route crashes root-caused to Node runtime.**
+  `firebase-admin` 14 (upgraded 2026-07-31) declares `engines.node >= 22`; the Vercel
+  backend project ran an older Node, so any route touching firebase-admin at request
+  time (login user query, google `verifyIdToken`) crashed with an HTML 500, while
+  early-return routes (`/api/auth/me`, `/api/orders` → 401) and build-time-cached ones
+  (`/api/notes-library`) appeared healthy. Both `package.json` files now pin
+  `"engines": { "node": ">=22" }`, which Vercel honours. Debugging notes:
+  Vercel adds `Access-Control-Allow-Origin: *` to static assets (incl. the prerendered
+  `/500` page) — it is not evidence of app CORS config; an HTML 500 with
+  `X-Matched-Path: /500` means the function crashed outside the route try/catch.
 
 - **2026-08-02** — Google sign-in fixes:
   - **CSP was blocking Firebase Auth.** `connect-src` lacked `https://apis.google.com`
