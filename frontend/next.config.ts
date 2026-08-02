@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
 
+  // Must match turbopack.root or Vercel's file tracer can omit runtime deps
+  // from serverless function bundles (crashes only in production).
+  outputFileTracingRoot: path.resolve(__dirname),
+
   // API requests are handled by frontend route handlers under /api.
   async rewrites() {
     return [
