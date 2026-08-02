@@ -2,7 +2,6 @@
 // Replaces Prisma as the database layer, connecting to Firestore
 import { initializeApp, getApps, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
 
 const projectId =
   process.env.FIREBASE_PROJECT_ID ||
@@ -49,13 +48,6 @@ if (!getApps().length) {
 }
 
 export const db = getFirestore();
-
-// Re-exported here because importing "firebase-admin/auth" directly from a
-// route resolved to build-absolute paths on Vercel (ENOENT at runtime), while
-// subpath imports from this lib chunk are traced correctly.
-export function getAdminAuth() {
-  return getAuth();
-}
 
 // ─── Serialization helper ──────────────────────────────
 // Recursively converts Firestore Timestamp fields to ISO strings
