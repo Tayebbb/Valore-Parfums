@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+// Deploy note: SESSION_SIGNING_KEY + FIREBASE_* must be set on the host (see §8 of copilot-instructions).
 // Detect Netlify environment
 const isNetlify = process.env.NEXT_PUBLIC_ENV === "netlify";
 
