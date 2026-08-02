@@ -62,12 +62,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid auth payload" }, { status: 500 });
   }
 
-  const token = await signSessionToken({
-    id: String(data.id),
-    name: String(data.name ?? ""),
-    email: String(data.email ?? ""),
-    role: String(data.role),
-  });
+  let token: string;
+  try {
+    token = await signSessionToken({
+      id: String(data.id),
+      name: String(data.name ?? ""),
+      email: String(data.email ?? ""),
+      role: String(data.role),
+    });
+  } catch (err) {
+    console.error("[auth/signup] failed to sign session token", err);
+    return NextResponse.json(
+      { error: "Session signing is not configured. Set SESSION_SIGNING_KEY (32+ chars)." },
+      { status: 500 },
+    );
+  }
 
   const response = NextResponse.json(data);
   response.cookies.set({

@@ -55,21 +55,56 @@ function terminalHeaders(source: Headers): Headers {
   return headers;
 }
 
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  // Next.js injects inline bootstrap scripts; 'unsafe-inline' is required here.
-  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.googletagmanager.com",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://res.cloudinary.com",
-  "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
+// The storefront calls the backend directly in some client paths, so its origin
+// has to be in connect-src or those fetches are blocked by the browser.
+function getApiOrigin(): string | null {
+  const raw = (
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.API_BASE_URL ||
+    ""
+  ).trim();
+  if (!raw) return null;
+  try {
+    return new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).origin;
+  } catch {
+    return null;
+  }
+}
+
+function buildContentSecurityPolicy(): string {
+  const connectSrc = [
+    "'self'",
+    "https://*.googleapis.com",
+    "https://apis.google.com",
+    "https://accounts.google.com",
+    "https://*.firebaseio.com",
+    "https://*.firebaseapp.com",
+    "https://res.cloudinary.com",
+    "https://*.google-analytics.com",
+    "https://*.googletagmanager.com",
+  ];
+  const apiOrigin = getApiOrigin();
+  if (apiOrigin) connectSrc.push(apiOrigin);
+
+  return [
+    "default-src 'self'",
+    // Next.js injects inline bootstrap scripts; 'unsafe-inline' is required here.
+    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.googleusercontent.com https://www.googletagmanager.com https://*.google-analytics.com",
+    "font-src 'self' data:",
+    `connect-src ${connectSrc.join(" ")}`,
+    // signInWithPopup loads a gapi iframe from apis.google.com.
+    "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://apis.google.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+const CONTENT_SECURITY_POLICY = buildContentSecurityPolicy();
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next();

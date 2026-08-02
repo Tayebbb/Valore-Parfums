@@ -10,7 +10,7 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-07-31 (security hardening + verification)
+- **Last updated:** 2026-08-02 (Google sign-in CSP + session-signing failure handling)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -438,10 +438,35 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
   `origin`/`referer` before forwarding — the backend must not re-evaluate a browser
   origin against its own allowlist. It also must send a `null` body for 204/205/304.
 - **`session-token.ts` exists twice** (frontend + backend) — always edit both.
+- **`signSessionToken()` throws when `SESSION_SIGNING_KEY` is missing/short in prod.**
+  Every caller must catch it and return JSON; an uncaught throw becomes an HTML 500
+  that the client cannot parse, surfacing only a generic "failed" message.
+- **The frontend CSP is built at module load in `frontend/src/proxy.ts`.** Adding any
+  new third-party host (analytics, payment widget, CDN) requires updating
+  `buildContentSecurityPolicy()` or the browser silently blocks it.
 
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-02** — Google sign-in fixes:
+  - **CSP was blocking Firebase Auth.** `connect-src` lacked `https://apis.google.com`
+    and the backend API origin, so the gapi popup callbacks and direct client fetches
+    (e.g. `/api/notifications`) were refused. `frontend/src/proxy.ts` now builds the
+    policy with `buildContentSecurityPolicy()`, which appends the origin derived from
+    `NEXT_PUBLIC_API_BASE_URL` / `API_BASE_URL` and adds `apis.google.com`,
+    `accounts.google.com`, `*.firebaseapp.com`, `*.google-analytics.com`,
+    `*.googletagmanager.com` to `connect-src`; `www.gstatic.com` to `script-src`;
+    `apis.google.com` to `frame-src` (gapi iframe).
+  - **Opaque 500 on `/api/auth/google`.** `signSessionToken()` throws in production
+    when `SESSION_SIGNING_KEY` is unset/short (§7.8). It was uncaught in the three
+    frontend auth routes, so Next returned an HTML 500 and the UI fell back to the
+    generic "Google sign-in failed". `login`, `signup`, and `google` routes now catch
+    it, log server-side, and return JSON
+    `{ error: "Session signing is not configured. Set SESSION_SIGNING_KEY (32+ chars)." }`.
+  - **Deployment action required:** `SESSION_SIGNING_KEY` must be set to the same
+    ≥ 32-char value on both the frontend and backend hosts. It is absent from every
+    `.env*` file in the repo.
 
 - **2026-07-31 (security audit)** — Deep security review + remediation:
   - **CRITICAL auth bypass fixed.** `getSessionUser()` in both `backend/src/lib/auth.ts`
