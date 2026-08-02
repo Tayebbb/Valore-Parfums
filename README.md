@@ -95,7 +95,7 @@ Frontend API calls are proxied to backend via `NEXT_PUBLIC_API_BASE_URL`.
 
 ### Firestore Collections (summary)
 
-`perfumes`, `perfumeReviews`, `notesLibrary`, `decantSizes`, `bottles`, `settings`, `bulkPricingRules`, `orders` (+`items` subcollection), `vouchers`, `stockRequests`, `users`, `wishlists`, `notifications`, `withdrawals`, `pickupLocations`, `requests`, `fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`
+`perfumes`, `perfumeReviews`, `notesLibrary`, `decantSizes`, `bottles`, `settings`, `bulkPricingRules`, `orders` (+`items` subcollection), `vouchers`, `stockRequests`, `users`, `wishlists`, `notifications`, `withdrawals`, `pickupLocations`, `requests`, `fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`, `investors`, `investments`, `investmentAllocations`, `investmentTransactions`, `investmentWithdrawals`, `buybacks`
 
 ---
 
@@ -575,6 +575,59 @@ Pickup orders have zero delivery fee.
 ### 6.11 Money Storage Convention
 
 All persistent financial figures are stored in **minor units** (BDT × 100, integers) in the `financialsMinor` field on orders and item `pricingSnapshot` objects to avoid floating-point rounding errors. Display uses `fromMinorUnits(value)`.
+
+### 6.12 Inventory Investment System (two-stream model)
+
+External investors finance perfume inventory without owning equity. Everything
+lives under `backend/src/lib/investments/` (pure engine + transactional
+services) and six Firestore collections: `investors`, `investments`,
+`investmentAllocations`, `investmentTransactions` (immutable ledger),
+`investmentWithdrawals`, `buybacks`.
+
+**Core rules:**
+
+- **Invariant (per investment, always):**
+  `amountMinor === recoveredCapitalMinor + remainingInventoryCostMinor` —
+  validated inside every Firestore transaction; violation throws → rollback.
+- **Stream A — capital recovery.** The perfume cost of every funded sale
+  returns investor capital at the lot's locked `costPerMlMinor`. Not profit,
+  never split, never directly withdrawable.
+- **Stream B — profit.** `net = sellingPrice − sellingCosts − perfumeCost`,
+  split by per-investment `profitSharePercentage` (default from
+  `settings/default.defaultInvestorProfitSharePercent`, fallback 40). The
+  investor share rounds; the business takes the exact remainder. Losses reduce
+  profit (can go negative) — capital still recovers in full.
+- **Recognition point:** order status **Dispatched** (same point store owner
+  profit is credited). Cancelling a Dispatched/Completed order writes
+  compensating `rev_`-keyed adjustment entries that exactly restore lots,
+  capital, and profit.
+- **FIFO consumption** of allocations (oldest lot first); multi-lot sales
+  prorate revenue/costs by ml with the remainder on the last lot. Oversells
+  run `allowPartial` — only funded ml is consumed and revenue is prorated.
+- **Idempotency:** ledger doc IDs are deterministic idempotency keys written
+  with `tx.create` (replays physically fail), plus an in-transaction ledger
+  query on `referenceOrderItemId` blocks duplicate sale events regardless of
+  FIFO state.
+- **Withdrawals** are profit-only: requested (pending) → approved (balance
+  re-validated and deducted inside a transaction) → paid.
+- **Buyback** closes an investment for
+  `remainingInventoryCost + max(0, availableProfit)`. It writes per-stream
+  ledger entries — capital `_buyback`, profit payout `_buyback_profit`
+  (profit > 0), or write-off adjustment `_buyback_writeoff` (profit < 0).
+  Negative profit is never paid out. Stock stays in `perfumes.totalStockMl`
+  (store-owned afterwards).
+- Personal-collection perfumes can never be investor-funded.
+- The `investor` role never satisfies `requireAdmin()`; investor routes
+  resolve the investor from the session (userId/email), never query params.
+
+**Worked example** (golden test in `backend/scripts/test-investments.ts`):
+30,000 BDT investment → 500 ml @ 60 BDT/ml. A 10 ml sale @ 900 BDT with
+100 BDT selling costs recovers 600 capital, nets 200 profit → investor 80
+(40%), business 120. Post-sale: recovered 600 + remaining 29,400 = 30,000 ✓.
+
+**Verification:** `npx tsx scripts/test-investments.ts` (84 pure-function
+assertions) and `npx tsx scripts/check-investments.ts` (read-only ledger
+replay + invariant reconciliation against live data).
 
 ---
 
