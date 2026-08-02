@@ -55,6 +55,21 @@ export const AUDIT_ACTIONS = {
   AUTH_RATE_LIMITED: "auth:rate_limited",
   UNAUTHORIZED_ACCESS: "security:unauthorized_access",
   PRIVILEGE_ESCALATION_ATTEMPT: "security:privilege_escalation_attempt",
+
+  // Investment operations
+  INVESTOR_CREATED: "admin:investor_created",
+  INVESTOR_UPDATED: "admin:investor_updated",
+  INVESTMENT_CREATED: "admin:investment_created",
+  INVESTMENT_SALE_PROCESSED: "investment:sale_processed",
+  INVESTMENT_SALE_REVERSED: "investment:sale_reversed",
+  INVESTMENT_BUYBACK: "admin:investment_buyback",
+  INVESTMENT_CLOSED: "investment:closed",
+  INVESTMENT_WITHDRAWAL_REQUESTED: "investment:withdrawal_requested",
+  INVESTMENT_WITHDRAWAL_APPROVED: "admin:investment_withdrawal_approved",
+  INVESTMENT_WITHDRAWAL_REJECTED: "admin:investment_withdrawal_rejected",
+  INVESTMENT_WITHDRAWAL_PAID: "admin:investment_withdrawal_paid",
+  INVESTMENT_ADJUSTMENT: "admin:investment_adjustment",
+  INVESTMENT_INVARIANT_VIOLATION: "investment:invariant_violation",
 };
 
 // Helper to extract IP address from request
