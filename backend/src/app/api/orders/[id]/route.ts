@@ -20,6 +20,10 @@ import {
 } from "@/lib/email";
 import { validateString } from "@/lib/validation";
 import {
+  processInvestmentSalesForOrder,
+  reverseInvestmentSalesForOrder,
+} from "@/lib/investments/orderIntegration";
+import {
   STATUS_CONFIG,
   getDbValueForStatusKey,
   isStatusAllowedForFulfillment,
@@ -795,6 +799,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         );
       }
     }
+
+    // ── Investor-funded stock: recognise capital recovery + investor profit ──
+    // Same recognition point as owner profit crediting. Idempotent (ledger doc
+    // IDs derive from order item IDs) and best-effort — never blocks the order.
+    const investmentSummary = await processInvestmentSalesForOrder(id, admin.id);
+    if (investmentSummary.itemsProcessed > 0 || investmentSummary.errors.length > 0) {
+      console.log(
+        `[INVESTMENT] Order ${id}: processed ${investmentSummary.itemsProcessed} item(s), ` +
+          `capital ${investmentSummary.totalCapitalRecoveredMinor} minor, ` +
+          `investor profit ${investmentSummary.totalInvestorProfitMinor} minor` +
+          (investmentSummary.errors.length ? `, errors: ${investmentSummary.errors.join("; ")}` : ""),
+      );
+    }
   }
 
   // ── Reverse profit & restore stock when cancelling a Completed order ──
@@ -942,6 +959,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             { merge: true },
           );
         }
+      }
+
+      // ── Reverse investor-funded ledger activity (idempotent, best-effort) ──
+      const investmentReversal = await reverseInvestmentSalesForOrder(id, admin.id);
+      if (investmentReversal.reversedEntries > 0 || investmentReversal.errors.length > 0) {
+        console.log(
+          `[INVESTMENT] Order ${id} cancellation: reversed ${investmentReversal.reversedEntries} ledger entr(ies)` +
+            (investmentReversal.errors.length ? `, errors: ${investmentReversal.errors.join("; ")}` : ""),
+        );
       }
     }
   }

@@ -126,6 +126,16 @@ export async function requireAdmin(): Promise<SessionUser | null> {
   return user;
 }
 
+// ─── Investor guard ────────────────────────────────────
+// Returns the session user if investor (or admin), otherwise null.
+// Investor role must NEVER satisfy requireAdmin() — the reverse is allowed.
+export async function requireInvestor(): Promise<SessionUser | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+  if (user.role !== "investor" && user.role !== "admin") return null;
+  return user;
+}
+
 // ─── Email normalization ───────────────────────────────
 // Normalize emails to lowercase for consistent lookups
 export function normalizeEmail(email?: string | null): string {

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { generateOrderCancelledEmail, sendEmail } from "@/lib/email";
 import { validateString } from "@/lib/validation";
 import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
+import { reverseInvestmentSalesForOrder } from "@/lib/investments/orderIntegration";
 
 function hasPaidLikeStatus(status?: string): boolean {
   const normalized = String(status || "").trim().toLowerCase();
@@ -169,6 +170,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           reversalReason: `Order ${id} cancelled`,
           reversedAt: now,
         });
+      }
+
+      // Reverse investor-funded ledger activity (idempotent, best-effort)
+      const investmentReversal = await reverseInvestmentSalesForOrder(id, admin.id);
+      if (investmentReversal.reversedEntries > 0 || investmentReversal.errors.length > 0) {
+        console.log(
+          `[INVESTMENT] Order ${id} cancellation: reversed ${investmentReversal.reversedEntries} ledger entr(ies)` +
+            (investmentReversal.errors.length ? `, errors: ${investmentReversal.errors.join("; ")}` : ""),
+        );
       }
     }
 
