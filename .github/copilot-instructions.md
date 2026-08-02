@@ -10,7 +10,7 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-02 (Inventory Investment System — Phase 4: production hardening, buyback ledger fix, idempotency fix)
+- **Last updated:** 2026-08-02 (Inventory Investment System — Phase 5: release QA, docs, feature branch + draft PR #22)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -554,6 +554,15 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-02 (7)** — **Inventory Investment System — Phase 5 release.** Full QA
+  battery green (84/84 tests, tsc + eslint 0 errors both apps, production builds
+  pass). Fixed pre-existing `react-hooks/set-state-in-effect` lint error in
+  `StoreClientShell.tsx` (recent-searches localStorage read deferred to a frame).
+  README gained §6.12 (investment system reference) + collections list. All
+  investment work committed as 5 logical commits on
+  `feature/inventory-investment-system` and pushed; **draft PR #22** open against
+  `main` — the investment system is NOT on `main` until that PR merges.
 
 - **2026-08-02 (6)** — **Inventory Investment System — Phase 4 hardening.**
   Fixed two real bugs: (1) **buyback with negative profit** credited the raw
