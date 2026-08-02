@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuid } from "uuid";
 import { db, Collections } from "@/lib/prisma";
@@ -15,6 +14,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Google ID token is required" }, { status: 400 });
     }
 
+    // Dynamic import: if this submodule fails to load in the serverless bundle,
+    // the error is caught below and returned as JSON instead of an HTML 500.
+    const { getAuth } = await import("firebase-admin/auth");
     const decoded = await getAuth().verifyIdToken(idToken);
     const email = normalizeEmail(decoded.email);
     if (!email) {
