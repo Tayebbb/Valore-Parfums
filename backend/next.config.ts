@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
 
-  // Must match turbopack.root or Vercel's file tracer can omit runtime deps
-  // from serverless function bundles (crashes only in production).
-  outputFileTracingRoot: path.resolve(__dirname),
-
   // Optimize images
   images: {
     formats: ["image/avif", "image/webp"],
