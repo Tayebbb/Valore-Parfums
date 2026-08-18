@@ -10,7 +10,7 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-02 (Inventory Investment System — Phase 5: release QA, docs, feature branch + draft PR #22)
+- **Last updated:** 2026-08-18 (Investment system — investor account statement + ROI surfacing)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -180,8 +180,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | `/api/investment-withdrawals`      | GET, POST | investor (own) / admin | Profit-only withdrawal requests                                                                       |
 | `/api/investment-withdrawals/[id]` | PUT       | admin                  | `action: approve\|reject\|paid`; approve deducts profit inside tx                                     |
 | `/api/investor/dashboard`          | GET       | investor               | Investor resolved from session (userId/email) — IDOR-proof                                            |
-| `/api/investor/investments/[id]`   | GET       | investor               | Ownership-guarded (404 on foreign ids); allocations + ledger                                          |
-
+| `/api/investor/investments/[id]`   | GET       | investor               | Ownership-guarded (404 on foreign ids); allocations + ledger                                          || `/api/investor/statement`          | GET       | investor / admin       | §17 account statement (MAJOR units); admin may pass `?investorId=` for any investor                    |
 **Order integration:** `orders/[id]` PUT → Dispatched calls
 `processInvestmentSalesForOrder()` (per-item FIFO consumption, `allowPartial`,
 idempotent ledger keys). PUT → Cancelled (from Dispatched) and
@@ -222,9 +221,12 @@ Server-side redirect in `admin/layout.tsx` checks session role before render.
 
 ### Investor portal (`app/investor/`)
 
-`/investor` (dashboard: summary cards, investments table, profit-withdrawal
-request form, withdrawal history), `/investor/investments/[id]` (balances,
-allocations, ledger with stream filter). `investor/layout.tsx` is a server
+`/investor` (dashboard: summary cards incl. remaining capital / available profit /
+account value / ROI, investments table, profit-withdrawal request form, withdrawal
+history, statement link), `/investor/investments/[id]` (balances, allocations,
+ledger with stream filter), `/investor/statement` (print-friendly §17 account
+statement; admins reach it via `?investorId=` links from `/admin/investments`).
+`investor/layout.tsx` is a server
 gate mirroring `admin/layout.tsx`: allows role `investor` OR `admin`,
 redirects others. The API is the real security boundary (`requireInvestor()`
 
@@ -554,6 +556,20 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-18** — **Investor account statement + ROI surfacing** (spec gap-closure
+  on `feature/inventory-investment-system`). New `GET /api/investor/statement`
+  (session-resolved investor; admin `?investorId=` override; MAJOR units): account
+  position (original vs additional capital, recovered, remaining, realized /
+  withdrawn / available profit, current account value, buyback-value-today =
+  Σ remaining + max(0, available) over open investments, ROI), per-contribution
+  rows, monthly breakdown + full transaction history from the immutable ledger.
+  New print-friendly `/investor/statement` page (Print / Save PDF via
+  `window.print`, `print:` classes). Investor dashboard gained Remaining Capital /
+  Available Profit / Account Value / ROI cards + statement link. Admin investors
+  tab gained Remaining / Available / ROI columns (recomputed live from investment
+  docs, not denormalized fields) + per-investor Statement link. QA: 84/84 engine
+  tests, tsc + eslint 0 errors, production builds green (both apps).
 
 - **2026-08-02 (7)** — **Inventory Investment System — Phase 5 release.** Full QA
   battery green (84/84 tests, tsc + eslint 0 errors both apps, production builds

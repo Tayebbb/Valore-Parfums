@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { FileText, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/Toaster";
 
 interface InvestorProfile {
@@ -137,6 +137,12 @@ export default function InvestorDashboardPage() {
   if (!investor) return null;
 
   const totalAvailableProfit = investments.reduce((s, i) => s + (i.availableProfit || 0), 0);
+  const totalRemainingCapital = investments.reduce((s, i) => s + (i.remainingInventoryCost || 0), 0);
+  const currentAccountValue = totalRemainingCapital + totalAvailableProfit;
+  const roiPercent =
+    investor.totalInvested > 0
+      ? Math.round((investor.totalProfit / investor.totalInvested) * 10000) / 100
+      : 0;
   const withdrawableInvestments = investments.filter((i) => i.availableProfit > 0);
 
   return (
@@ -148,9 +154,17 @@ export default function InvestorDashboardPage() {
             {investor.activeInvestmentCount} active investment{investor.activeInvestmentCount === 1 ? "" : "s"}
           </p>
         </div>
-        <button onClick={load} className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" title="Refresh">
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/investor/statement"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[var(--border)] rounded text-[var(--text-secondary)] hover:text-[var(--gold)] hover:border-[var(--gold)] transition-colors"
+          >
+            <FileText size={14} /> Account Statement
+          </Link>
+          <button onClick={load} className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" title="Refresh">
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -158,8 +172,12 @@ export default function InvestorDashboardPage() {
         {[
           { label: "Total Invested", value: bdtMajor(investor.totalInvested) },
           { label: "Capital Returned", value: bdtMajor(investor.totalRecoveredCapital) },
+          { label: "Capital In Inventory", value: bdtMajor(totalRemainingCapital) },
           { label: "Profit Earned", value: bdtMajor(investor.totalProfit) },
           { label: "Withdrawn", value: bdtMajor(investor.totalWithdrawn) },
+          { label: "Available Profit", value: bdtMajor(totalAvailableProfit) },
+          { label: "Account Value", value: bdtMajor(currentAccountValue) },
+          { label: "ROI", value: `${roiPercent}%` },
         ].map((c) => (
           <div key={c.label} className="p-4 rounded border border-[var(--border)] bg-[var(--bg-surface)]">
             <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{c.label}</p>

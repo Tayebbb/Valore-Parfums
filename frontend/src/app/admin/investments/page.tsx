@@ -160,6 +160,18 @@ export default function AdminInvestmentsPage() {
 
   const investorById = useMemo(() => new Map(investors.map((i) => [i.id, i])), [investors]);
 
+  // Live position per investor from investment docs (ledger-backed, not denormalized).
+  const investorPosition = useMemo(() => {
+    const map = new Map<string, { remainingMinor: number; availableProfitMinor: number }>();
+    for (const inv of investments) {
+      const p = map.get(inv.investorId) || { remainingMinor: 0, availableProfitMinor: 0 };
+      p.remainingMinor += inv.remainingInventoryCostMinor || 0;
+      p.availableProfitMinor += inv.availableProfitMinor || 0;
+      map.set(inv.investorId, p);
+    }
+    return map;
+  }, [investments]);
+
   // ─── Actions ───────────────────────────────────────────
 
   const saveInvestor = async () => {
@@ -555,33 +567,51 @@ export default function AdminInvestmentsPage() {
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Invested</th>
                   <th className="px-4 py-2.5">Recovered</th>
+                  <th className="px-4 py-2.5">Remaining</th>
                   <th className="px-4 py-2.5">Profit</th>
+                  <th className="px-4 py-2.5">Available</th>
                   <th className="px-4 py-2.5">Withdrawn</th>
+                  <th className="px-4 py-2.5">ROI</th>
                   <th className="px-4 py-2.5">Active</th>
                   <th className="px-4 py-2.5"></th>
                 </tr>
               </thead>
               <tbody>
                 {investors.length === 0 && (
-                  <tr><td colSpan={9} className="px-4 py-6 text-center text-[var(--text-muted)]">No investors</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-6 text-center text-[var(--text-muted)]">No investors</td></tr>
                 )}
-                {investors.map((i) => (
+                {investors.map((i) => {
+                  const pos = investorPosition.get(i.id);
+                  const roi = (i.totalInvestedMinor || 0) > 0
+                    ? Math.round(((i.totalProfitMinor || 0) / i.totalInvestedMinor) * 10000) / 100
+                    : 0;
+                  return (
                   <tr key={i.id} className="border-t border-[var(--border)]">
                     <td className="px-4 py-2.5">{i.name}</td>
                     <td className="px-4 py-2.5 text-[var(--text-secondary)]">{i.email}</td>
                     <td className="px-4 py-2.5"><StatusBadge status={i.status} /></td>
                     <td className="px-4 py-2.5">{bdt(i.totalInvestedMinor || 0)}</td>
                     <td className="px-4 py-2.5">{bdt(i.totalRecoveredCapitalMinor || 0)}</td>
+                    <td className="px-4 py-2.5">{bdt(pos?.remainingMinor || 0)}</td>
                     <td className="px-4 py-2.5">{bdt(i.totalProfitMinor || 0)}</td>
+                    <td className="px-4 py-2.5">{bdt(pos?.availableProfitMinor || 0)}</td>
                     <td className="px-4 py-2.5">{bdt(i.totalWithdrawnMinor || 0)}</td>
+                    <td className="px-4 py-2.5">{roi}%</td>
                     <td className="px-4 py-2.5">{i.activeInvestmentCount || 0}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <Link
+                        href={`/investor/statement?investorId=${i.id}`}
+                        className="text-xs text-[var(--gold)] hover:underline mr-3"
+                      >
+                        Statement
+                      </Link>
                       <button onClick={() => toggleInvestorStatus(i)} className="text-xs text-[var(--gold)] hover:underline">
                         {i.status === "active" ? "Deactivate" : "Activate"}
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
