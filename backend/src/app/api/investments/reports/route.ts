@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { fromMinorUnits } from "@/lib/finance";
+import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
+import { ownerRecognizedItemProfitMajor } from "@/lib/investments/finance";
+import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
 import type { InvestmentAllocationDoc, InvestmentDoc, InvestorDoc, LedgerEntryDoc, InvestmentWithdrawalDoc } from "@/lib/investments/types";
 
 // GET aggregate investment report — admin only.
@@ -11,12 +13,14 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [investorSnap, investmentSnap, allocationSnap, ledgerSnap, withdrawalSnap] = await Promise.all([
+  const [investorSnap, investmentSnap, allocationSnap, ledgerSnap, withdrawalSnap, allItemsSnap, ordersSnap] = await Promise.all([
     db.collection(Collections.investors).get(),
     db.collection(Collections.investments).get(),
     db.collection(Collections.investmentAllocations).get(),
     db.collection(Collections.investmentTransactions).get(),
     db.collection(Collections.investmentWithdrawals).get(),
+    db.collectionGroup("items").get(),
+    db.collection(Collections.orders).get(),
   ]);
 
   const investments = investmentSnap.docs.map((d) => ({
@@ -103,6 +107,49 @@ export async function GET() {
   const pendingWithdrawals = withdrawals.filter((w) => w.status === "pending");
   const paidWithdrawals = withdrawals.filter((w) => w.status === "paid");
 
+  // ── Profit attribution for investor-funded sales (ACCOUNTING INVARIANT) ──
+  // Gross Economic Profit = Investor Profit + Valore Retained Profit.
+  // Computed from the SAME persisted per-item `investmentRecognition` values
+  // the Dispatched crediting code used, over completed-family orders only —
+  // so this report reconciles exactly with the owner P&L and investor ledger.
+  const completedOrderIds = new Set(
+    ordersSnap.docs
+      .filter((d) => {
+        const o = d.data() as { status?: string; pickupMethod?: string };
+        return normalizeOrderStatus(o.status, o.pickupMethod) === "Dispatched";
+      })
+      .map((d) => d.id)
+  );
+  let fundedGrossMinor = 0;
+  let fundedInvestorMinor = 0;
+  let fundedValoreBookedMinor = 0;
+  let fundedItemCount = 0;
+  let clampedLossItemCount = 0;
+  for (const doc of allItemsSnap.docs) {
+    const orderId = doc.ref.parent.parent?.id;
+    if (!orderId || !completedOrderIds.has(orderId)) continue;
+    const item = doc.data() as {
+      totalPrice?: number;
+      costPrice?: number;
+      investmentRecognition?: { investorProfitMinor?: number };
+    };
+    const rec = item.investmentRecognition;
+    if (!rec) continue; // not investor-funded
+    fundedItemCount++;
+    const itemNetMajor = Number(item.totalPrice ?? 0) - Number(item.costPrice ?? 0);
+    const investorProfitMinor = Number(rec.investorProfitMinor ?? 0);
+    fundedGrossMinor += toMinorUnits(itemNetMajor);
+    fundedInvestorMinor += investorProfitMinor;
+    // What the owner books actually credited (mirrors the Dispatched code:
+    // recognised amounts ≤ 0 are skipped, negative investor profit clamps to 0).
+    const recognized = ownerRecognizedItemProfitMajor(itemNetMajor, investorProfitMinor);
+    if (recognized > 0) fundedValoreBookedMinor += toMinorUnits(recognized);
+    if (investorProfitMinor < 0 || recognized <= 0) clampedLossItemCount++;
+  }
+  // Economic attribution: retained is DEFINED as the remainder, so the
+  // invariant gross = investor + retained holds exactly, including losses.
+  const fundedValoreRetainedMinor = fundedGrossMinor - fundedInvestorMinor;
+
   return NextResponse.json({
     investors: {
       total: investorSnap.size,
@@ -133,6 +180,19 @@ export async function GET() {
       pendingAmount: fromMinorUnits(pendingWithdrawals.reduce((s, w) => s + (w.amountMinor || 0), 0)),
       paidCount: paidWithdrawals.length,
       paidAmount: fromMinorUnits(paidWithdrawals.reduce((s, w) => s + (w.amountMinor || 0), 0)),
+    },
+    // Investor-funded sales P&L attribution. Invariant:
+    // grossEconomicProfit === investorProfit + valoreRetainedProfit (exact).
+    // valoreBookedProfit is what the owner accounts actually credited — it
+    // differs from valoreRetainedProfit only on loss/clamped items.
+    profitAttribution: {
+      fundedItemCount,
+      grossEconomicProfit: fromMinorUnits(fundedGrossMinor),
+      investorProfit: fromMinorUnits(fundedInvestorMinor),
+      valoreRetainedProfit: fromMinorUnits(fundedValoreRetainedMinor),
+      valoreBookedProfit: fromMinorUnits(fundedValoreBookedMinor),
+      clampedLossItemCount,
+      invariantHolds: fundedGrossMinor === fundedInvestorMinor + fundedValoreRetainedMinor,
     },
     invariant: {
       healthy: invariantViolations.length === 0,

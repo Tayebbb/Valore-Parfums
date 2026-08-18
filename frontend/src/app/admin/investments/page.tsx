@@ -21,6 +21,15 @@ interface Report {
   monthlyBreakdown: Array<{ month: string; capitalRecovered: number; investorProfit: number; mlSold: number }>;
   byPerfume: Array<{ perfumeId: string; perfumeName: string; fundedMl: number; remainingMl: number; soldMl: number }>;
   withdrawals: { pendingCount: number; pendingAmount: number; paidCount: number; paidAmount: number };
+  profitAttribution?: {
+    fundedItemCount: number;
+    grossEconomicProfit: number;
+    investorProfit: number;
+    valoreRetainedProfit: number;
+    valoreBookedProfit: number;
+    clampedLossItemCount: number;
+    invariantHolds: boolean;
+  };
   invariant: { healthy: boolean; violations: Array<{ investmentId: string; detail: string }> };
 }
 
@@ -332,6 +341,41 @@ export default function AdminInvestmentsPage() {
               <p className="text-lg font-medium text-[var(--text-primary)] mt-1">{c.value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Funded-sales P&L attribution — gross = investor + Valore retained */}
+      {report?.profitAttribution && report.profitAttribution.fundedItemCount > 0 && (
+        <div className="p-4 rounded border border-[var(--border)] bg-[var(--bg-surface)]">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+              Investor-funded sales P&L ({report.profitAttribution.fundedItemCount} item{report.profitAttribution.fundedItemCount === 1 ? "" : "s"})
+            </p>
+            <span className={`text-[11px] ${report.profitAttribution.invariantHolds ? "text-emerald-500" : "text-red-400"}`}>
+              {report.profitAttribution.invariantHolds
+                ? "Gross = Investor + Valore ✓"
+                : "Attribution invariant BROKEN"}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Gross Economic Profit</p>
+              <p className="text-lg font-medium text-[var(--text-primary)] mt-0.5">{bdtMajor(report.profitAttribution.grossEconomicProfit)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Investor Profit</p>
+              <p className="text-lg font-medium text-[var(--text-primary)] mt-0.5">{bdtMajor(report.profitAttribution.investorProfit)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Valore Retained Profit</p>
+              <p className="text-lg font-medium text-[var(--gold)] mt-0.5">{bdtMajor(report.profitAttribution.valoreRetainedProfit)}</p>
+            </div>
+          </div>
+          {report.profitAttribution.clampedLossItemCount > 0 && (
+            <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+              {report.profitAttribution.clampedLossItemCount} loss item(s): owner books credited {bdtMajor(report.profitAttribution.valoreBookedProfit)} (losses are absorbed in the investor ledger, never booked as negative owner profit).
+            </p>
+          )}
         </div>
       )}
 

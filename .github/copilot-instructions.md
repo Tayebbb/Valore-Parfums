@@ -10,8 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-18 (Investment system — final accounting review: owner
-  P&L carve-out, no double-count)
+- **Last updated:** 2026-08-19 (Accounting integration audit — P&L attribution
+  reporting + combined-books reconciliation tests)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -177,7 +177,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                               |
 | `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                         |
 | `/api/investments/[id]/buyback`    | GET, POST | admin                  | GET quote / POST execute (atomic close)                                                               |
-| `/api/investments/reports`         | GET       | admin                  | Aggregates recomputed on read + invariant health + `monthlyBreakdown`, `byPerfume`, withdrawal stats  |
+| `/api/investments/reports`         | GET       | admin                  | Aggregates recomputed on read + invariant health + `monthlyBreakdown`, `byPerfume`, withdrawal stats + `profitAttribution` (gross = investor + Valore retained, from persisted `investmentRecognition`) |
 | `/api/investment-withdrawals`      | GET, POST | investor (own) / admin | Profit-only withdrawal requests                                                                       |
 | `/api/investment-withdrawals/[id]` | PUT       | admin                  | `action: approve\|reject\|paid`; approve deducts profit inside tx                                     |
 | `/api/investor/dashboard`          | GET       | investor               | Investor resolved from session (userId/email) — IDOR-proof                                            |
@@ -588,6 +588,27 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-19** — **Accounting integration audit (PR #22 hardening).** Full trace
+  of every owner-profit consumer confirmed the 2026-08-18 carve-out covers all
+  payout-bearing paths (Dispatched credit, both cancel reversals, dashboard
+  ownership breakdown, owner-accounts recompute — which skips Store items by
+  construction — and the withdrawable-revenue deductions, which correctly reserve
+  the FULL gross store profit so the investor share can never be double-spent as
+  store revenue). Closed the two audit gaps: (1) `/api/investments/reports` now
+  returns `profitAttribution` — Gross Economic Profit / Investor Profit / Valore
+  Retained Profit computed from the persisted per-item `investmentRecognition`
+  over completed-family orders, with `invariantHolds` (gross = investor +
+  retained, exact by construction) and `valoreBookedProfit` for loss-clamped
+  items; rendered as an attribution panel on `/admin/investments`. (2) New test
+  section 14 “Combined business P&L reconciliation” (117/117 total): mixed batch
+  (funded + non-funded + funded-loss + partially-funded) proves per-item and
+  batch-level no-double-count, the attribution invariant, and that books only
+  diverge from economics by the deliberately-unbooked owner loss share.
+  Reconciliation script: all checks pass; production has ZERO investment docs, so
+  no historical funded sale ever booked under pre-carve-out behaviour — **no
+  migration needed, provably**. Dashboard top-line profit KPIs remain GROSS
+  economic profit by design (documented; ownership breakdown is carved).
 
 - **2026-08-18** — **Investor account statement + ROI surfacing** (spec gap-closure
   on `feature/inventory-investment-system`). New `GET /api/investor/statement`
