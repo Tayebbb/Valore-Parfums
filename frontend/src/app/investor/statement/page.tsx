@@ -20,6 +20,8 @@ interface StatementPosition {
   additionalCapital: number;
   totalCapitalInvested: number;
   recoveredCapital: number;
+  capitalRecoveredFromSales: number;
+  capitalReturnedViaBuyback: number;
   remainingInventoryCost: number;
   realizedProfit: number;
   profitWithdrawn: number;
@@ -132,6 +134,8 @@ function StatementContent() {
     { label: "Additional Capital", value: bdt(position.additionalCapital) },
     { label: "Total Capital Invested", value: bdt(position.totalCapitalInvested), highlight: true },
     { label: "Recovered Capital", value: bdt(position.recoveredCapital) },
+    { label: "— via Sales", value: bdt(position.capitalRecoveredFromSales ?? 0) },
+    { label: "— via Buyback", value: bdt(position.capitalReturnedViaBuyback ?? 0) },
     { label: "Remaining Inventory Cost", value: bdt(position.remainingInventoryCost) },
     { label: "Realized Profit", value: bdt(position.realizedProfit) },
     { label: "Profit Withdrawn", value: bdt(position.profitWithdrawn) },

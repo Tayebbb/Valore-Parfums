@@ -3,6 +3,7 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
 import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
+import { ownerRecognizedItemProfitMajor } from "@/lib/investments/finance";
 import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
 
 // Helper: convert Firestore Timestamp to Date
@@ -214,6 +215,17 @@ export async function GET() {
     } else {
       itemOwnerProfit = item.ownerProfit ?? 0;
       itemOtherOwnerProfit = item.otherOwnerProfit ?? 0;
+      // Investor-funded items: the creation-time split contains the FULL net
+      // profit; scale it down to the owner-recognised portion (net − investor
+      // share) so the dashboard matches the profitTransactions ledger.
+      const investorProfitMinor = Number(item.investmentRecognition?.investorProfitMinor ?? 0);
+      const itemNet = Number(item.totalPrice ?? 0) - Number(item.costPrice ?? 0);
+      if (investorProfitMinor > 0 && itemNet > 0) {
+        const recognized = Math.max(0, ownerRecognizedItemProfitMajor(itemNet, investorProfitMinor));
+        const factor = recognized / itemNet;
+        itemOwnerProfit = Math.round(itemOwnerProfit * factor * 100) / 100;
+        itemOtherOwnerProfit = Math.round(itemOtherOwnerProfit * factor * 100) / 100;
+      }
     }
 
     ownershipBreakdown[effectiveName].total += itemOwnerProfit;

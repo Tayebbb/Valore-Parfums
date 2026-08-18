@@ -135,8 +135,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
     }
 
-    // Reverse profit transactions if order was already completed
-    if (["Completed", "Dispatched"].includes(currentStatus)) {
+    // Reverse profit transactions if financials were recognised. Recognition
+    // happens when the order enters the completed-family status (canonical db
+    // value "Dispatched"; aliases: Delivered/Completed/Fulfilled) — compare the
+    // NORMALIZED status so alias-stored orders reverse too.
+    if (normalizedCurrentStatus === "Dispatched") {
       const profitSnap = await db
         .collection(Collections.profitTransactions)
         .where("orderId", "==", id)

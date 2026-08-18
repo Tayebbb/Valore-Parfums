@@ -13,6 +13,8 @@ import {
   splitSale,
   validateInvariant,
   computeBuybackAmount,
+  ownerRecognizedItemProfitMajor,
+  splitCapitalBySource,
 } from "../src/lib/investments/finance";
 
 let passed = 0;
@@ -426,6 +428,146 @@ console.log("11. Buyback stream separation");
     computeBuybackAmount({ remainingInventoryCostMinor: 0, availableProfitMinor: 0 }),
     0,
     "fully recovered, zero profit → buyback owes nothing"
+  );
+}
+
+// ═══ 12. Owner P&L integration — economic profit is never double-counted ═══
+// FINAL ACCOUNTING DECISION: for investor-funded sales the investor share is
+// carved OUT of the item's net profit before owner crediting:
+//   actual net profit = investor profit + Valore (owner) profit
+console.log("12. Owner P&L integration (no double count)");
+{
+  // Canonical example from the external review:
+  // Revenue 900, perfume cost 600, direct costs 100 → net profit 200.
+  // Investor share 40% → investor 80, Valore 120.
+  const split = splitSale({
+    sellingPriceMinor: 90_000,
+    sellingCostsMinor: 10_000,
+    perfumeCostMinor: 60_000,
+    investorSharePercent: 40,
+  });
+  assertEqual(split.netProfitMinor, 20_000, "canonical: net profit = 200");
+  assertEqual(split.investorProfitMinor, 8_000, "canonical: investor profit = 80");
+  assertEqual(split.businessProfitMinor, 12_000, "canonical: Valore profit = 120");
+
+  // Owner-side item net profit (major units): 900 − (600 + 100) = 200.
+  const itemNetMajor = 900 - 700;
+  const ownerRecognized = ownerRecognizedItemProfitMajor(itemNetMajor, split.investorProfitMinor);
+  assertEqual(ownerRecognized, 120, "owner P&L recognises 120 — NOT the full 200");
+  assertEqual(
+    ownerRecognized + split.investorProfitMinor / 100,
+    200,
+    "total economic profit = investor 80 + Valore 120 = exactly 200"
+  );
+  // Owner split of the recognised 120 at 60/40 stays inside the 120.
+  const o1 = Math.round(ownerRecognized * 0.6);
+  const o2 = ownerRecognized - o1;
+  assertEqual(o1 + o2, 120, "owner1 + owner2 shares sum to the recognised 120");
+
+  // Non-investor-funded sale: behaviour preserved bit-for-bit.
+  assertEqual(
+    ownerRecognizedItemProfitMajor(200, 0),
+    200,
+    "non-funded sale recognises the full net profit (unchanged behaviour)"
+  );
+
+  // Non-interference: one funded + one unfunded item in the same order.
+  const fundedRecognized = ownerRecognizedItemProfitMajor(200, 8_000);
+  const unfundedRecognized = ownerRecognizedItemProfitMajor(150, 0);
+  assertEqual(fundedRecognized, 120, "funded item deducts only ITS OWN investor profit");
+  assertEqual(unfundedRecognized, 150, "unfunded item in the same order is untouched");
+  assertEqual(
+    80 + fundedRecognized + unfundedRecognized,
+    350,
+    "order economic profit: investor 80 + owners 270 = 350 (= 200 + 150) exactly"
+  );
+
+  // Loss on a funded sale: negative investor profit must never INFLATE the
+  // owner P&L — the deduction clamps at 0; the investor's loss share lives in
+  // the investment ledger. Callers skip non-positive owner amounts.
+  const loss = splitSale({
+    sellingPriceMinor: 50_000,
+    sellingCostsMinor: 10_000,
+    perfumeCostMinor: 60_000,
+    investorSharePercent: 40,
+  });
+  assert(loss.investorProfitMinor < 0, "loss sale produces negative investor profit");
+  assertEqual(
+    ownerRecognizedItemProfitMajor(-200, loss.investorProfitMinor),
+    -200,
+    "loss: owner-side result unchanged (no negative deduction credited)"
+  );
+  assertEqual(
+    ownerRecognizedItemProfitMajor(50, -1_000),
+    50,
+    "basis drift: engine loss never increases owner recognition"
+  );
+
+  // Rounding exactness: odd investor share deducts to exact 2 dp.
+  assertEqual(
+    ownerRecognizedItemProfitMajor(333.33, 13_333),
+    200,
+    "odd amounts: 333.33 − 133.33 = 200.00 exactly"
+  );
+
+  // Partially funded item: only the funded fraction's investor profit is
+  // deducted; the unfunded remainder stays entirely with the store.
+  const lots = [{ allocationId: "p", remainingMl: 4, costPerMlMinor: 6_000 }];
+  const plan = planPartialFifoSale(lots, 10); // request 10 ml, only 4 funded
+  assertEqual(plan.mlFunded, 4, "partial: 4 of 10 ml funded");
+  const partialSplit = splitSale({
+    sellingPriceMinor: Math.round((90_000 * 4) / 10), // prorated revenue 360
+    sellingCostsMinor: Math.round((10_000 * 4) / 10), // prorated costs 40
+    perfumeCostMinor: plan.consumptions[0].capitalMinor, // 240
+    investorSharePercent: 40,
+  });
+  assertEqual(partialSplit.investorProfitMinor, 3_200, "partial: investor profit = 32");
+  const partialRecognized = ownerRecognizedItemProfitMajor(200, partialSplit.investorProfitMinor);
+  assertEqual(partialRecognized, 168, "partial: owner recognises 200 − 32 = 168");
+  assertEqual(
+    partialRecognized + partialSplit.investorProfitMinor / 100,
+    200,
+    "partial: economic profit still exactly 200"
+  );
+
+  // Integer-safety on the deduction input.
+  assertThrows(
+    () => ownerRecognizedItemProfitMajor(200, 80.5),
+    "fractional minor-unit investor profit rejected"
+  );
+}
+
+// ═══ 13. Capital by source (statement: sales vs buyback) ═══
+console.log("13. splitCapitalBySource");
+{
+  // Sales only.
+  assertEqual(
+    splitCapitalBySource([
+      { type: "capital_recovery", stream: "capital", amountMinor: 60_000 },
+      { type: "capital_recovery", stream: "capital", amountMinor: 60_000 },
+    ]),
+    { fromSalesMinor: 120_000, fromBuybackMinor: 0 },
+    "sales-only history attributes everything to sales"
+  );
+  // Sale + reversal nets to zero; buyback separate.
+  assertEqual(
+    splitCapitalBySource([
+      { type: "capital_recovery", stream: "capital", amountMinor: 60_000 },
+      { type: "adjustment", stream: "capital", amountMinor: -60_000 },
+      { type: "buyback", stream: "capital", amountMinor: 2_940_000 },
+    ]),
+    { fromSalesMinor: 0, fromBuybackMinor: 2_940_000 },
+    "reversal nets against sales; buyback reported separately"
+  );
+  // Profit-stream entries are ignored.
+  assertEqual(
+    splitCapitalBySource([
+      { type: "profit_generated", stream: "profit", amountMinor: 8_000 },
+      { type: "profit_withdrawal", stream: "profit", amountMinor: -8_000 },
+      { type: "investment_created", stream: "none", amountMinor: 3_000_000 },
+    ]),
+    { fromSalesMinor: 0, fromBuybackMinor: 0 },
+    "profit and none streams never count as capital"
   );
 }
 

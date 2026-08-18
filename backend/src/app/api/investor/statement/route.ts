@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireInvestor, normalizeEmail } from "@/lib/auth";
 import { fromMinorUnits } from "@/lib/finance";
+import { splitCapitalBySource } from "@/lib/investments/finance";
 import type {
   InvestmentDoc,
   InvestorDoc,
@@ -123,6 +124,11 @@ export async function GET(req: Request) {
     .map((d) => ({ id: d.id, ...(d.data() as LedgerEntryDoc) }))
     .sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime());
 
+  // Capital recovered through SALES vs returned through BUYBACK — the stored
+  // recoveredCapitalMinor merges both after a buyback, so derive the split
+  // from the ledger (sale reversals net against the sales figure).
+  const capitalBySource = splitCapitalBySource(entries);
+
   const monthly: Record<string, { capitalRecoveredMinor: number; profitMinor: number }> = {};
   for (const e of entries) {
     if (e.type !== "capital_recovery" && e.type !== "profit_generated") continue;
@@ -169,6 +175,8 @@ export async function GET(req: Request) {
       additionalCapital: fromMinorUnits(additionalCapitalMinor),
       totalCapitalInvested: fromMinorUnits(totalInvestedMinor),
       recoveredCapital: fromMinorUnits(recoveredMinor),
+      capitalRecoveredFromSales: fromMinorUnits(capitalBySource.fromSalesMinor),
+      capitalReturnedViaBuyback: fromMinorUnits(capitalBySource.fromBuybackMinor),
       remainingInventoryCost: fromMinorUnits(remainingMinor),
       realizedProfit: fromMinorUnits(realizedProfitMinor),
       profitWithdrawn: fromMinorUnits(withdrawnProfitMinor),

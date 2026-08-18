@@ -23,6 +23,7 @@ import {
   processInvestmentSalesForOrder,
   reverseInvestmentSalesForOrder,
 } from "@/lib/investments/orderIntegration";
+import { ownerRecognizedItemProfitMajor } from "@/lib/investments/finance";
 import {
   STATUS_CONFIG,
   getDbValueForStatusKey,
@@ -673,6 +674,45 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (newStatusDb === "Dispatched" && previousStatusDb !== "Dispatched") {
     const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
 
+    // ── Investor-funded stock FIRST: recognise capital recovery + investor
+    // profit in the investment ledger, so the owner crediting below can carve
+    // the investor share OUT of each item's net profit. ACCOUNTING DECISION:
+    // actual net profit = investor profit + Valore (owner) profit — the owner
+    // P&L must never recognise the full net profit while the investor ledger
+    // recognises the investor share on top. Idempotent (ledger doc IDs derive
+    // from order item IDs) and best-effort — an unprocessed item produces NO
+    // investor entries and therefore NO deduction, so totals stay consistent
+    // either way. Never blocks the order.
+    const investmentSummary = await processInvestmentSalesForOrder(id, admin.id);
+    if (investmentSummary.itemsProcessed > 0 || investmentSummary.errors.length > 0) {
+      console.log(
+        `[INVESTMENT] Order ${id}: processed ${investmentSummary.itemsProcessed} item(s), ` +
+          `capital ${investmentSummary.totalCapitalRecoveredMinor} minor, ` +
+          `investor profit ${investmentSummary.totalInvestorProfitMinor} minor` +
+          (investmentSummary.errors.length ? `, errors: ${investmentSummary.errors.join("; ")}` : ""),
+      );
+    }
+    const investorProfitByItem = new Map(
+      investmentSummary.items.map((r) => [r.orderItemId, r.investorProfitMinor]),
+    );
+    // Persist what was recognised per item: the cancellation path reverses the
+    // exact same deduction (symmetric by construction), and reports can audit it.
+    for (const r of investmentSummary.items) {
+      await db
+        .collection(Collections.orders)
+        .doc(id)
+        .collection("items")
+        .doc(r.orderItemId)
+        .update({
+          investmentRecognition: {
+            investorProfitMinor: r.investorProfitMinor,
+            capitalRecoveredMinor: r.capitalRecoveredMinor,
+            mlFunded: r.mlFunded,
+            recognizedAt: now,
+          },
+        });
+    }
+
     const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
     const personalRevenueByOwner: Record<string, number> = {};
     for (const itemDoc of itemsSnap.docs) {
@@ -753,20 +793,33 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
-    // Handle Store-owned items: distribute by owner1Share / owner2Share
+    // Handle Store-owned items: distribute by owner1Share / owner2Share.
+    // For investor-funded items only `net profit − investor profit` is
+    // recognised (see ownerRecognizedItemProfitMajor) — the investor share was
+    // already credited to the investment ledger above.
     let totalStoreProfit = 0;
+    let totalInvestorDeduction = 0;
     for (const itemDoc of itemsSnap.docs) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const item = itemDoc.data() as any;
       if ((item.ownerName || "Store") === "Store") {
-        const itemProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
-        if (itemProfit > 0) totalStoreProfit += itemProfit;
+        const itemNetProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
+        const investorProfitMinor = Number(investorProfitByItem.get(itemDoc.id) ?? 0);
+        const recognized = ownerRecognizedItemProfitMajor(itemNetProfit, investorProfitMinor);
+        if (recognized > 0) totalStoreProfit += recognized;
+        if (investorProfitMinor > 0 && itemNetProfit > 0) {
+          totalInvestorDeduction += Math.min(itemNetProfit, investorProfitMinor / 100);
+        }
       }
     }
 
     if (totalStoreProfit > 0) {
       const owner1StoreShare = Math.round(totalStoreProfit * (owner1Share / 100));
       const owner2StoreShare = totalStoreProfit - owner1StoreShare;
+      const deductionNote =
+        totalInvestorDeduction > 0
+          ? ` (net of ${Math.round(totalInvestorDeduction * 100) / 100} investor profit share)`
+          : "";
 
       if (owner1StoreShare > 0) {
         const txId = uuid();
@@ -775,7 +828,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           ownerName: owner1Name,
           type: "store-share",
           amount: owner1StoreShare,
-          description: `Store profit share (${owner1Share}%) from order ${id.slice(0, 8)}`,
+          description: `Store profit share (${owner1Share}%) from order ${id.slice(0, 8)}${deductionNote}`,
           createdAt: now,
         });
         await db.collection(Collections.ownerAccounts).doc(owner1Name).set(
@@ -790,7 +843,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           ownerName: owner2Name,
           type: "store-share",
           amount: owner2StoreShare,
-          description: `Store profit share (${owner2Share}%) from order ${id.slice(0, 8)}`,
+          description: `Store profit share (${owner2Share}%) from order ${id.slice(0, 8)}${deductionNote}`,
           createdAt: now,
         });
         await db.collection(Collections.ownerAccounts).doc(owner2Name).set(
@@ -798,19 +851,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           { merge: true },
         );
       }
-    }
-
-    // ── Investor-funded stock: recognise capital recovery + investor profit ──
-    // Same recognition point as owner profit crediting. Idempotent (ledger doc
-    // IDs derive from order item IDs) and best-effort — never blocks the order.
-    const investmentSummary = await processInvestmentSalesForOrder(id, admin.id);
-    if (investmentSummary.itemsProcessed > 0 || investmentSummary.errors.length > 0) {
-      console.log(
-        `[INVESTMENT] Order ${id}: processed ${investmentSummary.itemsProcessed} item(s), ` +
-          `capital ${investmentSummary.totalCapitalRecoveredMinor} minor, ` +
-          `investor profit ${investmentSummary.totalInvestorProfitMinor} minor` +
-          (investmentSummary.errors.length ? `, errors: ${investmentSummary.errors.join("; ")}` : ""),
-      );
     }
   }
 
@@ -914,14 +954,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       }
 
-      // Reverse store-owned item profit distribution
+      // Reverse store-owned item profit distribution — the SAME per-item
+      // deduction that was applied at Dispatched (read back from the
+      // investmentRecognition field persisted at credit time), so credit and
+      // reversal are symmetric by construction.
       let totalStoreProfitToReverse = 0;
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
         if ((item.ownerName || "Store") === "Store") {
-          const itemProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
-          if (itemProfit > 0) totalStoreProfitToReverse += itemProfit;
+          const itemNetProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
+          const investorProfitMinor = Number(item.investmentRecognition?.investorProfitMinor ?? 0);
+          const recognized = ownerRecognizedItemProfitMajor(itemNetProfit, investorProfitMinor);
+          if (recognized > 0) totalStoreProfitToReverse += recognized;
         }
       }
 

@@ -136,3 +136,53 @@ export function computeBuybackAmount(inv: {
   assertInt(inv.availableProfitMinor, "availableProfitMinor");
   return inv.remainingInventoryCostMinor + Math.max(0, inv.availableProfitMinor);
 }
+
+/**
+ * FINAL ACCOUNTING DECISION (external financial review, 2026-08-18):
+ * For an investor-funded sale the investor's profit share is CARVED OUT of
+ * the item's net profit before the store owners are credited:
+ *
+ *     actual net profit = investor profit + Valore (owner) profit
+ *
+ * The owner P&L recognises `net profit − investor profit` — it must never
+ * recognise the full net profit while the investor ledger simultaneously
+ * recognises the investor share on top (double count). Non-funded sales pass
+ * `investorProfitMinor = 0` and recognise the full net profit, unchanged.
+ *
+ * A NEGATIVE investor profit (loss on a funded sale) is clamped to 0 here:
+ * the investor's loss share already lives in the investment ledger (reducing
+ * withdrawable profit) and must never INCREASE what the owners recognise.
+ * The result may still be ≤ 0 (item sold at/below cost) — callers skip
+ * non-positive amounts, matching the pre-existing owner-crediting rule.
+ *
+ * `itemNetProfitMajor` is in MAJOR units (order items store BDT major);
+ * `investorProfitMinor` is in minor units (investment ledger). The return
+ * value is major units rounded to 2 dp, exact because minor = major × 100.
+ */
+export function ownerRecognizedItemProfitMajor(
+  itemNetProfitMajor: number,
+  investorProfitMinor: number
+): number {
+  assertInt(investorProfitMinor, "investorProfitMinor");
+  const deductionMajor = Math.max(0, investorProfitMinor) / 100;
+  return Math.round((itemNetProfitMajor - deductionMajor) * 100) / 100;
+}
+
+/**
+ * Split an investor's capital-stream ledger history into capital recovered
+ * through SALES versus capital returned through BUYBACK (investor statements
+ * must distinguish the two). Sale reversals (negative capital adjustments)
+ * net against sales recovery. Profit-stream entries are ignored.
+ */
+export function splitCapitalBySource(
+  entries: Array<{ type: string; stream: string; amountMinor: number }>
+): { fromSalesMinor: number; fromBuybackMinor: number } {
+  let fromSalesMinor = 0;
+  let fromBuybackMinor = 0;
+  for (const e of entries) {
+    if (e.stream !== "capital") continue;
+    if (e.type === "buyback") fromBuybackMinor += e.amountMinor || 0;
+    else fromSalesMinor += e.amountMinor || 0;
+  }
+  return { fromSalesMinor, fromBuybackMinor };
+}

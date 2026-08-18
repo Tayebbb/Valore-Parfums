@@ -10,7 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-18 (Investment system — investor account statement + ROI surfacing)
+- **Last updated:** 2026-08-18 (Investment system — final accounting review: owner
+  P&L carve-out, no double-count)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -182,10 +183,13 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | `/api/investor/dashboard`          | GET       | investor               | Investor resolved from session (userId/email) — IDOR-proof                                            |
 | `/api/investor/investments/[id]`   | GET       | investor               | Ownership-guarded (404 on foreign ids); allocations + ledger                                          || `/api/investor/statement`          | GET       | investor / admin       | §17 account statement (MAJOR units); admin may pass `?investorId=` for any investor                    |
 **Order integration:** `orders/[id]` PUT → Dispatched calls
-`processInvestmentSalesForOrder()` (per-item FIFO consumption, `allowPartial`,
-idempotent ledger keys). PUT → Cancelled (from Dispatched) and
-`orders/[id]/cancel` (from Completed/Dispatched) call
-`reverseInvestmentSalesForOrder()` (compensating `rev_` adjustment entries).
+`processInvestmentSalesForOrder()` FIRST (per-item FIFO consumption, `allowPartial`,
+idempotent ledger keys), persists per-item `investmentRecognition` on order items,
+then credits owners with `net profit − investor profit` per funded item
+(`ownerRecognizedItemProfitMajor`). PUT → Cancelled (from Dispatched) and
+`orders/[id]/cancel` (normalized completed-family status) reverse BOTH sides:
+owner reversal reuses the persisted per-item deduction;
+`reverseInvestmentSalesForOrder()` appends compensating `rev_` adjustment entries.
 `/api/export` supports `type=investors|investments|investment-ledger` CSVs.
 
 Never add a mutating admin endpoint without `requireAdmin()`.
@@ -416,18 +420,46 @@ header with curl. Rules:
   Negative profit is NEVER paid out or counted in `withdrawnProfitMinor` /
   `totalWithdrawnMinor` — only `max(0, availableProfit)` is.
 - All money in minor units. **Recognition point = order status "Dispatched"**
-  (same point where store owner profit is credited). Duplicate sale events are
-  blocked in-transaction by a ledger query on `referenceOrderItemId` (not a
-  key guess) plus `tx.create` on every ledger doc. `processInvestmentSalesForOrder`
-  runs per decant item with `allowPartial: true` — sells beyond funded ml only
-  consume what lots have; revenue/costs prorated by funded ml. Selling price
-  excludes delivery fee (built from `item.totalPrice`); selling costs =
-  packaging + bottle from `pricingSnapshot`.
-- **Reversals**: cancelling a Dispatched/Completed order calls
+  (the completed-family status key; db aliases Delivered/Completed/Fulfilled
+  normalize to it). This is THE financial recognition event for BOTH the owner
+  P&L and the investor ledger — orders recognise nothing before it, and
+  cancellation FROM it is the reversal event for both, symmetrically.
+  Duplicate sale events are blocked in-transaction by a ledger query on
+  `referenceOrderItemId` (not a key guess) plus `tx.create` on every ledger
+  doc. `processInvestmentSalesForOrder` runs per decant item with
+  `allowPartial: true` — sells beyond funded ml only consume what lots have;
+  revenue/costs prorated by funded ml. Selling price excludes delivery fee
+  (built from `item.totalPrice`); selling costs = packaging + bottle from
+  `pricingSnapshot`.
+- **Owner P&L carve-out (final accounting decision, external review 2026-08-18,
+  do not regress):** for every investor-funded sale,
+  `actual net profit = investor profit + Valore (owner) profit`. At Dispatched
+  the investment ledger is processed FIRST; the store-share crediting then
+  recognises `ownerRecognizedItemProfitMajor(itemNet, investorProfitMinor)` =
+  `net − max(0, investor profit)` per item — the owner P&L never recognises
+  the full net profit while the investor ledger recognises the share on top.
+  Canonical example: revenue 900, perfume 600, direct costs 100 → net 200 =
+  investor 80 (40%) + Valore 120; owners are credited 120, never 200.
+  The per-item deduction is persisted as `investmentRecognition` on the order
+  item; the cancellation reversal reuses it, so credit and reversal are
+  symmetric by construction. Negative investor profit (funded loss) clamps the
+  deduction to 0 — the investor's loss share lives in the investment ledger
+  (reducing withdrawable profit) and never inflates owner recognition.
+  Non-funded items pass through with deduction 0 — behaviour unchanged.
+  An item whose investment processing failed produces NO investor entries and
+  NO deduction — totals stay consistent either way (no double count possible).
+- **Reversals**: cancelling a Dispatched-family order calls
   `reverseSalesForOrder` — compensating adjustment entries with idempotency key
   `rev_${originalKey}` (double-reversal physically fails via `tx.create`);
   restores allocation ml, capital, and profit; refuses on `bought_back`
-  investments (manual adjustment required).
+  investments (manual adjustment required). The owner-side reversal deducts the
+  SAME persisted per-item investor profit that was deducted at credit time.
+- **Investor statements** distinguish: capital invested (original + additional
+  — each contribution is its own investment doc, aggregated per investor),
+  capital recovered through sales vs returned through buyback
+  (`splitCapitalBySource` over the capital stream), remaining inventory
+  exposure, realized profit, withdrawable (available) profit, and profit
+  already withdrawn.
 - Partial refunds are handled via manual admin adjustments (`PUT /api/investments/[id]`
   with `{ adjustment }`), not automatically.
 - Personal-collection perfumes can never be investor-funded.

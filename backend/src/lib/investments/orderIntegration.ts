@@ -17,11 +17,22 @@ import { db, Collections } from "@/lib/firebase-admin";
 import { toMinorUnits } from "@/lib/finance";
 import { investmentAccounting } from "./accountingService";
 
+export interface OrderInvestmentItemResult {
+  orderItemId: string;
+  investorProfitMinor: number;
+  capitalRecoveredMinor: number;
+  businessProfitMinor: number;
+  mlFunded: number;
+}
+
 export interface OrderInvestmentSummary {
   itemsProcessed: number;
   itemsSkipped: number;
   totalCapitalRecoveredMinor: number;
   totalInvestorProfitMinor: number;
+  /** Per-item recognition — the owner P&L deducts each item's investor
+   *  profit from its net profit so economic profit is never double-counted. */
+  items: OrderInvestmentItemResult[];
   errors: string[];
 }
 
@@ -43,6 +54,7 @@ export async function processInvestmentSalesForOrder(
     itemsSkipped: 0,
     totalCapitalRecoveredMinor: 0,
     totalInvestorProfitMinor: 0,
+    items: [],
     errors: [],
   };
 
@@ -85,6 +97,13 @@ export async function processInvestmentSalesForOrder(
           summary.itemsProcessed++;
           summary.totalCapitalRecoveredMinor += result.totalCapitalRecoveredMinor;
           summary.totalInvestorProfitMinor += result.totalInvestorProfitMinor;
+          summary.items.push({
+            orderItemId: itemDoc.id,
+            investorProfitMinor: result.totalInvestorProfitMinor,
+            capitalRecoveredMinor: result.totalCapitalRecoveredMinor,
+            businessProfitMinor: result.totalBusinessProfitMinor,
+            mlFunded: result.mlFundedProcessed,
+          });
         } else {
           summary.itemsSkipped++;
         }
