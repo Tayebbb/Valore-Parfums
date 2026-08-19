@@ -16,6 +16,7 @@ import {
   Bell,
   MapPin,
   Inbox,
+  TrendingUp,
   Menu,
   X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/requests", label: "Requests", icon: Inbox },
   { href: "/admin/vouchers", label: "Vouchers", icon: Tag },
+  { href: "/admin/investments", label: "Investments", icon: TrendingUp },
   { href: "/admin/pickup-locations", label: "Pickup Locations", icon: MapPin },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },

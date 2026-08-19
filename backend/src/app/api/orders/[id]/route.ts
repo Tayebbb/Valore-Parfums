@@ -20,6 +20,11 @@ import {
 } from "@/lib/email";
 import { validateString } from "@/lib/validation";
 import {
+  processInvestmentSalesForOrder,
+  reverseInvestmentSalesForOrder,
+} from "@/lib/investments/orderIntegration";
+import { ownerRecognizedItemProfitMajor } from "@/lib/investments/finance";
+import {
   STATUS_CONFIG,
   getDbValueForStatusKey,
   isStatusAllowedForFulfillment,
@@ -667,8 +672,37 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   // ── Credit profit when status changes to "Dispatched" (only if not already dispatched) ──
   if (newStatusDb === "Dispatched" && previousStatusDb !== "Dispatched") {
-    const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
+    const orderRef = db.collection(Collections.orders).doc(id);
+    const itemsSnap = await orderRef.collection("items").get();
 
+    // ── Investor-funded stock FIRST: recognise capital recovery + investor
+    // profit in the investment ledger, so the owner crediting below can carve
+    // the investor share OUT of each item's net profit. ACCOUNTING DECISION:
+    // actual net profit = investor profit + Valore (owner) profit — the owner
+    // P&L must never recognise the full net profit while the investor ledger
+    // recognises the investor share on top. Idempotent (ledger doc IDs derive
+    // from order item IDs) and best-effort — an unprocessed item produces NO
+    // investor entries and therefore NO deduction, so totals stay consistent
+    // either way. Never blocks the order.
+    const investmentSummary = await processInvestmentSalesForOrder(id, admin.id);
+    if (investmentSummary.itemsProcessed > 0 || investmentSummary.errors.length > 0) {
+      console.log(
+        `[INVESTMENT] Order ${id}: processed ${investmentSummary.itemsProcessed} item(s), ` +
+          `capital ${investmentSummary.totalCapitalRecoveredMinor} minor, ` +
+          `investor profit ${investmentSummary.totalInvestorProfitMinor} minor` +
+          (investmentSummary.errors.length ? `, errors: ${investmentSummary.errors.join("; ")}` : ""),
+      );
+    }
+    const investorProfitByItem = new Map(
+      investmentSummary.items.map((r) => [r.orderItemId, r.investorProfitMinor]),
+    );
+    // Retry heal: an item processed by a PRIOR attempt (crash between the
+    // investment ledger tx and owner crediting) is skipped by the service and
+    // absent from summary.items — fall back to the recognition persisted then.
+    const investorProfitForItem = (itemId: string, item: { investmentRecognition?: { investorProfitMinor?: number } }): number =>
+      Number(investorProfitByItem.get(itemId) ?? item.investmentRecognition?.investorProfitMinor ?? 0);
+
+    // ── Compute every owner credit up front (no writes yet) ──
     const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
     const personalRevenueByOwner: Record<string, number> = {};
     for (const itemDoc of itemsSnap.docs) {
@@ -693,107 +727,148 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
+    type CreditRow = {
+      ownerName: string;
+      type: string;
+      amount: number;
+      description: string;
+      balanceField: "totalEarned" | "storeShareEarned";
+    };
+    const creditRows: CreditRow[] = [];
+
     for (const [ownerName, profits] of Object.entries(profitByOwner)) {
       if (ownerName === "Store") continue;
 
-      // Credit bottle owner's direct profit
       if (profits.ownerProfit > 0) {
-        const txId = uuid();
-        await db.collection(Collections.profitTransactions).doc(txId).set({
-          orderId: id,
+        creditRows.push({
           ownerName,
           type: "sale",
           amount: profits.ownerProfit,
           description: `Profit from order ${id.slice(0, 8)} (bottle owner ${Math.round(settings?.ownerProfitPercent ?? 85)}%)`,
-          createdAt: now,
+          balanceField: "totalEarned",
         });
-        await db.collection(Collections.ownerAccounts).doc(ownerName).set(
-          { totalEarned: FieldValue.increment(profits.ownerProfit) },
-          { merge: true },
-        );
       }
 
-      // Credit the OTHER owner with their share directly
       if (profits.otherOwnerProfit > 0) {
         const otherOwner = ownerName === owner1Name ? owner2Name : owner1Name;
-        const txId = uuid();
-        await db.collection(Collections.profitTransactions).doc(txId).set({
-          orderId: id,
+        creditRows.push({
           ownerName: otherOwner,
           type: "cross-owner-share",
           amount: profits.otherOwnerProfit,
           description: `Share from ${ownerName}'s sale in order ${id.slice(0, 8)} (${100 - Math.round(settings?.ownerProfitPercent ?? 85)}%)`,
-          createdAt: now,
+          balanceField: "storeShareEarned",
         });
-        await db.collection(Collections.ownerAccounts).doc(otherOwner).set(
-          { storeShareEarned: FieldValue.increment(profits.otherOwnerProfit) },
-          { merge: true },
-        );
       }
 
       if ((personalRevenueByOwner[ownerName] || 0) > 0) {
-        const ownerRevenueCredit = personalRevenueByOwner[ownerName];
-        const txId = uuid();
-        await db.collection(Collections.profitTransactions).doc(txId).set({
-          orderId: id,
+        creditRows.push({
           ownerName,
           type: "owner-revenue-base",
-          amount: ownerRevenueCredit,
+          amount: personalRevenueByOwner[ownerName],
           description: `Personal collection revenue credit from order ${id.slice(0, 8)} (excluding profit, packaging and bottle costs)`,
-          createdAt: now,
+          balanceField: "totalEarned",
         });
-        await db.collection(Collections.ownerAccounts).doc(ownerName).set(
-          { totalEarned: FieldValue.increment(ownerRevenueCredit) },
-          { merge: true },
-        );
       }
     }
 
-    // Handle Store-owned items: distribute by owner1Share / owner2Share
+    // Handle Store-owned items: distribute by owner1Share / owner2Share.
+    // For investor-funded items only `net profit − investor profit` is
+    // recognised (see ownerRecognizedItemProfitMajor) — the investor share was
+    // already credited to the investment ledger above.
     let totalStoreProfit = 0;
+    let totalInvestorDeduction = 0;
     for (const itemDoc of itemsSnap.docs) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const item = itemDoc.data() as any;
       if ((item.ownerName || "Store") === "Store") {
-        const itemProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
-        if (itemProfit > 0) totalStoreProfit += itemProfit;
+        const itemNetProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
+        const investorProfitMinor = investorProfitForItem(itemDoc.id, item);
+        const recognized = ownerRecognizedItemProfitMajor(itemNetProfit, investorProfitMinor);
+        if (recognized > 0) totalStoreProfit += recognized;
+        if (investorProfitMinor > 0 && itemNetProfit > 0) {
+          totalInvestorDeduction += Math.min(itemNetProfit, investorProfitMinor / 100);
+        }
       }
     }
 
     if (totalStoreProfit > 0) {
       const owner1StoreShare = Math.round(totalStoreProfit * (owner1Share / 100));
       const owner2StoreShare = totalStoreProfit - owner1StoreShare;
+      const deductionNote =
+        totalInvestorDeduction > 0
+          ? ` (net of ${Math.round(totalInvestorDeduction * 100) / 100} investor profit share)`
+          : "";
 
       if (owner1StoreShare > 0) {
-        const txId = uuid();
-        await db.collection(Collections.profitTransactions).doc(txId).set({
-          orderId: id,
+        creditRows.push({
           ownerName: owner1Name,
           type: "store-share",
           amount: owner1StoreShare,
-          description: `Store profit share (${owner1Share}%) from order ${id.slice(0, 8)}`,
-          createdAt: now,
+          description: `Store profit share (${owner1Share}%) from order ${id.slice(0, 8)}${deductionNote}`,
+          balanceField: "storeShareEarned",
         });
-        await db.collection(Collections.ownerAccounts).doc(owner1Name).set(
-          { storeShareEarned: FieldValue.increment(owner1StoreShare) },
-          { merge: true },
-        );
       }
       if (owner2StoreShare > 0) {
-        const txId = uuid();
-        await db.collection(Collections.profitTransactions).doc(txId).set({
-          orderId: id,
+        creditRows.push({
           ownerName: owner2Name,
           type: "store-share",
           amount: owner2StoreShare,
-          description: `Store profit share (${owner2Share}%) from order ${id.slice(0, 8)}`,
+          description: `Store profit share (${owner2Share}%) from order ${id.slice(0, 8)}${deductionNote}`,
+          balanceField: "storeShareEarned",
+        });
+      }
+    }
+
+    // ── One atomic, exactly-once commit ──
+    // Concurrent Dispatched PUTs (double-click, retry) both pass the status
+    // gate above because it is read non-transactionally; the profitCreditedAt
+    // claim inside the transaction makes owner crediting exactly-once, and
+    // bundling ALL writes (recognition persistence + ledger rows + balance
+    // increments) means a crash can never leave a partial credit.
+    const aggregated = new Map<string, { totalEarned: number; storeShareEarned: number }>();
+    for (const row of creditRows) {
+      const acc = aggregated.get(row.ownerName) || { totalEarned: 0, storeShareEarned: 0 };
+      acc[row.balanceField] += row.amount;
+      aggregated.set(row.ownerName, acc);
+    }
+    const credited = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(orderRef);
+      if (!snap.exists || snap.data()?.profitCreditedAt) return false;
+      // Persist what was recognised per item: the cancellation path reverses
+      // the exact same deduction (symmetric by construction), and reports audit it.
+      for (const r of investmentSummary.items) {
+        tx.update(orderRef.collection("items").doc(r.orderItemId), {
+          investmentRecognition: {
+            investorProfitMinor: r.investorProfitMinor,
+            capitalRecoveredMinor: r.capitalRecoveredMinor,
+            mlFunded: r.mlFunded,
+            recognizedAt: now,
+          },
+        });
+      }
+      for (const row of creditRows) {
+        tx.create(db.collection(Collections.profitTransactions).doc(uuid()), {
+          orderId: id,
+          ownerName: row.ownerName,
+          type: row.type,
+          amount: row.amount,
+          description: row.description,
           createdAt: now,
         });
-        await db.collection(Collections.ownerAccounts).doc(owner2Name).set(
-          { storeShareEarned: FieldValue.increment(owner2StoreShare) },
-          { merge: true },
-        );
       }
+      for (const [ownerName, sums] of aggregated) {
+        const increments: Record<string, FieldValue> = {};
+        if (sums.totalEarned !== 0) increments.totalEarned = FieldValue.increment(sums.totalEarned);
+        if (sums.storeShareEarned !== 0) increments.storeShareEarned = FieldValue.increment(sums.storeShareEarned);
+        if (Object.keys(increments).length > 0) {
+          tx.set(db.collection(Collections.ownerAccounts).doc(ownerName), increments, { merge: true });
+        }
+      }
+      tx.update(orderRef, { profitCreditedAt: now });
+      return true;
+    });
+    if (!credited) {
+      console.log(`[ORDER] ${id} profit already credited — skipping duplicate crediting`);
     }
   }
 
@@ -801,24 +876,42 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (newStatusDb === "Cancelled" && previousStatusDb !== "Cancelled") {
     const itemsSnap = await db.collection(Collections.orders).doc(id).collection("items").get();
 
-    // Restore stock regardless of previous status
-    for (const itemDoc of itemsSnap.docs) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const item = itemDoc.data() as any;
-      if (item.isFullBottle) continue;
-      await db.collection(Collections.perfumes).doc(item.perfumeId).update({
-        totalStockMl: FieldValue.increment(item.ml * item.quantity),
-      });
-      const bottleSnap = await db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1).get();
-      if (!bottleSnap.empty) {
-        await db.collection(Collections.bottles).doc(bottleSnap.docs[0].id).update({
-          availableCount: FieldValue.increment(item.quantity),
+    // ── One atomic, exactly-once stock restoration (claim shared with the
+    // standalone cancel route) — concurrent or repeated cancellations must
+    // not inflate inventory. ──
+    const stockOrderRef = db.collection(Collections.orders).doc(id);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(stockOrderRef);
+      if (!snap.exists || snap.data()?.stockRestoredAt) return;
+      const bottleRefs: Array<{ ref: FirebaseFirestore.DocumentReference; quantity: number }> = [];
+      for (const itemDoc of itemsSnap.docs) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const item = itemDoc.data() as any;
+        if (item.isFullBottle) continue;
+        const bottleSnap = await tx.get(
+          db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1),
+        );
+        if (!bottleSnap.empty) {
+          bottleRefs.push({ ref: bottleSnap.docs[0].ref, quantity: Number(item.quantity || 0) });
+        }
+      }
+      for (const itemDoc of itemsSnap.docs) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const item = itemDoc.data() as any;
+        if (item.isFullBottle) continue;
+        tx.update(db.collection(Collections.perfumes).doc(item.perfumeId), {
+          totalStockMl: FieldValue.increment(item.ml * item.quantity),
         });
       }
-    }
+      for (const b of bottleRefs) {
+        tx.update(b.ref, { availableCount: FieldValue.increment(b.quantity) });
+      }
+      tx.update(stockOrderRef, { stockRestoredAt: now });
+    });
 
     // Only reverse profit if profit was previously credited (order was Dispatched)
     if (previousStatusDb === "Dispatched") {
+      // ── Compute every owner reversal up front (no writes yet) ──
       const profitByOwner: Record<string, { ownerProfit: number; otherOwnerProfit: number }> = {};
       const personalRevenueByOwner: Record<string, number> = {};
       for (const itemDoc of itemsSnap.docs) {
@@ -843,68 +936,63 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       }
 
+      type ReversalRow = {
+        ownerName: string;
+        type: string;
+        amount: number; // negative
+        description: string;
+        balanceField: "totalEarned" | "storeShareEarned";
+      };
+      const reversalRows: ReversalRow[] = [];
+
       for (const [ownerName, profits] of Object.entries(profitByOwner)) {
         if (ownerName === "Store") continue;
 
         if (profits.ownerProfit > 0) {
-          const txId = uuid();
-          await db.collection(Collections.profitTransactions).doc(txId).set({
-            orderId: id,
+          reversalRows.push({
             ownerName,
             type: "cancellation",
             amount: -profits.ownerProfit,
             description: `Reversed profit from cancelled order ${id.slice(0, 8)}`,
-            createdAt: now,
+            balanceField: "totalEarned",
           });
-          await db.collection(Collections.ownerAccounts).doc(ownerName).set(
-            { totalEarned: FieldValue.increment(-profits.ownerProfit) },
-            { merge: true },
-          );
         }
 
         if (profits.otherOwnerProfit > 0) {
           const otherOwner = ownerName === owner1Name ? owner2Name : owner1Name;
-          const txId = uuid();
-          await db.collection(Collections.profitTransactions).doc(txId).set({
-            orderId: id,
+          reversalRows.push({
             ownerName: otherOwner,
             type: "cancellation",
             amount: -profits.otherOwnerProfit,
             description: `Reversed cross-owner share from cancelled order ${id.slice(0, 8)}`,
-            createdAt: now,
+            balanceField: "storeShareEarned",
           });
-          await db.collection(Collections.ownerAccounts).doc(otherOwner).set(
-            { storeShareEarned: FieldValue.increment(-profits.otherOwnerProfit) },
-            { merge: true },
-          );
         }
 
         if ((personalRevenueByOwner[ownerName] || 0) > 0) {
-          const ownerRevenueReverse = personalRevenueByOwner[ownerName];
-          const txId = uuid();
-          await db.collection(Collections.profitTransactions).doc(txId).set({
-            orderId: id,
+          reversalRows.push({
             ownerName,
             type: "owner-revenue-base",
-            amount: -ownerRevenueReverse,
+            amount: -personalRevenueByOwner[ownerName],
             description: `Reversed personal collection revenue credit from cancelled order ${id.slice(0, 8)}`,
-            createdAt: now,
+            balanceField: "totalEarned",
           });
-          await db.collection(Collections.ownerAccounts).doc(ownerName).set(
-            { totalEarned: FieldValue.increment(-ownerRevenueReverse) },
-            { merge: true },
-          );
         }
       }
 
-      // Reverse store-owned item profit distribution
+      // Reverse store-owned item profit distribution — the SAME per-item
+      // deduction that was applied at Dispatched (read back from the
+      // investmentRecognition field persisted at credit time), so credit and
+      // reversal are symmetric by construction.
       let totalStoreProfitToReverse = 0;
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
         if ((item.ownerName || "Store") === "Store") {
-          const itemProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
-          if (itemProfit > 0) totalStoreProfitToReverse += itemProfit;
+          const itemNetProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
+          const investorProfitMinor = Number(item.investmentRecognition?.investorProfitMinor ?? 0);
+          const recognized = ownerRecognizedItemProfitMajor(itemNetProfit, investorProfitMinor);
+          if (recognized > 0) totalStoreProfitToReverse += recognized;
         }
       }
 
@@ -913,35 +1001,71 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         const owner2StoreReverse = totalStoreProfitToReverse - owner1StoreReverse;
 
         if (owner1StoreReverse > 0) {
-          const txId = uuid();
-          await db.collection(Collections.profitTransactions).doc(txId).set({
-            orderId: id,
+          reversalRows.push({
             ownerName: owner1Name,
             type: "cancellation",
             amount: -owner1StoreReverse,
             description: `Reversed store share from cancelled order ${id.slice(0, 8)}`,
-            createdAt: now,
+            balanceField: "storeShareEarned",
           });
-          await db.collection(Collections.ownerAccounts).doc(owner1Name).set(
-            { storeShareEarned: FieldValue.increment(-owner1StoreReverse) },
-            { merge: true },
-          );
         }
         if (owner2StoreReverse > 0) {
-          const txId = uuid();
-          await db.collection(Collections.profitTransactions).doc(txId).set({
-            orderId: id,
+          reversalRows.push({
             ownerName: owner2Name,
             type: "cancellation",
             amount: -owner2StoreReverse,
             description: `Reversed store share from cancelled order ${id.slice(0, 8)}`,
+            balanceField: "storeShareEarned",
+          });
+        }
+      }
+
+      // ── One atomic, exactly-once reversal ──
+      // The profitReversedAt claim (shared with the standalone cancel route)
+      // makes owner un-crediting exactly-once under concurrent/duplicate
+      // cancellations, and bundling all writes prevents partial reversal.
+      const aggregatedReversal = new Map<string, { totalEarned: number; storeShareEarned: number }>();
+      for (const row of reversalRows) {
+        const acc = aggregatedReversal.get(row.ownerName) || { totalEarned: 0, storeShareEarned: 0 };
+        acc[row.balanceField] += row.amount;
+        aggregatedReversal.set(row.ownerName, acc);
+      }
+      const cancelOrderRef = db.collection(Collections.orders).doc(id);
+      const reversed = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(cancelOrderRef);
+        if (!snap.exists || snap.data()?.profitReversedAt) return false;
+        for (const row of reversalRows) {
+          tx.create(db.collection(Collections.profitTransactions).doc(uuid()), {
+            orderId: id,
+            ownerName: row.ownerName,
+            type: row.type,
+            amount: row.amount,
+            description: row.description,
             createdAt: now,
           });
-          await db.collection(Collections.ownerAccounts).doc(owner2Name).set(
-            { storeShareEarned: FieldValue.increment(-owner2StoreReverse) },
-            { merge: true },
-          );
         }
+        for (const [ownerName, sums] of aggregatedReversal) {
+          const increments: Record<string, FieldValue> = {};
+          if (sums.totalEarned !== 0) increments.totalEarned = FieldValue.increment(sums.totalEarned);
+          if (sums.storeShareEarned !== 0) increments.storeShareEarned = FieldValue.increment(sums.storeShareEarned);
+          if (Object.keys(increments).length > 0) {
+            tx.set(db.collection(Collections.ownerAccounts).doc(ownerName), increments, { merge: true });
+          }
+        }
+        tx.update(cancelOrderRef, { profitReversedAt: now });
+        return true;
+      });
+      if (!reversed) {
+        console.log(`[ORDER] ${id} profit already reversed — skipping duplicate reversal`);
+      }
+
+      // ── Reverse investor-funded ledger activity (idempotent, best-effort) ──
+      const investmentReversal = await reverseInvestmentSalesForOrder(id, admin.id);
+      if (investmentReversal.reversedEntries > 0 || investmentReversal.errors.length > 0) {
+        console.log(
+          `[INVESTMENT] Order ${id} cancellation: reversed ${investmentReversal.reversedEntries} ledger entr(ies)` +
+            (investmentReversal.errors.length ? `, errors: ${investmentReversal.errors.join("; ")}` : ""),
+        );
       }
     }
   }

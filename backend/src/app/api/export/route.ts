@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins } from "@/lib/utils";
+import { fromMinorUnits } from "@/lib/finance";
 
 async function getOrderItemsMap(orderIds: string[]) {
   if (orderIds.length === 0) return new Map<string, Array<Record<string, unknown> & { id: string }>>();
@@ -193,6 +194,78 @@ export async function GET(req: Request) {
       ]);
       csv = toCSV(headers, rows);
       filename = "customers.csv";
+      break;
+    }
+
+    case "investors": {
+      const snap = await db.collection(Collections.investors).get();
+      const headers = ["Name", "Email", "Phone", "Status", "Total Invested", "Capital Recovered", "Total Profit", "Total Withdrawn", "Active Investments", "Completed Investments", "Created"];
+      const rows = snap.docs.map((d) => {
+        const r = asRecord(d.data());
+        return [
+          asString(r.name),
+          asString(r.email),
+          asString(r.phone),
+          asString(r.status),
+          (fromMinorUnits(asNumber(r.totalInvestedMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.totalRecoveredCapitalMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.totalProfitMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.totalWithdrawnMinor))).toFixed(2),
+          asNumber(r.activeInvestmentCount).toString(),
+          asNumber(r.completedInvestmentCount).toString(),
+          toDate(r.createdAt).toLocaleDateString(),
+        ];
+      });
+      csv = toCSV(headers, rows);
+      filename = "investors.csv";
+      break;
+    }
+
+    case "investments": {
+      const snap = await db.collection(Collections.investments).get();
+      const headers = ["Investment ID", "Investor", "Status", "Principal", "Capital Recovered", "Remaining Inventory Cost", "Available Profit", "Withdrawn Profit", "Profit Share %", "Created", "Closed"];
+      const rows = snap.docs
+        .map((d) => ({ id: d.id, r: asRecord(d.data()) }))
+        .sort((a, b) => toDate(b.r.createdAt).getTime() - toDate(a.r.createdAt).getTime())
+        .map(({ id: docId, r }) => [
+          docId.slice(0, 8),
+          asString(r.investorName),
+          asString(r.status),
+          (fromMinorUnits(asNumber(r.amountMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.recoveredCapitalMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.remainingInventoryCostMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.availableProfitMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.withdrawnProfitMinor))).toFixed(2),
+          asNumber(r.profitSharePercentage).toString(),
+          toDate(r.createdAt).toLocaleDateString(),
+          r.closedAt ? toDate(r.closedAt).toLocaleDateString() : "",
+        ]);
+      csv = toCSV(headers, rows);
+      filename = "investments.csv";
+      break;
+    }
+
+    case "investment-ledger": {
+      const snap = await db.collection(Collections.investmentTransactions).get();
+      const headers = ["Date", "Type", "Stream", "Investment ID", "Amount", "ML Sold", "Balance Before", "Balance After", "Order Ref", "Performed By", "Notes"];
+      const rows = snap.docs
+        .map((d) => asRecord(d.data()))
+        .sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime())
+        .map((r) => [
+          toDate(r.createdAt).toLocaleString(),
+          asString(r.type),
+          asString(r.stream),
+          asString(r.investmentId).slice(0, 8),
+          (fromMinorUnits(asNumber(r.amountMinor))).toFixed(2),
+          r.mlSold === null || r.mlSold === undefined ? "" : asNumber(r.mlSold).toString(),
+          (fromMinorUnits(asNumber(r.previousBalanceMinor))).toFixed(2),
+          (fromMinorUnits(asNumber(r.newBalanceMinor))).toFixed(2),
+          asString(r.referenceOrderId).slice(0, 8),
+          asString(r.performedBy),
+          asString(r.notes),
+        ]);
+      csv = toCSV(headers, rows);
+      filename = "investment_ledger.csv";
       break;
     }
 

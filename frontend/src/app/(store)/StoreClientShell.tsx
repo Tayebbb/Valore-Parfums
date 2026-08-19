@@ -153,10 +153,14 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
     fetchUser();
   }, [fetchUser]);
 
-  // Load recent searches from localStorage
+  // Load recent searches from localStorage. Deferred to a frame so the
+  // hydration render matches the server output (empty list) first.
   useEffect(() => {
-    const saved = safeStorageGetJSON<string[]>("valore_recent_searches", "localStorage");
-    if (Array.isArray(saved)) setRecentSearches(saved);
+    const frame = window.requestAnimationFrame(() => {
+      const saved = safeStorageGetJSON<string[]>("valore_recent_searches", "localStorage");
+      if (Array.isArray(saved)) setRecentSearches(saved);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   const saveRecentSearch = useCallback((query: string) => {

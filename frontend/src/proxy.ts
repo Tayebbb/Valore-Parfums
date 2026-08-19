@@ -213,6 +213,19 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Protect investor portal (defense-in-depth; the server layout and the
+  // backend APIs are the real boundaries). Investor OR admin may enter.
+  if (request.nextUrl.pathname.startsWith("/investor")) {
+    const session = request.cookies.get("vp-session");
+    const user = session?.value ? await verifySessionToken(session.value) : null;
+    if (!user) {
+      return NextResponse.redirect(new URL("/login?next=/investor", request.url));
+    }
+    if (user.role !== "investor" && user.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   return response;
 }
 

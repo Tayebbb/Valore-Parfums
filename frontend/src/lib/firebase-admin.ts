@@ -80,4 +80,10 @@ export const Collections = {
   blogPosts: "blogPosts",
   ownerAccounts: "ownerAccounts",
   profitTransactions: "profitTransactions",
+  investors: "investors",
+  investments: "investments",
+  investmentAllocations: "investmentAllocations",
+  investmentTransactions: "investmentTransactions",
+  investmentWithdrawals: "investmentWithdrawals",
+  buybacks: "buybacks",
 } as const;

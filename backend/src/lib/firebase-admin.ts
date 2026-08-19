@@ -93,4 +93,10 @@ export const Collections = {
   ownerAccounts: "ownerAccounts",
   profitTransactions: "profitTransactions",
   auditLogs: "auditLogs",
+  investors: "investors",
+  investments: "investments",
+  investmentAllocations: "investmentAllocations",
+  investmentTransactions: "investmentTransactions",
+  investmentWithdrawals: "investmentWithdrawals",
+  buybacks: "buybacks",
 } as const;

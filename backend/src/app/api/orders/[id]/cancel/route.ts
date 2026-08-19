@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { generateOrderCancelledEmail, sendEmail } from "@/lib/email";
 import { validateString } from "@/lib/validation";
 import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
+import { reverseInvestmentSalesForOrder } from "@/lib/investments/orderIntegration";
 
 function hasPaidLikeStatus(status?: string): boolean {
   const normalized = String(status || "").trim().toLowerCase();
@@ -74,6 +75,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         { status: 400 },
       );
     }
+    // isValidTransition treats same→same as a no-op “transition”, which would
+    // let an already-cancelled order be re-cancelled — re-running stock
+    // restoration and notifications. Terminal means terminal.
+    if (normalizedCurrentStatus === "Cancelled") {
+      return NextResponse.json({ error: "Order is already cancelled" }, { status: 400 });
+    }
 
     console.log(`[ORDER] ${id} status: ${normalizedCurrentStatus} → Cancelled`);
 
@@ -95,7 +102,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       fullBottleCondition?: "new" | "partial";
     }> = [];
 
-    // Restore inventory for all items
+    // Restore inventory for all items (writes are claim-guarded below;
+    // this loop only computes the refund + email item list).
     for (const itemDoc of itemsSnap.docs) {
       const item = itemDoc.data();
       refundAmount += item.totalPrice || 0;
@@ -113,62 +121,101 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           ? (conditionFromItem === "partial" || conditionFromSnapshot === "full_bottle" ? "partial" : "new")
           : undefined,
       });
-
-      // Only restore decant items (full bottles are not stock-managed the same way)
-      if (!item.isFullBottle) {
-        await db.collection(Collections.perfumes).doc(item.perfumeId).update({
-          totalStockMl: FieldValue.increment(item.ml * item.quantity),
-        });
-
-        // Restore bottle inventory
-        const bottleSnap = await db
-          .collection(Collections.bottles)
-          .where("ml", "==", item.ml)
-          .limit(1)
-          .get();
-        if (!bottleSnap.empty) {
-          await bottleSnap.docs[0].ref.update({
-            availableCount: FieldValue.increment(item.quantity),
-          });
-        }
-      }
     }
 
-    // Reverse profit transactions if order was already completed
-    if (["Completed", "Dispatched"].includes(currentStatus)) {
+    // ── One atomic, exactly-once stock restoration ──
+    // The stockRestoredAt claim (shared with the PUT-cancel path) prevents
+    // concurrent or repeated cancellations from inflating inventory.
+    const orderRefForStock = db.collection(Collections.orders).doc(id);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(orderRefForStock);
+      if (!snap.exists || snap.data()?.stockRestoredAt) return;
+      const bottleRefs: Array<{ ref: FirebaseFirestore.DocumentReference; quantity: number }> = [];
+      for (const itemDoc of itemsSnap.docs) {
+        const item = itemDoc.data();
+        if (item.isFullBottle) continue;
+        const bottleSnap = await tx.get(
+          db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1),
+        );
+        if (!bottleSnap.empty) {
+          bottleRefs.push({ ref: bottleSnap.docs[0].ref, quantity: Number(item.quantity || 0) });
+        }
+      }
+      for (const itemDoc of itemsSnap.docs) {
+        const item = itemDoc.data();
+        if (item.isFullBottle) continue;
+        tx.update(db.collection(Collections.perfumes).doc(item.perfumeId), {
+          totalStockMl: FieldValue.increment(item.ml * item.quantity),
+        });
+      }
+      for (const b of bottleRefs) {
+        tx.update(b.ref, { availableCount: FieldValue.increment(b.quantity) });
+      }
+      tx.update(orderRefForStock, { stockRestoredAt: now });
+    });
+
+    // Reverse profit transactions if financials were recognised. Recognition
+    // happens when the order enters the completed-family status (canonical db
+    // value "Dispatched"; aliases: Delivered/Completed/Fulfilled) — compare the
+    // NORMALIZED status so alias-stored orders reverse too.
+    if (normalizedCurrentStatus === "Dispatched") {
+      const orderRef = db.collection(Collections.orders).doc(id);
       const profitSnap = await db
         .collection(Collections.profitTransactions)
         .where("orderId", "==", id)
         .get();
 
-      for (const profitDoc of profitSnap.docs) {
-        const profit = profitDoc.data();
+      // ── One atomic, exactly-once reversal ──
+      // The profitReversedAt claim (shared with the PUT-cancel path) makes the
+      // balance decrements exactly-once under concurrent/duplicate cancels,
+      // and bundling all writes prevents a partial reversal on crash.
+      const rows = profitSnap.docs
+        .map((d) => ({ ref: d.ref, data: d.data() }))
+        .filter((r) => !r.data.reversed); // never un-credit the same row twice
+      const aggregated = new Map<string, { totalEarned: number; storeShareEarned: number }>();
+      for (const { data: profit } of rows) {
+        if (!profit.ownerName) continue;
+        const acc = aggregated.get(profit.ownerName) || { totalEarned: 0, storeShareEarned: 0 };
+        if (profit.type === "sale" || profit.type === "owner-revenue-base") {
+          acc.totalEarned -= profit.amount || 0;
+        } else if (profit.type === "store-share" || profit.type === "cross-owner-share") {
+          acc.storeShareEarned -= profit.amount || 0;
+        }
+        aggregated.set(profit.ownerName, acc);
+      }
 
-        // Reverse the profit
-        if (profit.ownerName) {
-          if (profit.type === "sale") {
-            await db
-              .collection(Collections.ownerAccounts)
-              .doc(profit.ownerName)
-              .update({
-                totalEarned: FieldValue.increment(-(profit.amount || 0)),
-              });
-          } else if (profit.type === "store-share" || profit.type === "cross-owner-share") {
-            await db
-              .collection(Collections.ownerAccounts)
-              .doc(profit.ownerName)
-              .update({
-                storeShareEarned: FieldValue.increment(-(profit.amount || 0)),
-              });
+      const reversed = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(orderRef);
+        if (!snap.exists || snap.data()?.profitReversedAt) return false;
+        for (const [ownerName, sums] of aggregated) {
+          const increments: Record<string, FieldValue> = {};
+          if (sums.totalEarned !== 0) increments.totalEarned = FieldValue.increment(sums.totalEarned);
+          if (sums.storeShareEarned !== 0) increments.storeShareEarned = FieldValue.increment(sums.storeShareEarned);
+          if (Object.keys(increments).length > 0) {
+            tx.set(db.collection(Collections.ownerAccounts).doc(ownerName), increments, { merge: true });
           }
         }
+        for (const { ref } of rows) {
+          tx.update(ref, {
+            reversed: true,
+            reversalReason: `Order ${id} cancelled`,
+            reversedAt: now,
+          });
+        }
+        tx.update(orderRef, { profitReversedAt: now });
+        return true;
+      });
+      if (!reversed) {
+        console.log(`[ORDER] ${id} profit already reversed — skipping duplicate reversal`);
+      }
 
-        // Mark profit transaction as reversed
-        await profitDoc.ref.update({
-          reversed: true,
-          reversalReason: `Order ${id} cancelled`,
-          reversedAt: now,
-        });
+      // Reverse investor-funded ledger activity (idempotent, best-effort)
+      const investmentReversal = await reverseInvestmentSalesForOrder(id, admin.id);
+      if (investmentReversal.reversedEntries > 0 || investmentReversal.errors.length > 0) {
+        console.log(
+          `[INVESTMENT] Order ${id} cancellation: reversed ${investmentReversal.reversedEntries} ledger entr(ies)` +
+            (investmentReversal.errors.length ? `, errors: ${investmentReversal.errors.join("; ")}` : ""),
+        );
       }
     }
 

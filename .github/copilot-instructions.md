@@ -10,7 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-02 (Google ID tokens verified with jose — firebase-admin/auth unusable on Vercel)
+- **Last updated:** 2026-08-19 (Release hardening — exactly-once financial claims,
+  live E2E suite 62/62, merged to main)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -65,7 +66,9 @@ Collections (see `backend/src/lib/firebase-admin.ts::Collections`):
 `perfumes`, `perfumeReviews`, `notesLibrary`, `decantSizes`, `bottles`, `settings`,
 `bulkPricingRules`, `orders`, `orderItems`, `vouchers`, `stockRequests`, `users`,
 `wishlists`, `notifications`, `withdrawals`, `pickupLocations`, `requests`,
-`fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`.
+`fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`,
+`investors`, `investments`, `investmentAllocations`, `investmentTransactions`,
+`investmentWithdrawals`, `buybacks`.
 
 **Subcollections:** `orders/{orderId}/items` — order line items. Queried via
 `collectionGroup("items")` in `dashboard`, `owner-accounts`, `withdrawals`, and the
@@ -164,6 +167,31 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | `/api/export`                       | GET              | admin                        | CSV / JSON export              |
 | `/api/test-email`                   | POST             | admin                        | Diagnostic                     |
 
+### Investments (Phase 3 — integrated with orders + UI)
+
+| Route                              | Methods   | Guard                  | Notes                                                                                                 |
+| ---------------------------------- | --------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/api/investors`                   | GET, POST | admin                  | Investor registry; POST links to `users` doc by email when one exists                                 |
+| `/api/investors/[id]`              | GET, PUT  | admin                  | PUT edits profile only — financial totals are ledger-controlled                                       |
+| `/api/investments`                 | GET, POST | admin                  | POST derives amount from allocations (`ml × costPerMl`); rejects personal-collection perfumes; one tx |
+| `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                               |
+| `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                         |
+| `/api/investments/[id]/buyback`    | GET, POST | admin                  | GET quote / POST execute (atomic close)                                                               |
+| `/api/investments/reports`         | GET       | admin                  | Aggregates recomputed on read + invariant health + `monthlyBreakdown`, `byPerfume`, withdrawal stats + `profitAttribution` (gross = investor + Valore retained, from persisted `investmentRecognition`) |
+| `/api/investment-withdrawals`      | GET, POST | investor (own) / admin | Profit-only withdrawal requests                                                                       |
+| `/api/investment-withdrawals/[id]` | PUT       | admin                  | `action: approve\|reject\|paid`; approve deducts profit inside tx                                     |
+| `/api/investor/dashboard`          | GET       | investor               | Investor resolved from session (userId/email) — IDOR-proof                                            |
+| `/api/investor/investments/[id]`   | GET       | investor               | Ownership-guarded (404 on foreign ids); allocations + ledger                                          || `/api/investor/statement`          | GET       | investor / admin       | §17 account statement (MAJOR units); admin may pass `?investorId=` for any investor                    |
+**Order integration:** `orders/[id]` PUT → Dispatched calls
+`processInvestmentSalesForOrder()` FIRST (per-item FIFO consumption, `allowPartial`,
+idempotent ledger keys), persists per-item `investmentRecognition` on order items,
+then credits owners with `net profit − investor profit` per funded item
+(`ownerRecognizedItemProfitMajor`). PUT → Cancelled (from Dispatched) and
+`orders/[id]/cancel` (normalized completed-family status) reverse BOTH sides:
+owner reversal reuses the persisted per-item deduction;
+`reverseInvestmentSalesForOrder()` appends compensating `rev_` adjustment entries.
+`/api/export` supports `type=investors|investments|investment-ledger` CSVs.
+
 Never add a mutating admin endpoint without `requireAdmin()`.
 
 ---
@@ -188,10 +216,25 @@ Never add a mutating admin endpoint without `requireAdmin()`.
 `/admin` (dashboard), `/admin/orders`, `/admin/inventory`, `/admin/settings`,
 `/admin/vouchers`, `/admin/decant-sizes`, `/admin/bottles`, `/admin/requests`,
 `/admin/notifications`, `/admin/brand-sections`, `/admin/export`, `/admin/reports`,
-`/admin/pickup-locations`.
+`/admin/pickup-locations`, `/admin/investments` (overview + tabs: investments /
+investors / withdrawals), `/admin/investments/[id]` (balances, allocations,
+ledger, buyback, manual adjustments).
 Two legacy paths are permanent redirects to consolidated pages:
 `/admin/stock-requests` → `/admin/orders`, `/admin/notes-library` → `/admin/inventory`.
 Server-side redirect in `admin/layout.tsx` checks session role before render.
+
+### Investor portal (`app/investor/`)
+
+`/investor` (dashboard: summary cards incl. remaining capital / available profit /
+account value / ROI, investments table, profit-withdrawal request form, withdrawal
+history, statement link), `/investor/investments/[id]` (balances, allocations,
+ledger with stream filter), `/investor/statement` (print-friendly §17 account
+statement; admins reach it via `?investorId=` links from `/admin/investments`).
+`investor/layout.tsx` is a server
+gate mirroring `admin/layout.tsx`: allows role `investor` OR `admin`,
+redirects others. The API is the real security boundary (`requireInvestor()`
+
+- session-resolved investor id).
 
 ### Special
 
@@ -230,26 +273,32 @@ Do **not** add new API handlers here unless they only touch frontend concerns.
 
 ### `backend/src/lib/`
 
-| File                   | Purpose                                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------------------- |
-| `auth.ts`              | PBKDF2 hash / verify, session cookie sign / verify, `getSessionUser`, `requireAdmin`                  |
-| `finance.ts`           | Minor-unit math, `computeItemBreakdown`, `buildOrderPricingSnapshot`, `splitProfitMinor`              |
-| `ownerEarnings.ts`     | `calculatePersonalBottleEarnings` (85/15 split with liquid-cost recovery)                             |
-| `products.ts`          | Decant price + stock helpers                                                                          |
-| `utils.ts`             | `calculateSellingPrice`, `getBrandTier`, `getTierProfitMargin`, `splitProfit`, `DEFAULT_TIER_MARGINS` |
-| `orderStatusConfig.ts` | Status transitions + email triggers (duplicated in frontend)                                          |
-| `email.ts`             | Resend / Nodemailer dispatch + all templates                                                          |
-| `cloudinary.ts`        | Upload / delete / URL parsing                                                                         |
-| `image-utils.ts`       | `parseImageList`, `sanitizeCloudinaryImagesField`, `sanitizeCloudinaryUrl`                            |
-| `fragrance-notes.ts`   | Canonical notes + `buildStructuredNotes`                                                              |
-| `seo-catalog.ts`       | `getPerfumeOffers`, `getActivePerfumes`, slug / URL builders (duplicated in frontend)                 |
-| `validation.ts`        | Input validators                                                                                      |
-| `audit-log.ts`         | `logAuditAction` + `AUDIT_ACTIONS`                                                                    |
-| `rate-limit.ts`        | Per-IP limiter                                                                                        |
-| `csrf.ts`              | Double-submit cookie CSRF (helpers only — not currently wired into routes)                            |
-| `session-token.ts`     | HMAC sign/verify of `vp-session` (no `next/headers`; safe for middleware). See §7.8                   |
-| `firebase-admin.ts`    | Admin SDK init + `Collections`, `serializeDoc`                                                        |
-| `prisma.ts`            | Passthrough re-export of `db` + `Collections` (legacy name)                                           |
+| File                               | Purpose                                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `auth.ts`                          | PBKDF2 hash / verify, session cookie sign / verify, `getSessionUser`, `requireAdmin`                           |
+| `finance.ts`                       | Minor-unit math, `computeItemBreakdown`, `buildOrderPricingSnapshot`, `splitProfitMinor`                       |
+| `ownerEarnings.ts`                 | `calculatePersonalBottleEarnings` (85/15 split with liquid-cost recovery)                                      |
+| `products.ts`                      | Decant price + stock helpers                                                                                   |
+| `utils.ts`                         | `calculateSellingPrice`, `getBrandTier`, `getTierProfitMargin`, `splitProfit`, `DEFAULT_TIER_MARGINS`          |
+| `orderStatusConfig.ts`             | Status transitions + email triggers (duplicated in frontend)                                                   |
+| `email.ts`                         | Resend / Nodemailer dispatch + all templates                                                                   |
+| `cloudinary.ts`                    | Upload / delete / URL parsing                                                                                  |
+| `image-utils.ts`                   | `parseImageList`, `sanitizeCloudinaryImagesField`, `sanitizeCloudinaryUrl`                                     |
+| `fragrance-notes.ts`               | Canonical notes + `buildStructuredNotes`                                                                       |
+| `seo-catalog.ts`                   | `getPerfumeOffers`, `getActivePerfumes`, slug / URL builders (duplicated in frontend)                          |
+| `validation.ts`                    | Input validators                                                                                               |
+| `audit-log.ts`                     | `logAuditAction` + `AUDIT_ACTIONS`                                                                             |
+| `rate-limit.ts`                    | Per-IP limiter                                                                                                 |
+| `csrf.ts`                          | Double-submit cookie CSRF (helpers only — not currently wired into routes)                                     |
+| `session-token.ts`                 | HMAC sign/verify of `vp-session` (no `next/headers`; safe for middleware). See §7.8                            |
+| `firebase-admin.ts`                | Admin SDK init + `Collections`, `serializeDoc`                                                                 |
+| `prisma.ts`                        | Passthrough re-export of `db` + `Collections` (legacy name)                                                    |
+| `investments/types.ts`             | Investment system interfaces (investor, investment, allocation, ledger, withdrawal, buyback)                   |
+| `investments/finance.ts`           | PURE two-stream engine: FIFO allocation, sale split, invariant check, buyback math                             |
+| `investments/accountingService.ts` | `InvestmentAccountingService` — createInvestment, processInvestmentSale, adjustments (all `db.runTransaction`) |
+| `investments/buybackService.ts`    | Buyback quote + atomic execute                                                                                 |
+| `investments/withdrawalService.ts` | Profit-only withdrawal workflow (pending→approved/rejected→paid)                                               |
+| `investments/orderIntegration.ts`  | `processInvestmentSalesForOrder` / `reverseInvestmentSalesForOrder` — order-lifecycle glue; never throws       |
 
 ### `frontend/src/lib/`
 
@@ -346,6 +395,75 @@ header with curl. Rules:
 - `SESSION_SIGNING_KEY` must be ≥ 32 chars; missing/short keys **throw** in production.
   It is resolved lazily so `next build` does not need the secret.
 
+### 7.9 Inventory Investment System (two-stream model — do not regress)
+
+- **INVARIANT (always, per investment):**
+  `amountMinor === recoveredCapitalMinor + remainingInventoryCostMinor`.
+  Validated inside every transaction; violation throws → rollback.
+- **Stream A (capital recovery)** — the perfume cost of each funded sale returns
+  investor capital at the lot's locked `costPerMlMinor`. It is NOT profit and is
+  NEVER split or withdrawable.
+- **Stream B (profit)** — `net = sellingPrice − sellingCosts − perfumeCost`, split
+  by `profitSharePercentage` (per investment; default from
+  `settings/default.defaultInvestorProfitSharePercent`, fallback 40). Investor
+  share rounds; business takes the exact remainder. Losses reduce profit
+  (can go negative) — capital is still recovered in full.
+- **Only `availableProfitMinor` is withdrawable.** Deducted at APPROVAL inside a
+  transaction that re-validates the balance.
+- Sales consume allocations **FIFO** (oldest lot first). Multi-lot sales prorate
+  revenue/costs by ml, remainder to the last lot.
+- **Buyback** = `remainingInventoryCost + max(0, availableProfit)`; allocations →
+  `bought_back`, stock stays in `perfumes.totalStockMl` (now store-owned).
+  Buyback writes **per-stream ledger entries** (never mixed): a capital `buyback`
+  entry (`_buyback`), a profit payout entry (`_buyback_profit`) when profit > 0,
+  or a profit write-off adjustment (`_buyback_writeoff`) when profit < 0.
+  Negative profit is NEVER paid out or counted in `withdrawnProfitMinor` /
+  `totalWithdrawnMinor` — only `max(0, availableProfit)` is.
+- All money in minor units. **Recognition point = order status "Dispatched"**
+  (the completed-family status key; db aliases Delivered/Completed/Fulfilled
+  normalize to it). This is THE financial recognition event for BOTH the owner
+  P&L and the investor ledger — orders recognise nothing before it, and
+  cancellation FROM it is the reversal event for both, symmetrically.
+  Duplicate sale events are blocked in-transaction by a ledger query on
+  `referenceOrderItemId` (not a key guess) plus `tx.create` on every ledger
+  doc. `processInvestmentSalesForOrder` runs per decant item with
+  `allowPartial: true` — sells beyond funded ml only consume what lots have;
+  revenue/costs prorated by funded ml. Selling price excludes delivery fee
+  (built from `item.totalPrice`); selling costs = packaging + bottle from
+  `pricingSnapshot`.
+- **Owner P&L carve-out (final accounting decision, external review 2026-08-18,
+  do not regress):** for every investor-funded sale,
+  `actual net profit = investor profit + Valore (owner) profit`. At Dispatched
+  the investment ledger is processed FIRST; the store-share crediting then
+  recognises `ownerRecognizedItemProfitMajor(itemNet, investorProfitMinor)` =
+  `net − max(0, investor profit)` per item — the owner P&L never recognises
+  the full net profit while the investor ledger recognises the share on top.
+  Canonical example: revenue 900, perfume 600, direct costs 100 → net 200 =
+  investor 80 (40%) + Valore 120; owners are credited 120, never 200.
+  The per-item deduction is persisted as `investmentRecognition` on the order
+  item; the cancellation reversal reuses it, so credit and reversal are
+  symmetric by construction. Negative investor profit (funded loss) clamps the
+  deduction to 0 — the investor's loss share lives in the investment ledger
+  (reducing withdrawable profit) and never inflates owner recognition.
+  Non-funded items pass through with deduction 0 — behaviour unchanged.
+  An item whose investment processing failed produces NO investor entries and
+  NO deduction — totals stay consistent either way (no double count possible).
+- **Reversals**: cancelling a Dispatched-family order calls
+  `reverseSalesForOrder` — compensating adjustment entries with idempotency key
+  `rev_${originalKey}` (double-reversal physically fails via `tx.create`);
+  restores allocation ml, capital, and profit; refuses on `bought_back`
+  investments (manual adjustment required). The owner-side reversal deducts the
+  SAME persisted per-item investor profit that was deducted at credit time.
+- **Investor statements** distinguish: capital invested (original + additional
+  — each contribution is its own investment doc, aggregated per investor),
+  capital recovered through sales vs returned through buyback
+  (`splitCapitalBySource` over the capital stream), remaining inventory
+  exposure, realized profit, withdrawable (available) profit, and profit
+  already withdrawn.
+- Partial refunds are handled via manual admin adjustments (`PUT /api/investments/[id]`
+  with `{ adjustment }`), not automatically.
+- Personal-collection perfumes can never be investor-funded.
+
 ---
 
 ## 8. Environment Variables
@@ -384,20 +502,29 @@ header with curl. Rules:
 Run with `cd backend && npx tsx scripts/<name>.ts [--apply]`. Everything is dry-run
 until `--apply` is passed. Env comes from `backend/.env.local`.
 
-| Script                                                                                   | Purpose                                                                                                                |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `set-personal-collection.ts`                                                             | Flag non-Store perfumes as `isPersonalCollection` + patch existing order items.                                        |
-| `backfill-personal-collection-earnings.ts`                                               | Recompute `ownerProfit` / `otherOwnerProfit` on personal-collection items with the corrected `productCost` derivation. |
-| `reset-order-financials.ts`                                                              | **Destructive.** Zero order + owner totals.                                                                            |
-| `purge-orders.ts`                                                                        | **Destructive.** Full wipe of order data. Use with caution.                                                            |
-| `check-finances.ts`                                                                      | Read-only reconciliation of stored vs recomputed totals.                                                               |
-| `check-perfumes.ts` / `check-stock.ts` / `check-settings.ts` / `check-store-perfumes.ts` | Read-only inspection helpers.                                                                                          |
-| `clean-margins.ts` / `fix-bottles.ts` / `fix-decant-sizes.ts`                            | Historical one-shot data fixers (already run).                                                                         |
+| Script                                                                                   | Purpose                                                                                                                               |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `set-personal-collection.ts`                                                             | Flag non-Store perfumes as `isPersonalCollection` + patch existing order items.                                                       |
+| `backfill-personal-collection-earnings.ts`                                               | Recompute `ownerProfit` / `otherOwnerProfit` on personal-collection items with the corrected `productCost` derivation.                |
+| `reset-order-financials.ts`                                                              | **Destructive.** Zero order + owner totals.                                                                                           |
+| `purge-orders.ts`                                                                        | **Destructive.** Full wipe of order data. Use with caution.                                                                           |
+| `check-finances.ts`                                                                      | Read-only reconciliation of stored vs recomputed totals.                                                                              |
+| `check-perfumes.ts` / `check-stock.ts` / `check-settings.ts` / `check-store-perfumes.ts` | Read-only inspection helpers.                                                                                                         |
+| `clean-margins.ts` / `fix-bottles.ts` / `fix-decant-sizes.ts`                            | Historical one-shot data fixers (already run).                                                                                        |
+| `test-investments.ts`                                                                     | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure). |
+| `e2e-investments.ts`                                                                      | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup. |
+| `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                  |
 
 ---
 
 ## 10. Conventions & Gotchas
 
+- **Financial recognition/reversal is exactly-once by claim fields on the order doc:**
+  `profitCreditedAt` (Dispatched credit), `profitReversedAt` (cancel reversal,
+  shared by BOTH cancel paths), `stockRestoredAt` (cancel stock restore). Each is
+  claimed inside the same Firestore transaction that performs ALL the money/stock
+  writes — never split the claim from the writes, and never add a second code
+  path that credits/reverses without checking the claim.
 - **Never** compute personal-collection `productCost` from
   `perfume.purchasePricePerMl` alone — it is 0 for manual admin orders. Derive from
   `unitCost` / `costPrice` (see §7.1).
@@ -423,6 +550,14 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
   every user out — coordinate. See §7.8 for the trust model.
 - **Never trust an unverified `vp-session` payload.** Always go through
   `verifySessionToken()` / `getSessionUser()`.
+- **Investment mutations MUST go through the services in `backend/src/lib/investments/`**
+  (all use `db.runTransaction`). Never write investment/allocation/ledger docs
+  directly from a route. Ledger entries are immutable — corrections are
+  `adjustment` entries only. Ledger doc IDs = idempotency keys (`tx.create`
+  makes replays fail).
+- **The `investor` role NEVER satisfies `requireAdmin()`.** `requireInvestor()`
+  passes for investor OR admin. Investor-facing routes resolve the investor
+  from the session (userId/email) — never from query params.
 - **`next.config.ts` `images.remotePatterns` must stay host-restricted.** A `"**"`
   wildcard turns `/_next/image` into an open image proxy (SSRF).
 - **CORS is an explicit allowlist in both middlewares** — no `"*"`, and
@@ -460,6 +595,124 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-19 (2)** — **Release hardening + live E2E (merge gate for PR #22).**
+  Adversarial review of the recognition/reversal paths found and fixed three
+  defects: (1) **double-credit race** — concurrent/duplicate Dispatched PUTs
+  could credit owners twice (the loser with FULL profit, resurrecting the
+  double count); owner crediting is now computed first and committed in ONE
+  Firestore transaction guarded by a `profitCreditedAt` claim on the order
+  (recognition persistence + profit rows + balance increments all-or-nothing).
+  (2) **double-reversal race** — both cancel paths now share a
+  `profitReversedAt` claim with the same atomic pattern; the standalone cancel
+  route also stopped skipping `owner-revenue-base` when decrementing balances
+  (pre-existing under-reversal bug) and now rejects re-cancelling a Cancelled
+  order (`isValidTransition` treats same→same as valid — stock was restored
+  again on every repeat call). (3) **stock double-restore race** — stock/bottle
+  restoration in both cancel paths is now atomic behind a shared
+  `stockRestoredAt` claim. `processInvestmentSalesForOrder` heals retries: items
+  skipped as already-processed recover their amounts from the ledger so the
+  deduction map is never empty on a retry. New `backend/scripts/e2e-investments.ts`
+  (62 assertions, run against the live dev server + real Firestore with
+  namespaced fixtures and full cleanup incl. compensating owner decrements):
+  canonical recognition (owners +120 not +200), duplicate/alias dispatch,
+  symmetric cancellation to baseline, withdrawal request→approve→paid with
+  over-withdrawal rejection, buyback quote+execute, statement/report totals,
+  and a 13-check security battery (401s, forged/unsigned cookies, role
+  isolation, statement IDOR, foreign-id 404). Full battery green: 117/117 engine,
+  62/62 E2E, reconciliation pass, tsc/eslint 0 errors, both builds. Branch
+  merged to `main` (PR #22).
+
+- **2026-08-19** — **Accounting integration audit (PR #22 hardening).** Full trace
+  of every owner-profit consumer confirmed the 2026-08-18 carve-out covers all
+  payout-bearing paths (Dispatched credit, both cancel reversals, dashboard
+  ownership breakdown, owner-accounts recompute — which skips Store items by
+  construction — and the withdrawable-revenue deductions, which correctly reserve
+  the FULL gross store profit so the investor share can never be double-spent as
+  store revenue). Closed the two audit gaps: (1) `/api/investments/reports` now
+  returns `profitAttribution` — Gross Economic Profit / Investor Profit / Valore
+  Retained Profit computed from the persisted per-item `investmentRecognition`
+  over completed-family orders, with `invariantHolds` (gross = investor +
+  retained, exact by construction) and `valoreBookedProfit` for loss-clamped
+  items; rendered as an attribution panel on `/admin/investments`. (2) New test
+  section 14 “Combined business P&L reconciliation” (117/117 total): mixed batch
+  (funded + non-funded + funded-loss + partially-funded) proves per-item and
+  batch-level no-double-count, the attribution invariant, and that books only
+  diverge from economics by the deliberately-unbooked owner loss share.
+  Reconciliation script: all checks pass; production has ZERO investment docs, so
+  no historical funded sale ever booked under pre-carve-out behaviour — **no
+  migration needed, provably**. Dashboard top-line profit KPIs remain GROSS
+  economic profit by design (documented; ownership breakdown is carved).
+
+- **2026-08-18** — **Investor account statement + ROI surfacing** (spec gap-closure
+  on `feature/inventory-investment-system`). New `GET /api/investor/statement`
+  (session-resolved investor; admin `?investorId=` override; MAJOR units): account
+  position (original vs additional capital, recovered, remaining, realized /
+  withdrawn / available profit, current account value, buyback-value-today =
+  Σ remaining + max(0, available) over open investments, ROI), per-contribution
+  rows, monthly breakdown + full transaction history from the immutable ledger.
+  New print-friendly `/investor/statement` page (Print / Save PDF via
+  `window.print`, `print:` classes). Investor dashboard gained Remaining Capital /
+  Available Profit / Account Value / ROI cards + statement link. Admin investors
+  tab gained Remaining / Available / ROI columns (recomputed live from investment
+  docs, not denormalized fields) + per-investor Statement link. QA: 84/84 engine
+  tests, tsc + eslint 0 errors, production builds green (both apps).
+
+- **2026-08-02 (7)** — **Inventory Investment System — Phase 5 release.** Full QA
+  battery green (84/84 tests, tsc + eslint 0 errors both apps, production builds
+  pass). Fixed pre-existing `react-hooks/set-state-in-effect` lint error in
+  `StoreClientShell.tsx` (recent-searches localStorage read deferred to a frame).
+  README gained §6.12 (investment system reference) + collections list. All
+  investment work committed as 5 logical commits on
+  `feature/inventory-investment-system` and pushed; **draft PR #22** open against
+  `main` — the investment system is NOT on `main` until that PR merges.
+
+- **2026-08-02 (6)** — **Inventory Investment System — Phase 4 hardening.**
+  Fixed two real bugs: (1) **buyback with negative profit** credited the raw
+  (negative) `availableProfitMinor` to `withdrawnProfitMinor` / investor
+  `totalWithdrawnMinor` and wrote one mixed-stream ledger entry — now
+  `paidProfit = max(0, availableProfit)` and buyback writes separate per-stream
+  entries (`_buyback` capital, `_buyback_profit` payout, `_buyback_writeoff`
+  negative write-off), making every balance ledger-replayable (§7.9); (2)
+  **sale idempotency** pre-check only guessed the first-allocation key — now an
+  in-transaction ledger query on `referenceOrderItemId` blocks duplicates
+  regardless of FIFO state. Also: `createInvestment` ledger writes upgraded
+  `tx.set`→`tx.create`; `recordAdjustment` idempotency key gained a random
+  suffix (same-ms collision); new `AUDIT_ACTIONS.INVESTMENT_WITHDRAWAL_PAID`
+  used by `markPaid`; frontend middleware now gates `/investor` (investor OR
+  admin) as defense-in-depth; `check-investments.ts` profit replay now runs
+  for `bought_back` too. Tests 72→84, all green; both apps tsc + eslint clean.
+
+- **2026-08-02 (5)** — **Inventory Investment System — Phase 3.** Order
+  integration: `backend/src/lib/investments/orderIntegration.ts` wired into
+  `orders/[id]` PUT (Dispatched → `processInvestmentSalesForOrder`; Cancelled
+  from Dispatched → reverse) and `orders/[id]/cancel` (reverse). Engine gained
+  `planPartialFifoSale` + `allowPartial` sale mode + `reverseSalesForOrder`
+  (compensating `rev_` ledger entries, invariant-checked, `bought_back`
+  refused). Fixed latent retry bug (tx-callback accumulators now reset on
+  retry). Reports API extended (`monthlyBreakdown`, `byPerfume`, withdrawal
+  stats); `/api/export` gained `investors` / `investments` /
+  `investment-ledger` CSVs; audit action `INVESTMENT_SALE_REVERSED`. UI:
+  `/admin/investments` (+`[id]` detail with buyback + adjustments; sidebar
+  link) and investor portal `/investor` (+`investments/[id]`), server-gated
+  layout (investor OR admin). Tests 72/72 green; both apps tsc + eslint clean.
+  Store-side profit crediting still counts the full item profit (investor
+  profit tracked in the parallel ledger) — business-books overlap flagged for
+  Phase 4.
+
+- **2026-08-02 (4)** — **Inventory Investment System — Phase 2 backend.** New
+  collections `investors`, `investments`, `investmentAllocations`,
+  `investmentTransactions` (single immutable ledger; `stream: capital|profit|none`,
+  doc id = idempotency key, `tx.create` blocks replays), `investmentWithdrawals`,
+  `buybacks`. New libs under `backend/src/lib/investments/` (pure engine +
+  transactional services), 11 new API routes (see §4 Investments), new
+  `requireInvestor()` guard (investor OR admin; never satisfies `requireAdmin`),
+  investment `AUDIT_ACTIONS`, business rules in §7.9. Tests:
+  `scripts/test-investments.ts` (56/56 green) + `scripts/check-investments.ts`
+  reconciliation. Frontend untouched except `Collections` parity in the legacy
+  `frontend/src/lib/firebase-admin.ts`. NOT yet integrated with order processing
+  (Phase 3: call `processInvestmentSale()` at Dispatched, admin/investor UI,
+  frontend `requireInvestor` copy). Backend `tsc --noEmit` + eslint clean.
 
 - **2026-08-02 (3)** — **Google sign-in fixed end-to-end; `firebase-admin/auth` banned on Vercel.**
   Even after the Node 22 pin, `/api/auth/google` returned an HTML 500: any function
