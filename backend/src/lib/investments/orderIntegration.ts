@@ -111,8 +111,40 @@ export async function processInvestmentSalesForOrder(
         const message = error instanceof Error ? error.message : String(error);
         const normalized = message.toLowerCase();
         if (normalized.includes("already processed") || normalized.includes("already_exists") || normalized.includes("already exists")) {
-          // Duplicate event / replay / concurrent call — idempotency worked as designed.
+          // Duplicate event / replay / concurrent call — idempotency worked as
+          // designed. Recover this item's amounts from the ledger so the caller
+          // still gets a complete deduction map (heals a retry after a crash
+          // between the ledger tx and owner crediting).
           summary.itemsSkipped++;
+          try {
+            const existing = await db
+              .collection(Collections.investmentTransactions)
+              .where("referenceOrderItemId", "==", itemDoc.id)
+              .get();
+            let capitalMinor = 0;
+            let profitMinor = 0;
+            let mlFunded = 0;
+            for (const entryDoc of existing.docs) {
+              const e = entryDoc.data() as { type?: string; amountMinor?: number; mlSold?: number };
+              if (e.type === "capital_recovery") {
+                capitalMinor += e.amountMinor || 0;
+                mlFunded += e.mlSold || 0;
+              } else if (e.type === "profit_generated") {
+                profitMinor += e.amountMinor || 0;
+              }
+            }
+            if (capitalMinor !== 0 || profitMinor !== 0 || mlFunded !== 0) {
+              summary.items.push({
+                orderItemId: itemDoc.id,
+                investorProfitMinor: profitMinor,
+                capitalRecoveredMinor: capitalMinor,
+                businessProfitMinor: 0, // not recoverable from the ledger; unused by callers
+                mlFunded,
+              });
+            }
+          } catch (recoveryError) {
+            console.error(`[INVESTMENT] Ledger recovery failed for item ${itemDoc.id}:`, recoveryError);
+          }
         } else {
           summary.errors.push(`item ${itemDoc.id}: ${message}`);
           console.error(`[INVESTMENT] Sale processing failed for order ${orderId}, item ${itemDoc.id}:`, error);

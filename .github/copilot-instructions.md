@@ -10,8 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-19 (Accounting integration audit — P&L attribution
-  reporting + combined-books reconciliation tests)
+- **Last updated:** 2026-08-19 (Release hardening — exactly-once financial claims,
+  live E2E suite 62/62, merged to main)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -511,13 +511,20 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 | `check-finances.ts`                                                                      | Read-only reconciliation of stored vs recomputed totals.                                                                              |
 | `check-perfumes.ts` / `check-stock.ts` / `check-settings.ts` / `check-store-perfumes.ts` | Read-only inspection helpers.                                                                                                         |
 | `clean-margins.ts` / `fix-bottles.ts` / `fix-decant-sizes.ts`                            | Historical one-shot data fixers (already run).                                                                                        |
-| `test-investments.ts`                                                                    | Investment engine test suite (84 assertions incl. partial-FIFO, reversal math, buyback stream separation; exits non-zero on failure). |
+| `test-investments.ts`                                                                     | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure). |
+| `e2e-investments.ts`                                                                      | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup. |
 | `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                  |
 
 ---
 
 ## 10. Conventions & Gotchas
 
+- **Financial recognition/reversal is exactly-once by claim fields on the order doc:**
+  `profitCreditedAt` (Dispatched credit), `profitReversedAt` (cancel reversal,
+  shared by BOTH cancel paths), `stockRestoredAt` (cancel stock restore). Each is
+  claimed inside the same Firestore transaction that performs ALL the money/stock
+  writes — never split the claim from the writes, and never add a second code
+  path that credits/reverses without checking the claim.
 - **Never** compute personal-collection `productCost` from
   `perfume.purchasePricePerMl` alone — it is 0 for manual admin orders. Derive from
   `unitCost` / `costPrice` (see §7.1).
@@ -588,6 +595,33 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-19 (2)** — **Release hardening + live E2E (merge gate for PR #22).**
+  Adversarial review of the recognition/reversal paths found and fixed three
+  defects: (1) **double-credit race** — concurrent/duplicate Dispatched PUTs
+  could credit owners twice (the loser with FULL profit, resurrecting the
+  double count); owner crediting is now computed first and committed in ONE
+  Firestore transaction guarded by a `profitCreditedAt` claim on the order
+  (recognition persistence + profit rows + balance increments all-or-nothing).
+  (2) **double-reversal race** — both cancel paths now share a
+  `profitReversedAt` claim with the same atomic pattern; the standalone cancel
+  route also stopped skipping `owner-revenue-base` when decrementing balances
+  (pre-existing under-reversal bug) and now rejects re-cancelling a Cancelled
+  order (`isValidTransition` treats same→same as valid — stock was restored
+  again on every repeat call). (3) **stock double-restore race** — stock/bottle
+  restoration in both cancel paths is now atomic behind a shared
+  `stockRestoredAt` claim. `processInvestmentSalesForOrder` heals retries: items
+  skipped as already-processed recover their amounts from the ledger so the
+  deduction map is never empty on a retry. New `backend/scripts/e2e-investments.ts`
+  (62 assertions, run against the live dev server + real Firestore with
+  namespaced fixtures and full cleanup incl. compensating owner decrements):
+  canonical recognition (owners +120 not +200), duplicate/alias dispatch,
+  symmetric cancellation to baseline, withdrawal request→approve→paid with
+  over-withdrawal rejection, buyback quote+execute, statement/report totals,
+  and a 13-check security battery (401s, forged/unsigned cookies, role
+  isolation, statement IDOR, foreign-id 404). Full battery green: 117/117 engine,
+  62/62 E2E, reconciliation pass, tsc/eslint 0 errors, both builds. Branch
+  merged to `main` (PR #22).
 
 - **2026-08-19** — **Accounting integration audit (PR #22 hardening).** Full trace
   of every owner-profit consumer confirmed the 2026-08-18 carve-out covers all
