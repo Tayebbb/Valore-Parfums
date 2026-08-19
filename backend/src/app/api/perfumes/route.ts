@@ -7,6 +7,8 @@ import { requireAdmin } from "@/lib/auth";
 import { buildStructuredNotes, getCanonicalNotesLibrary } from "@/lib/fragrance-notes";
 import { getBrandTier } from "@/lib/utils";
 import { sanitizeCloudinaryImagesField } from "@/lib/image-utils";
+import { toMinorUnits } from "@/lib/finance";
+import { investmentAccounting } from "@/lib/investments/accountingService";
 import {
   buildCanonicalProductPath,
   buildCanonicalProductUrl,
@@ -123,6 +125,16 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
+    // Investor funding source (inventory page "owner" dropdown). This is a
+    // FUNDING selection, not ownership — the perfume stays owner "Store" so
+    // pricing and profit-split logic are untouched; the bottle cost is
+    // deducted from the investor's deposited capital pool below.
+    const fundingInvestorId = String(body.investorId ?? "").trim();
+    delete body.investorId;
+    if (fundingInvestorId) {
+      body.owner = "Store";
+      body.isPersonalCollection = false;
+    }
     const sanitizedImages = sanitizeCloudinaryImagesField(body.images);
     const purchasePricePerMl = Number(body.purchasePricePerMl ?? 0);
     const marketPricePerMl = Number(body.marketPricePerMl ?? 0);
@@ -181,7 +193,40 @@ export async function POST(req: Request) {
       createdAt: now,
       updatedAt: now,
     };
-    await db.collection(Collections.perfumes).doc(id).set(data);
+
+    if (fundingInvestorId) {
+      // Validate before writing anything.
+      const fundedMl = Math.round(normalizedBottleSizeMl);
+      const costPerMlMinor = toMinorUnits(purchasePricePerMl);
+      if (fundedMl <= 0 || costPerMlMinor <= 0) {
+        return NextResponse.json(
+          { error: "Investor-funded bottles need a bottle size and a purchase price" },
+          { status: 400 }
+        );
+      }
+      // createInvestment adds the funded ml to stock — start at 0 to avoid doubling.
+      data.totalStockMl = 0;
+      await db.collection(Collections.perfumes).doc(id).set(data);
+      try {
+        await investmentAccounting.createInvestment({
+          investorId: fundingInvestorId,
+          allocations: [{ perfumeId: id, ml: fundedMl, costPerMlMinor }],
+          amountMinor: fundedMl * costPerMlMinor,
+          performedBy: admin.id,
+          notes: `Funded via inventory: ${String(body.name || "")} (${fundedMl} ml)`,
+          fundFromPool: true,
+        });
+      } catch (fundingError) {
+        // Compensate: never leave a half-created investor bottle behind.
+        await db.collection(Collections.perfumes).doc(id).delete();
+        const message =
+          fundingError instanceof Error ? fundingError.message : "Investor funding failed";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+      data.totalStockMl = fundedMl; // reflect final stock in the response
+    } else {
+      await db.collection(Collections.perfumes).doc(id).set(data);
+    }
     perfumesCache.clear();
     revalidateTag("perfumes", "max");
     revalidatePath("/shop");

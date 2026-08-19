@@ -43,6 +43,7 @@ interface Investor {
   totalRecoveredCapitalMinor: number;
   totalProfitMinor: number;
   totalWithdrawnMinor: number;
+  unallocatedCapitalMinor?: number;
   activeInvestmentCount: number;
 }
 
@@ -123,6 +124,9 @@ export default function AdminInvestmentsPage() {
   // Forms
   const [showInvestorForm, setShowInvestorForm] = useState(false);
   const [investorForm, setInvestorForm] = useState(emptyInvestorForm);
+  const [capitalTarget, setCapitalTarget] = useState<Investor | null>(null);
+  const [capitalAmount, setCapitalAmount] = useState("");
+  const [capitalNotes, setCapitalNotes] = useState("");
   const [showInvestmentForm, setShowInvestmentForm] = useState(false);
   const [invForm, setInvForm] = useState({ investorId: "", profitSharePercentage: "", notes: "" });
   const [allocRows, setAllocRows] = useState<AllocationRow[]>([{ perfumeId: "", ml: "", costPerMl: "" }]);
@@ -200,6 +204,31 @@ export default function AdminInvestmentsPage() {
       load();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Failed to create investor", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addCapital = async () => {
+    if (!capitalTarget) return;
+    const amount = Number(capitalAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return toast("Enter a valid amount", "error");
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/investors/${capitalTarget.id}/capital`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, notes: capitalNotes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      toast(`৳${amount.toLocaleString("en-BD")} added to ${capitalTarget.name}'s capital`, "success");
+      setCapitalTarget(null);
+      setCapitalAmount("");
+      setCapitalNotes("");
+      load();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Failed to add capital", "error");
     } finally {
       setSaving(false);
     }
@@ -602,6 +631,29 @@ export default function AdminInvestmentsPage() {
             </div>
           )}
 
+          {capitalTarget && (
+            <div className="p-4 rounded border border-[var(--gold)]/40 bg-[var(--bg-surface)] space-y-2">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                Add capital — {capitalTarget.name} (current: {bdt(capitalTarget.unallocatedCapitalMinor || 0)})
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Deposited cash is deducted automatically when you add investor-funded bottles from the Inventory page.
+              </p>
+              <div className="grid md:grid-cols-3 gap-2">
+                <input value={capitalAmount} onChange={(e) => setCapitalAmount(e.target.value)} placeholder="Amount (BDT) *" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />
+                <input value={capitalNotes} onChange={(e) => setCapitalNotes(e.target.value)} placeholder="Notes (e.g. bKash ref)" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />
+                <div className="flex gap-2">
+                  <button onClick={addCapital} disabled={saving} className="px-3 py-1.5 text-xs bg-[var(--gold)] text-black rounded disabled:opacity-50">
+                    {saving ? "…" : "Add Capital"}
+                  </button>
+                  <button onClick={() => { setCapitalTarget(null); setCapitalAmount(""); setCapitalNotes(""); }} className="px-3 py-1.5 text-xs border border-[var(--border)] rounded text-[var(--text-secondary)]">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -609,6 +661,7 @@ export default function AdminInvestmentsPage() {
                   <th className="px-4 py-2.5">Name</th>
                   <th className="px-4 py-2.5">Email</th>
                   <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Capital</th>
                   <th className="px-4 py-2.5">Invested</th>
                   <th className="px-4 py-2.5">Recovered</th>
                   <th className="px-4 py-2.5">Remaining</th>
@@ -622,7 +675,7 @@ export default function AdminInvestmentsPage() {
               </thead>
               <tbody>
                 {investors.length === 0 && (
-                  <tr><td colSpan={12} className="px-4 py-6 text-center text-[var(--text-muted)]">No investors</td></tr>
+                  <tr><td colSpan={13} className="px-4 py-6 text-center text-[var(--text-muted)]">No investors</td></tr>
                 )}
                 {investors.map((i) => {
                   const pos = investorPosition.get(i.id);
@@ -634,6 +687,7 @@ export default function AdminInvestmentsPage() {
                     <td className="px-4 py-2.5">{i.name}</td>
                     <td className="px-4 py-2.5 text-[var(--text-secondary)]">{i.email}</td>
                     <td className="px-4 py-2.5"><StatusBadge status={i.status} /></td>
+                    <td className="px-4 py-2.5 text-[var(--gold)]">{bdt(i.unallocatedCapitalMinor || 0)}</td>
                     <td className="px-4 py-2.5">{bdt(i.totalInvestedMinor || 0)}</td>
                     <td className="px-4 py-2.5">{bdt(i.totalRecoveredCapitalMinor || 0)}</td>
                     <td className="px-4 py-2.5">{bdt(pos?.remainingMinor || 0)}</td>
@@ -643,6 +697,12 @@ export default function AdminInvestmentsPage() {
                     <td className="px-4 py-2.5">{roi}%</td>
                     <td className="px-4 py-2.5">{i.activeInvestmentCount || 0}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
+                      <button
+                        onClick={() => { setCapitalTarget(i); setCapitalAmount(""); setCapitalNotes(""); }}
+                        className="text-xs text-[var(--gold)] hover:underline mr-3"
+                      >
+                        Add Capital
+                      </button>
                       <Link
                         href={`/investor/statement?investorId=${i.id}`}
                         className="text-xs text-[var(--gold)] hover:underline mr-3"

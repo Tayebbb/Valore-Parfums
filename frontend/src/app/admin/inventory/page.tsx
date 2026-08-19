@@ -327,6 +327,7 @@ export default function InventoryPage() {
   const [noteSearchMiddle, setNoteSearchMiddle] = useState("");
   const [noteSearchBase, setNoteSearchBase] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [investors, setInvestors] = useState<Array<{ id: string; name: string; status: string; unallocatedCapitalMinor?: number }>>([]);
 
   const debouncedNoteSearchTop = useDebouncedValue(noteSearchTop, 120);
   const debouncedNoteSearchMiddle = useDebouncedValue(noteSearchMiddle, 120);
@@ -355,6 +356,10 @@ export default function InventoryPage() {
   useEffect(() => {
     load();
     loadNotesLibrary();
+    fetch("/api/investors")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) => setInvestors(Array.isArray(rows) ? rows.filter((i) => i.status === "active") : []))
+      .catch(() => setInvestors([]));
   }, []);
 
   const noteById = useMemo(
@@ -501,6 +506,15 @@ export default function InventoryPage() {
       // Build the payload — strip UI-only fields
       const { bottleSizeMl, marketPriceWhole, purchasePriceWhole, ...payload } = form;
       if (!payload.partialDealType) payload.partialSellingPrice = 0;
+      // Investor funding: the dropdown value is a funding source, not an owner.
+      // The bottle stays store-owned; the backend deducts the cost from the
+      // investor's deposited capital and registers the allocation.
+      let investorId = "";
+      if (payload.owner.startsWith("investor:")) {
+        investorId = payload.owner.slice("investor:".length);
+        payload.owner = "Store";
+        payload.isPersonalCollection = false;
+      }
       // Auto-compute per-ML if whole bottle fields filled
       if (bottleSizeMl > 0 && marketPriceWhole > 0) {
         payload.marketPricePerMl = parseFloat((marketPriceWhole / bottleSizeMl).toFixed(2));
@@ -512,6 +526,12 @@ export default function InventoryPage() {
       // Total stock = bottle size (N/A = 0)
       const effectiveBottleSize = bottleSizeMl > 0 ? bottleSizeMl : 0;
       (payload as Record<string, unknown>).totalStockMl = effectiveBottleSize;
+      if (investorId) {
+        if (effectiveBottleSize <= 0 || !(payload.purchasePricePerMl > 0)) {
+          return toast("Investor-funded bottles need a bottle size and purchase price", "error");
+        }
+        (payload as Record<string, unknown>).investorId = investorId;
+      }
 
       let res: Response;
       if (editing) {
@@ -986,7 +1006,28 @@ export default function InventoryPage() {
                   className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
                 >
                   {owners.map((o) => <option key={o} value={o}>{o === "Store" ? "Store (Platform)" : o}</option>)}
+                  {!editing && investors.length > 0 && (
+                    <optgroup label="Investor funded (store-owned)">
+                      {investors.map((inv) => (
+                        <option key={inv.id} value={`investor:${inv.id}`}>
+                          {inv.name} — ৳{((inv.unallocatedCapitalMinor || 0) / 100).toLocaleString("en-BD")} available
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
+                {form.owner.startsWith("investor:") && (
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    {(() => {
+                      const inv = investors.find((i) => `investor:${i.id}` === form.owner);
+                      const cost = (form.bottleSizeMl || 0) > 0 && form.purchasePriceWhole > 0
+                        ? form.purchasePriceWhole
+                        : (form.bottleSizeMl || 0) * (form.purchasePricePerMl || 0);
+                      const available = (inv?.unallocatedCapitalMinor || 0) / 100;
+                      return `৳${cost.toLocaleString("en-BD")} will be deducted from ${inv?.name || "the investor"}'s capital (৳${available.toLocaleString("en-BD")} available). The bottle sells as store stock; the investor earns their profit share on every sale.`;
+                    })()}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Partial Deal Type</label>

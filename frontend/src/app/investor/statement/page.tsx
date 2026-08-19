@@ -19,6 +19,7 @@ interface StatementPosition {
   originalCapital: number;
   additionalCapital: number;
   totalCapitalInvested: number;
+  undeployedCapital?: number;
   recoveredCapital: number;
   capitalRecoveredFromSales: number;
   capitalReturnedViaBuyback: number;
@@ -72,6 +73,7 @@ const bdt = (v: number) => `৳${v.toLocaleString("en-BD", { maximumFractionDigi
 const fmtDate = (s?: string) => (s ? new Date(s).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
 const TYPE_LABEL: Record<string, string> = {
+  capital_contribution: "Capital deposit",
   investment_created: "Capital contribution",
   inventory_purchased: "Inventory purchase",
   capital_recovery: "Capital recovery",
@@ -133,6 +135,7 @@ function StatementContent() {
     { label: "Original Capital", value: bdt(position.originalCapital) },
     { label: "Additional Capital", value: bdt(position.additionalCapital) },
     { label: "Total Capital Invested", value: bdt(position.totalCapitalInvested), highlight: true },
+    { label: "Undeployed Capital (cash on hand)", value: bdt(position.undeployedCapital ?? 0) },
     { label: "Recovered Capital", value: bdt(position.recoveredCapital) },
     { label: "— via Sales", value: bdt(position.capitalRecoveredFromSales ?? 0) },
     { label: "— via Buyback", value: bdt(position.capitalReturnedViaBuyback ?? 0) },

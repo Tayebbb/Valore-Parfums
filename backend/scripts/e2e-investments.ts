@@ -103,6 +103,8 @@ async function main() {
   let investorIdA = "";
   let investorIdB = "";
   let investmentId = "";
+  let investmentIdB = "";
+  let poolPerfumeId = "";
   let withdrawalId = "";
   const orderIds = [order1Id, order2Id];
 
@@ -381,6 +383,86 @@ async function main() {
     const attribution = reports.json.profitAttribution as Record<string, unknown>;
     ok(Boolean(attribution?.invariantHolds), "reports: gross = investor + Valore invariant holds");
 
+    // ══════════════════════════════════════════════════
+    console.log("\n7b. Capital pool: deposit → investor-funded bottle from inventory page");
+    // ══════════════════════════════════════════════════
+    const depositDenied = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: investorCookieA,
+      body: { amount: 5000 },
+    });
+    ok(depositDenied.status === 401, `investor role cannot deposit capital (${depositDenied.status})`);
+
+    const deposit = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: adminCookie,
+      body: { amount: 5000, notes: "e2e deposit" },
+    });
+    ok(deposit.status === 201, `admin deposits ৳5,000 → ${deposit.status}`);
+    const investorBAfterDeposit = (await db.collection(Collections.investors).doc(investorIdB).get()).data()!;
+    eq(investorBAfterDeposit.unallocatedCapitalMinor, 500_000, "pool = ৳5,000 after deposit");
+
+    // Inventory page flow: perfume created with investor as funding source.
+    const poolPerfume = await api("POST", "/api/perfumes", {
+      cookie: adminCookie,
+      body: {
+        name: `E2E POOL PERFUME ${RUN} (DELETE ME)`,
+        brand: "E2E-POOL",
+        owner: "Store",
+        investorId: investorIdB,
+        purchasePricePerMl: 60,
+        marketPricePerMl: 90,
+        totalStockMl: 50, // 50 ml × ৳60 = ৳3,000 — cut from the ৳5,000 pool
+        isActive: false,
+        category: "Unisex",
+        images: "[]",
+      },
+    });
+    ok(poolPerfume.status === 201, `investor-funded perfume created → ${poolPerfume.status}`);
+    poolPerfumeId = String(poolPerfume.json.id || "");
+    eq(poolPerfume.json.owner, "Store", "funded perfume stays owner Store (NOT personal collection)");
+    eq(poolPerfume.json.isPersonalCollection, false, "isPersonalCollection = false");
+    eq(poolPerfume.json.totalStockMl, 50, "stock = funded 50 ml");
+
+    const investorBAfterFunding = (await db.collection(Collections.investors).doc(investorIdB).get()).data()!;
+    eq(investorBAfterFunding.unallocatedCapitalMinor, 200_000, "pool ৳5,000 − ৳3,000 = ৳2,000");
+    eq(investorBAfterFunding.totalInvestedMinor, 300_000, "investor B total invested = ৳3,000");
+
+    const invBSnap = await db
+      .collection(Collections.investments)
+      .where("investorId", "==", investorIdB)
+      .get();
+    eq(invBSnap.size, 1, "exactly one investment auto-created for investor B");
+    investmentIdB = invBSnap.docs[0]?.id || "";
+    const autoInvB = invBSnap.docs[0]?.data() as Record<string, unknown>;
+    eq(autoInvB?.amountMinor, 300_000, "auto investment principal = ৳3,000");
+    eq((autoInvB?.metadata as { fundedFromPool?: boolean })?.fundedFromPool, true, "investment flagged fundedFromPool");
+    const dbPoolPerfume = (await db.collection(Collections.perfumes).doc(poolPerfumeId).get()).data()!;
+    eq(dbPoolPerfume.totalStockMl, 50, "db stock = 50 ml (no doubling)");
+
+    // Over-fund attempt: ৳6,000 bottle against a ৳2,000 pool must fail atomically.
+    const overFund = await api("POST", "/api/perfumes", {
+      cookie: adminCookie,
+      body: {
+        name: `E2E POOL OVERFUND ${RUN} (DELETE ME)`,
+        brand: "E2E-POOL",
+        owner: "Store",
+        investorId: investorIdB,
+        purchasePricePerMl: 60,
+        marketPricePerMl: 90,
+        totalStockMl: 100,
+        isActive: false,
+        category: "Unisex",
+        images: "[]",
+      },
+    });
+    ok(overFund.status === 400, `over-funding rejected (${overFund.status})`);
+    const orphanCheck = await db.collection(Collections.perfumes).where("brand", "==", "E2E-POOL").get();
+    eq(orphanCheck.size, 1, "rejected bottle left NO orphan perfume doc");
+    const investorBAfterReject = (await db.collection(Collections.investors).doc(investorIdB).get()).data()!;
+    eq(investorBAfterReject.unallocatedCapitalMinor, 200_000, "pool untouched by rejected funding");
+
+    const statementB = await api("GET", `/api/investor/statement?investorId=${investorIdB}`, { cookie: adminCookie });
+    eq((statementB.json.position as Record<string, number>)?.undeployedCapital, 2000, "statement shows ৳2,000 undeployed");
+
     // ════════════════════════════════════════════════════
     console.log("\n8. Security battery");
     // ════════════════════════════════════════════════════
@@ -445,6 +527,27 @@ async function main() {
         }
         await db.collection(Collections.investments).doc(investmentId).delete();
       }
+      if (investmentIdB) {
+        for (const col of [
+          Collections.investmentTransactions,
+          Collections.investmentAllocations,
+          Collections.investmentWithdrawals,
+          Collections.buybacks,
+        ]) {
+          const snap = await db.collection(col).where("investmentId", "==", investmentIdB).get();
+          for (const d of snap.docs) await d.ref.delete();
+        }
+        await db.collection(Collections.investments).doc(investmentIdB).delete();
+      }
+      // Pool contribution entries carry investmentId "" — delete by investor.
+      for (const invId of [investorIdA, investorIdB].filter(Boolean)) {
+        const contribSnap = await db
+          .collection(Collections.investmentTransactions)
+          .where("investorId", "==", invId)
+          .get();
+        for (const d of contribSnap.docs) await d.ref.delete();
+      }
+      if (poolPerfumeId) await db.collection(Collections.perfumes).doc(poolPerfumeId).delete();
       if (investorIdA) await db.collection(Collections.investors).doc(investorIdA).delete();
       if (investorIdB) await db.collection(Collections.investors).doc(investorIdB).delete();
       await db.collection(Collections.perfumes).doc(perfumeId).delete();

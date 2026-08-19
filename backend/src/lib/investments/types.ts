@@ -23,6 +23,10 @@ export interface InvestorDoc {
   totalRecoveredCapitalMinor: MoneyMinor;
   totalProfitMinor: MoneyMinor;
   totalWithdrawnMinor: MoneyMinor;
+  /** Cash deposited by the investor but not yet deployed into inventory.
+   *  Deposits credit it (capital_contribution entries); pool-funded
+   *  investments (metadata.fundedFromPool) debit it. */
+  unallocatedCapitalMinor: MoneyMinor;
   activeInvestmentCount: number;
   completedInvestmentCount: number;
   createdAt: Timestamp | Date;
@@ -78,6 +82,7 @@ export interface InvestmentAllocationDoc {
 // ─── Immutable ledger ──────────────────────────────────
 // Entries are NEVER edited or deleted. Corrections are `adjustment` entries.
 export type LedgerEntryType =
+  | "capital_contribution" // cash deposit into the investor's pool (investmentId = "")
   | "investment_created"
   | "inventory_purchased"
   | "capital_recovery"

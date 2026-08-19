@@ -119,6 +119,20 @@ async function main() {
         `investor ${doc.id}: totalInvested ${investor.totalInvestedMinor} ≠ Σ investments ${invested}`
       );
     }
+
+    // 6. Capital pool replay: pool = Σ contributions − Σ pool-funded amounts.
+    const contributions = ledger
+      .filter((e) => e.type === "capital_contribution" && e.investorId === doc.id)
+      .reduce((s, e) => s + Number(e.amountMinor || 0), 0);
+    const poolDeployed = myInvestments
+      .filter((d) => (d.data().metadata as { fundedFromPool?: boolean } | undefined)?.fundedFromPool === true)
+      .reduce((s, d) => s + (d.data().amountMinor || 0), 0);
+    const expectedPool = contributions - poolDeployed;
+    if (expectedPool !== (investor.unallocatedCapitalMinor || 0)) {
+      report(
+        `investor ${doc.id}: pool ${investor.unallocatedCapitalMinor || 0} ≠ contributions ${contributions} − deployed ${poolDeployed} = ${expectedPool}`
+      );
+    }
   }
 
   console.log("\n──────────────────────────────────");

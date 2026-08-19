@@ -10,8 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-19 (Release hardening — exactly-once financial claims,
-  live E2E suite 62/62, merged to main)
+- **Last updated:** 2026-08-19 (Investor capital pool — deposits + inventory-page
+  investor funding; branch `feature/investor-capital-pool`, E2E 79/79)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -173,6 +173,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | ---------------------------------- | --------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
 | `/api/investors`                   | GET, POST | admin                  | Investor registry; POST links to `users` doc by email when one exists                                 |
 | `/api/investors/[id]`              | GET, PUT  | admin                  | PUT edits profile only — financial totals are ledger-controlled                                       |
+| `/api/investors/[id]/capital`      | POST      | admin                  | Cash deposit into the investor's unallocated pool; ledgered `capital_contribution`; drawn down by inventory-page funding |
 | `/api/investments`                 | GET, POST | admin                  | POST derives amount from allocations (`ml × costPerMl`); rejects personal-collection perfumes; one tx |
 | `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                               |
 | `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                         |
@@ -431,6 +432,20 @@ header with curl. Rules:
   revenue/costs prorated by funded ml. Selling price excludes delivery fee
   (built from `item.totalPrice`); selling costs = packaging + bottle from
   `pricingSnapshot`.
+- **Investor capital pool (inventory-page funding, 2026-08-19):**
+  `investors.unallocatedCapitalMinor` = deposited cash not yet deployed.
+  `POST /api/investors/[id]/capital` credits it (immutable `capital_contribution`
+  ledger entry, investmentId `""`). The admin inventory page's Owner dropdown
+  offers active investors (`investor:<id>`) for NEW perfumes — this is a FUNDING
+  source, not ownership: the perfume is forced to `owner: "Store"`,
+  `isPersonalCollection: false`, and `POST /api/perfumes` auto-creates a
+  pool-funded investment (`fundFromPool: true`, `metadata.fundedFromPool`),
+  deducting `ml × purchasePricePerMl` from the pool inside the SAME transaction
+  (insufficient pool → 400, perfume doc compensated/deleted, nothing partial).
+  The perfume is created with stock 0 — `createInvestment` adds the funded ml
+  (never double-count stock). Pool invariant (reconciled by
+  `check-investments.ts`): pool = Σ contributions − Σ pool-funded amounts.
+  Undeployed capital counts in investor account value + statement.
 - **Owner P&L carve-out (final accounting decision, external review 2026-08-18,
   do not regress):** for every investor-funded sale,
   `actual net profit = investor profit + Valore (owner) profit`. At Dispatched
@@ -595,6 +610,26 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-19 (3)** — **Investor capital pool + inventory-page funding**
+  (branch `feature/investor-capital-pool`). New flow matching how the business
+  actually works: investor hands over cash first, bottles are bought against it.
+  (1) `investors.unallocatedCapitalMinor` + `POST /api/investors/[id]/capital`
+  (admin deposit; immutable `capital_contribution` ledger entry; audit
+  `INVESTMENT_CAPITAL_ADDED`). (2) Admin inventory page Owner dropdown gains an
+  "Investor funded (store-owned)" optgroup listing active investors with their
+  available capital; selecting one sends `investorId` — the perfume stays
+  `owner: "Store"` / non-personal-collection, and the backend auto-creates a
+  pool-funded investment (`fundFromPool` inside `createInvestment`'s
+  transaction: pool checked + decremented atomically; insufficient → 400 and
+  the perfume doc is removed — no orphans). Stock starts at 0 so
+  `createInvestment`'s increment lands exactly once. (3) Admin investors tab:
+  Capital column + Add Capital inline form; investor dashboard + statement show
+  Undeployed Capital and include it in account value. (4) `check-investments.ts`
+  reconciles the pool (Σ contributions − Σ pool-funded amounts). E2E suite
+  extended with section 7b (deposit → funded bottle → pool cut ৳5,000→৳2,000 →
+  over-funding rejected atomically → statement) — **79/79**, engine 117/117,
+  reconciliation pass, tsc/eslint 0 errors, both builds green.
 
 - **2026-08-19 (2)** — **Release hardening + live E2E (merge gate for PR #22).**
   Adversarial review of the recognition/reversal paths found and fixed three
