@@ -85,6 +85,16 @@ const seasons = ["Summer", "Winter", "Spring", "Autumn", "Rainy", "All Season"];
 
 const owners = ["Store", "Tayeb", "Enid"];
 
+// Mirrors the backend pool deduction exactly: round(ml) × toMinorUnits(per-ml price sent).
+function computeInvestorFunding(bottleSizeMl: number, purchasePriceWhole: number, purchasePricePerMl: number) {
+  const perMl = bottleSizeMl > 0 && purchasePriceWhole > 0
+    ? parseFloat((purchasePriceWhole / bottleSizeMl).toFixed(2))
+    : purchasePricePerMl || 0;
+  const fundedMl = Math.round(bottleSizeMl || 0);
+  const deductionMinor = fundedMl > 0 && perMl > 0 ? fundedMl * Math.round(perMl * 100) : 0;
+  return { fundedMl, deductionMinor };
+}
+
 const emptyNotes: FragranceNotes = { top: [], middle: [], base: [], all: [] };
 const emptyNoteIds: FragranceNoteIds = { top: [], middle: [], base: [], all: [] };
 
@@ -529,6 +539,15 @@ export default function InventoryPage() {
       if (investorId) {
         if (effectiveBottleSize <= 0 || !(payload.purchasePricePerMl > 0)) {
           return toast("Investor-funded bottles need a bottle size and purchase price", "error");
+        }
+        const inv = investors.find((i) => i.id === investorId);
+        const { deductionMinor } = computeInvestorFunding(bottleSizeMl, purchasePriceWhole, payload.purchasePricePerMl);
+        const availableMinor = inv?.unallocatedCapitalMinor || 0;
+        if (deductionMinor > availableMinor) {
+          return toast(
+            `Insufficient balance of investor: ${inv?.name || "investor"} has ৳${(availableMinor / 100).toLocaleString("en-BD")} but this bottle needs ৳${(deductionMinor / 100).toLocaleString("en-BD")}. Add capital in Investments → Investors first.`,
+            "error",
+          );
         }
         (payload as Record<string, unknown>).investorId = investorId;
       }
@@ -1006,28 +1025,37 @@ export default function InventoryPage() {
                   className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2.5 text-sm focus:border-[var(--gold)] outline-none"
                 >
                   {owners.map((o) => <option key={o} value={o}>{o === "Store" ? "Store (Platform)" : o}</option>)}
-                  {!editing && investors.length > 0 && (
-                    <optgroup label="Investor funded (store-owned)">
-                      {investors.map((inv) => (
-                        <option key={inv.id} value={`investor:${inv.id}`}>
-                          {inv.name} — ৳{((inv.unallocatedCapitalMinor || 0) / 100).toLocaleString("en-BD")} available
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {!editing && investors.map((inv) => (
+                    <option key={inv.id} value={`investor:${inv.id}`}>
+                      {inv.name} (investor) — ৳{((inv.unallocatedCapitalMinor || 0) / 100).toLocaleString("en-BD")}
+                    </option>
+                  ))}
                 </select>
-                {form.owner.startsWith("investor:") && (
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
-                    {(() => {
-                      const inv = investors.find((i) => `investor:${i.id}` === form.owner);
-                      const cost = (form.bottleSizeMl || 0) > 0 && form.purchasePriceWhole > 0
-                        ? form.purchasePriceWhole
-                        : (form.bottleSizeMl || 0) * (form.purchasePricePerMl || 0);
-                      const available = (inv?.unallocatedCapitalMinor || 0) / 100;
-                      return `৳${cost.toLocaleString("en-BD")} will be deducted from ${inv?.name || "the investor"}'s capital (৳${available.toLocaleString("en-BD")} available). The bottle sells as store stock; the investor earns their profit share on every sale.`;
-                    })()}
-                  </p>
-                )}
+                {form.owner.startsWith("investor:") && (() => {
+                  const inv = investors.find((i) => `investor:${i.id}` === form.owner);
+                  const { fundedMl, deductionMinor } = computeInvestorFunding(form.bottleSizeMl, form.purchasePriceWhole, form.purchasePricePerMl);
+                  const availableMinor = inv?.unallocatedCapitalMinor || 0;
+                  const fmt = (minor: number) => `৳${(minor / 100).toLocaleString("en-BD")}`;
+                  if (fundedMl <= 0 || deductionMinor <= 0) {
+                    return (
+                      <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                        Enter the bottle size and purchase price to see the deduction from {inv?.name || "the investor"}&apos;s balance ({fmt(availableMinor)} available).
+                      </p>
+                    );
+                  }
+                  if (deductionMinor > availableMinor) {
+                    return (
+                      <p className="text-[11px] text-[var(--error)] mt-1.5">
+                        Insufficient balance of investor: {inv?.name || "investor"} has {fmt(availableMinor)} but this bottle needs {fmt(deductionMinor)}. Add capital in Investments → Investors first.
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                      {fmt(deductionMinor)} will be deducted from {inv?.name || "the investor"}&apos;s balance on save ({fmt(availableMinor)} → {fmt(availableMinor - deductionMinor)}). The bottle sells as store stock; the investor earns their profit share on every sale.
+                    </p>
+                  );
+                })()}
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1 block">Partial Deal Type</label>

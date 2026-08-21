@@ -10,8 +10,9 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-21 (PR #23 merged to `main`: investor capital pool +
-  instant price propagation; hosting labels corrected to Vercel)
+- **Last updated:** 2026-08-21 (PR #23 merged to `main`; follow-up: inventory
+  investor-funding UX — inline "(investor)" owner options + exact deduction
+  preview + insufficient-balance guard)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -627,6 +628,17 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-21 (3)** — **Inventory investor-funding UX pass** (direct to `main`).
+  Admin inventory Owner dropdown now lists active investors inline as
+  “Name (investor) — ৳balance” (optgroup removed); the helper text previews the
+  EXACT pool deduction (`round(ml) × toMinorUnits(per-ml)` — mirrors
+  `createInvestment`, closing the PR #23 review LOW about paisa mismatch) with
+  before → after balance, and turns red when the pool can't cover it; `save()`
+  blocks client-side with “Insufficient balance of investor: …” before hitting
+  the API (backend 400 in `fundFromPool` remains the authority). Shared helper
+  `computeInvestorFunding()` keeps preview and guard in lockstep. tsc + eslint +
+  production build green.
 
 - **2026-08-21 (2)** — **PR #23 merged to `main`** (capital pool + price
   propagation, 28 files, +902/−42). Pre-merge gate: full battery green (24/24 +
