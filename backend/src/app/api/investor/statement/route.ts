@@ -174,6 +174,7 @@ export async function GET(req: Request) {
       originalCapital: fromMinorUnits(originalCapitalMinor),
       additionalCapital: fromMinorUnits(additionalCapitalMinor),
       totalCapitalInvested: fromMinorUnits(totalInvestedMinor),
+      undeployedCapital: fromMinorUnits(investor.unallocatedCapitalMinor || 0),
       recoveredCapital: fromMinorUnits(recoveredMinor),
       capitalRecoveredFromSales: fromMinorUnits(capitalBySource.fromSalesMinor),
       capitalReturnedViaBuyback: fromMinorUnits(capitalBySource.fromBuybackMinor),
@@ -181,8 +182,10 @@ export async function GET(req: Request) {
       realizedProfit: fromMinorUnits(realizedProfitMinor),
       profitWithdrawn: fromMinorUnits(withdrawnProfitMinor),
       availableProfit: fromMinorUnits(availableProfitMinor),
-      // Remaining capital exposure + withdrawable profit = what the account is worth today.
-      currentAccountValue: fromMinorUnits(remainingMinor + availableProfitMinor),
+      // Remaining exposure + withdrawable profit + undeployed cash = account value today.
+      currentAccountValue: fromMinorUnits(
+        remainingMinor + availableProfitMinor + (investor.unallocatedCapitalMinor || 0)
+      ),
       buybackValueToday: fromMinorUnits(buybackTodayMinor),
       roiPercent:
         totalInvestedMinor > 0

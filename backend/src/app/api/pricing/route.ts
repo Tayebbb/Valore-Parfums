@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
-import type { OwnerType, TierMargins } from "@/lib/utils";
+import type { OwnerType } from "@/lib/utils";
 import { FieldPath } from "firebase-admin/firestore";
+import { apiCache } from "@/lib/api-cache";
 
-const CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=120";
+// Short shared-cache window so admin price changes reach CDN-cached responses fast.
+const CACHE_CONTROL = "public, s-maxage=15, stale-while-revalidate=30";
 
-// ── In-memory cache for rarely-changing config (sizes, bottles, settings, bulk rules) ──
+// Config (sizes, bottles, settings, bulk rules) + batch results live in the
+// shared api-cache store so admin mutations can invalidate them instantly;
+// the TTLs below are only a fallback for direct Firestore edits.
 const CACHE_TTL = 60_000; // 60 seconds
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let configCache: { sizes: any[]; bottles: any[]; packagingCost: number; ownerProfitPercent: number; margins: TierMargins; bulkRules: any[]; ts: number } | null = null;
 const PRICE_RESULT_CACHE_TTL = 30_000;
-const priceResultCache = new Map<string, { data: Record<string, { prices: { ml: number; sellingPrice: number; available: boolean }[] }>; ts: number }>();
 
 type PricingPerfume = {
   id: string;
@@ -59,7 +60,8 @@ async function getPerfumesByIds(ids: string[]): Promise<PricingPerfume[]> {
 }
 
 async function getPricingConfig() {
-  if (configCache && Date.now() - configCache.ts < CACHE_TTL) return configCache;
+  const cached = apiCache.pricingConfig;
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached;
 
   const [sizesSnap, bottlesSnap, settingsDoc, bulkSnap] = await Promise.all([
     db.collection(Collections.decantSizes).get(),
@@ -77,7 +79,7 @@ async function getPricingConfig() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bulkRules = bulkSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r: any) => r.isActive === true).sort((a: any, b: any) => a.minQuantity - b.minQuantity) as any[];
 
-  configCache = {
+  const fresh = {
     sizes,
     bottles,
     packagingCost: settings?.packagingCost ?? 20,
@@ -86,7 +88,8 @@ async function getPricingConfig() {
     bulkRules,
     ts: Date.now(),
   };
-  return configCache;
+  apiCache.pricingConfig = fresh;
+  return fresh;
 }
 
 // Get prices for a specific perfume across all enabled decant sizes
@@ -184,7 +187,7 @@ export async function POST(req: Request) {
   // Cap to 50 to avoid abuse
   const uniqueIds = [...new Set(ids)].slice(0, 50);
   const cacheKey = [...uniqueIds].sort().join("|");
-  const cached = priceResultCache.get(cacheKey);
+  const cached = apiCache.batchPriceResults.get(cacheKey);
   if (cached && Date.now() - cached.ts < PRICE_RESULT_CACHE_TTL) {
     return NextResponse.json(cached.data, { headers: { "Cache-Control": CACHE_CONTROL } });
   }
@@ -231,10 +234,10 @@ export async function POST(req: Request) {
     result[perfume.id] = { prices };
   }
 
-  priceResultCache.set(cacheKey, { data: result, ts: Date.now() });
-  if (priceResultCache.size > 100) {
-    const firstKey = priceResultCache.keys().next().value;
-    if (firstKey) priceResultCache.delete(firstKey);
+  apiCache.batchPriceResults.set(cacheKey, { data: result, ts: Date.now() });
+  if (apiCache.batchPriceResults.size > 100) {
+    const firstKey = apiCache.batchPriceResults.keys().next().value;
+    if (firstKey) apiCache.batchPriceResults.delete(firstKey);
   }
 
   return NextResponse.json(result, { headers: { "Cache-Control": CACHE_CONTROL } });

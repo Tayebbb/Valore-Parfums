@@ -14,6 +14,7 @@ interface InvestorProfile {
   totalRecoveredCapital: number;
   totalProfit: number;
   totalWithdrawn: number;
+  unallocatedCapital?: number;
   activeInvestmentCount: number;
   completedInvestmentCount: number;
 }
@@ -138,7 +139,8 @@ export default function InvestorDashboardPage() {
 
   const totalAvailableProfit = investments.reduce((s, i) => s + (i.availableProfit || 0), 0);
   const totalRemainingCapital = investments.reduce((s, i) => s + (i.remainingInventoryCost || 0), 0);
-  const currentAccountValue = totalRemainingCapital + totalAvailableProfit;
+  const undeployedCapital = investor.unallocatedCapital || 0;
+  const currentAccountValue = totalRemainingCapital + totalAvailableProfit + undeployedCapital;
   const roiPercent =
     investor.totalInvested > 0
       ? Math.round((investor.totalProfit / investor.totalInvested) * 10000) / 100
@@ -171,6 +173,7 @@ export default function InvestorDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total Invested", value: bdtMajor(investor.totalInvested) },
+          { label: "Undeployed Capital", value: bdtMajor(undeployedCapital) },
           { label: "Capital Returned", value: bdtMajor(investor.totalRecoveredCapital) },
           { label: "Capital In Inventory", value: bdtMajor(totalRemainingCapital) },
           { label: "Profit Earned", value: bdtMajor(investor.totalProfit) },

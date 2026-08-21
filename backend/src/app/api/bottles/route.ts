@@ -3,6 +3,7 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
+import { invalidatePricingConfigCache } from "@/lib/api-cache";
 
 // GET all bottles — Firestore query ordered by ml (replaces prisma.bottleInventory.findMany)
 export async function GET() {
@@ -20,5 +21,6 @@ export async function POST(req: Request) {
   const now = Timestamp.now();
   const data = { ...body, createdAt: now, updatedAt: now };
   await db.collection(Collections.bottles).doc(id).set(data);
+  invalidatePricingConfigCache();
   return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }

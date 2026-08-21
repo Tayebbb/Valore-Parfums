@@ -72,6 +72,7 @@ export async function GET() {
       totalRecoveredCapital: fromMinorUnits(investor.totalRecoveredCapitalMinor || 0),
       totalProfit: fromMinorUnits(investor.totalProfitMinor || 0),
       totalWithdrawn: fromMinorUnits(investor.totalWithdrawnMinor || 0),
+      unallocatedCapital: fromMinorUnits(investor.unallocatedCapitalMinor || 0),
       activeInvestmentCount: investor.activeInvestmentCount || 0,
       completedInvestmentCount: investor.completedInvestmentCount || 0,
     }),

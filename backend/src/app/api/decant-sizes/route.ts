@@ -3,6 +3,7 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
+import { invalidatePricingConfigCache } from "@/lib/api-cache";
 
 // GET all decant sizes — Firestore query ordered by ml (replaces prisma.decantSize.findMany)
 export async function GET() {
@@ -19,5 +20,6 @@ export async function POST(req: Request) {
   const id = uuid();
   const data = { ...body, createdAt: Timestamp.now() };
   await db.collection(Collections.decantSizes).doc(id).set(data);
+  invalidatePricingConfigCache();
   return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }

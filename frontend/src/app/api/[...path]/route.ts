@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+
+// Storefront pages render from THIS app's unstable_cache/ISR entries (tags
+// "perfumes" / "pricing-config"), which the backend's own revalidateTag can
+// never reach. Admin mutations flow through this proxy, so purge here.
+const PRICE_DATA_PATH_RE = /^(perfumes|settings|decant-sizes|bottles|bulk-pricing)(\/|$)/;
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 function resolveBackendBaseUrl(): string | null {
   const raw =
@@ -106,7 +113,7 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
         redirect: "manual",
         signal: controller.signal,
         cache: useCatalogCache ? "force-cache" : "no-store",
-        next: useCatalogCache ? { revalidate: 20 } : undefined,
+        next: useCatalogCache ? { revalidate: 20, tags: ["perfumes"] } : undefined,
       });
     } finally {
       clearTimeout(timeoutId);
@@ -142,6 +149,18 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
       },
       { status: upstream.status },
     );
+  }
+
+  // Successful admin write to pricing-relevant data → storefront caches are stale.
+  // { expire: 0 } hard-expires the tag; the "max" profile would keep serving the
+  // stale entry once more (stale-while-revalidate) — not acceptable for prices.
+  if (upstream.ok && MUTATING_METHODS.has(method) && PRICE_DATA_PATH_RE.test(pathname)) {
+    try {
+      revalidateTag("perfumes", { expire: 0 });
+      revalidateTag("pricing-config", { expire: 0 });
+    } catch (error) {
+      console.error("Storefront cache revalidation failed", { pathname, error });
+    }
   }
 
   // 204/205/304 responses must not carry a body — passing one throws.

@@ -70,6 +70,7 @@ export async function POST(req: Request) {
       totalRecoveredCapitalMinor: 0,
       totalProfitMinor: 0,
       totalWithdrawnMinor: 0,
+      unallocatedCapitalMinor: 0,
       activeInvestmentCount: 0,
       completedInvestmentCount: 0,
       createdAt: now,

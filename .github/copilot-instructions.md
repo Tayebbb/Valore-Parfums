@@ -10,8 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-19 (Release hardening — exactly-once financial claims,
-  live E2E suite 62/62, merged to main)
+- **Last updated:** 2026-08-21 (Instant price propagation — cross-app cache
+  invalidation; admin price/margin changes reach customers immediately; E2E 24/24)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -53,7 +53,7 @@ Frontend proxies every `/api/*` call to `NEXT_PUBLIC_API_BASE_URL` (see §5).
 | Email         | Resend (preferred) with Nodemailer / Gmail SMTP fallback                                           |
 | State         | Zustand v5 (cart, auth, theme). Cart + theme persisted to `localStorage`.                          |
 | Styling       | Tailwind v4, CSS-variable theming                                                                  |
-| Caching       | Per-process `Map` + Next.js `unstable_cache` (`perfumes` tag, 300 s TTL)                           |
+| Caching       | Shared invalidatable store `backend/src/lib/api-cache.ts` (globalThis-anchored) + Next.js `unstable_cache` (tags `perfumes`, `pricing-config`, 300 s TTL fallback) |
 | Rate limiting | In-memory per-IP (`backend/src/lib/rate-limit.ts`)                                                 |
 | CSRF          | Double-submit cookie (`backend/src/lib/csrf.ts`)                                                   |
 
@@ -173,6 +173,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | ---------------------------------- | --------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
 | `/api/investors`                   | GET, POST | admin                  | Investor registry; POST links to `users` doc by email when one exists                                 |
 | `/api/investors/[id]`              | GET, PUT  | admin                  | PUT edits profile only — financial totals are ledger-controlled                                       |
+| `/api/investors/[id]/capital`      | POST      | admin                  | Cash deposit into the investor's unallocated pool; ledgered `capital_contribution`; drawn down by inventory-page funding |
 | `/api/investments`                 | GET, POST | admin                  | POST derives amount from allocations (`ml × costPerMl`); rejects personal-collection perfumes; one tx |
 | `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                               |
 | `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                         |
@@ -431,6 +432,20 @@ header with curl. Rules:
   revenue/costs prorated by funded ml. Selling price excludes delivery fee
   (built from `item.totalPrice`); selling costs = packaging + bottle from
   `pricingSnapshot`.
+- **Investor capital pool (inventory-page funding, 2026-08-19):**
+  `investors.unallocatedCapitalMinor` = deposited cash not yet deployed.
+  `POST /api/investors/[id]/capital` credits it (immutable `capital_contribution`
+  ledger entry, investmentId `""`). The admin inventory page's Owner dropdown
+  offers active investors (`investor:<id>`) for NEW perfumes — this is a FUNDING
+  source, not ownership: the perfume is forced to `owner: "Store"`,
+  `isPersonalCollection: false`, and `POST /api/perfumes` auto-creates a
+  pool-funded investment (`fundFromPool: true`, `metadata.fundedFromPool`),
+  deducting `ml × purchasePricePerMl` from the pool inside the SAME transaction
+  (insufficient pool → 400, perfume doc compensated/deleted, nothing partial).
+  The perfume is created with stock 0 — `createInvestment` adds the funded ml
+  (never double-count stock). Pool invariant (reconciled by
+  `check-investments.ts`): pool = Σ contributions − Σ pool-funded amounts.
+  Undeployed capital counts in investor account value + statement.
 - **Owner P&L carve-out (final accounting decision, external review 2026-08-18,
   do not regress):** for every investor-funded sale,
   `actual net profit = investor profit + Valore (owner) profit`. At Dispatched
@@ -514,6 +529,7 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 | `test-investments.ts`                                                                     | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure). |
 | `e2e-investments.ts`                                                                      | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup. |
 | `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                  |
+| `e2e-price-propagation.ts`                                                                | Live E2E (needs BOTH dev servers; frontend with `API_BASE_URL=http://localhost:3001`): admin price/margin/create/delete changes must reach the pricing APIs, batch pricing, perfume list, and product-page SSR instantly. Namespaced fixture + settings snapshot/restore + full cleanup. |
 
 ---
 
@@ -532,9 +548,24 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
   Two independent formulas caused the storefront ↔ admin mismatch fixed on 2026-07-18.
 - **`seo-catalog.ts` exists twice** (frontend + backend) — always edit both together.
 - **`orderStatusConfig.ts` exists twice** — always edit both.
-- **`unstable_cache`** with tag `perfumes` has a 5-minute TTL. Storefront price
-  changes may lag until a perfume mutation triggers `revalidateTag("perfumes", "max")`
-  or the TTL elapses.
+- **`unstable_cache` staleness is now actively invalidated (2026-08-21).** The
+  storefront renders from the FRONTEND app's `unstable_cache`/ISR entries (tags
+  `perfumes`, `pricing-config`), which the backend's `revalidateTag` can NEVER
+  reach (separate app). The frontend proxy (`frontend/src/app/api/[...path]/route.ts`)
+  is the cross-app invalidation point: after any successful POST/PUT/PATCH/DELETE
+  to `perfumes*|settings|decant-sizes*|bottles*|bulk-pricing*` it calls
+  `revalidateTag(tag, { expire: 0 })` for both tags. Admin mutations that affect
+  customer-visible prices MUST flow through the proxy (relative `/api/...`) or
+  replicate this purge.
+- **`revalidateTag(tag, "max")` is stale-while-revalidate** in Next 16 — the next
+  request still serves the OLD entry once. For read-your-write freshness always
+  use `revalidateTag(tag, { expire: 0 })` (`updateTag` throws in route handlers).
+- **Backend in-memory API caches live in `backend/src/lib/api-cache.ts`**
+  (globalThis-anchored — per-route module instances would otherwise clear a
+  different Map than the reader uses). Any new mutation route that changes pricing
+  inputs (perfume prices, settings margins/packaging, decant sizes, bottles, bulk
+  rules) MUST call the matching invalidator (`invalidatePerfumeCaches`,
+  `invalidatePricingConfigCache`, `invalidateCheckoutConfigCache`).
 - **Do not add API handlers under `frontend/src/app/api/`** except for the existing
   `auth/*` handlers that need cookie-domain control.
 - **Withdrawable balance** = per-payment-source completed revenue − personal-collection
@@ -595,6 +626,50 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-21** — **Instant price propagation (admin → customer).** Root cause:
+  the storefront renders from the FRONTEND app's `unstable_cache`/ISR (tags
+  `perfumes`/`pricing-config`) while admin mutations run in the BACKEND app,
+  whose `revalidateTag` can't cross apps — and the `pricing-config` tag was never
+  revalidated anywhere, so price/margin edits waited out layered 300 s TTLs
+  (felt like “never”). Fixes: (1) frontend proxy now hard-purges both tags
+  (`revalidateTag(tag, { expire: 0 })` — the previous `"max"` profile is SWR and
+  serves stale once) after successful price-affecting mutations, and tags its
+  catalog fetch cache; (2) new `backend/src/lib/api-cache.ts` — globalThis-anchored
+  shared store for the pricing config / batch-price / perfumes-list /
+  checkout-config caches with invalidators now called by perfumes (POST/PUT/DELETE
+  — PUT/DELETE previously cleared nothing), settings, decant-sizes, bottles, and
+  bulk-pricing mutations (globalThis anchoring was required: per-route module
+  instances cleared a different Map than the pricing route read); (3) product
+  page always background-refreshes prices cache-busted on mount (also fixes bulk
+  rules never loading on `/products/*`), preserving the user's size selection;
+  (4) `/api/pricing` Cache-Control tightened 30/120 → 15/30. New
+  `backend/scripts/e2e-price-propagation.ts` (24 assertions over live HTTP:
+  create→page live instantly, price PUT → pricing API + batch + list + SSR page
+  update instantly, tier-margin PUT → instant reprice, delete→404, settings
+  snapshot/restore + fixture cleanup). Verified independently: 24/24 E2E,
+  117/117 engine, 79/79 investments E2E, tsc + eslint clean and production
+  builds green in both apps.
+
+- **2026-08-19 (3)** — **Investor capital pool + inventory-page funding**
+  (branch `feature/investor-capital-pool`). New flow matching how the business
+  actually works: investor hands over cash first, bottles are bought against it.
+  (1) `investors.unallocatedCapitalMinor` + `POST /api/investors/[id]/capital`
+  (admin deposit; immutable `capital_contribution` ledger entry; audit
+  `INVESTMENT_CAPITAL_ADDED`). (2) Admin inventory page Owner dropdown gains an
+  "Investor funded (store-owned)" optgroup listing active investors with their
+  available capital; selecting one sends `investorId` — the perfume stays
+  `owner: "Store"` / non-personal-collection, and the backend auto-creates a
+  pool-funded investment (`fundFromPool` inside `createInvestment`'s
+  transaction: pool checked + decremented atomically; insufficient → 400 and
+  the perfume doc is removed — no orphans). Stock starts at 0 so
+  `createInvestment`'s increment lands exactly once. (3) Admin investors tab:
+  Capital column + Add Capital inline form; investor dashboard + statement show
+  Undeployed Capital and include it in account value. (4) `check-investments.ts`
+  reconciles the pool (Σ contributions − Σ pool-funded amounts). E2E suite
+  extended with section 7b (deposit → funded bottle → pool cut ৳5,000→৳2,000 →
+  over-funding rejected atomically → statement) — **79/79**, engine 117/117,
+  reconciliation pass, tsc/eslint 0 errors, both builds green.
 
 - **2026-08-19 (2)** — **Release hardening + live E2E (merge gate for PR #22).**
   Adversarial review of the recognition/reversal paths found and fixed three

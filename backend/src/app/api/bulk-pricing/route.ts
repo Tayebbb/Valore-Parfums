@@ -3,6 +3,7 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
+import { invalidatePricingConfigCache } from "@/lib/api-cache";
 
 // GET all bulk pricing rules — Firestore query (replaces prisma.bulkPricingRule.findMany)
 export async function GET() {
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
     createdAt: Timestamp.now(),
   };
   await db.collection(Collections.bulkPricingRules).doc(id).set(data);
+  invalidatePricingConfigCache();
   return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }
 
@@ -34,6 +36,7 @@ export async function PUT(req: Request) {
   const body = await req.json();
   const { id, ...data } = body;
   await db.collection(Collections.bulkPricingRules).doc(id).update(data);
+  invalidatePricingConfigCache();
   const doc = await db.collection(Collections.bulkPricingRules).doc(id).get();
   return NextResponse.json(serializeDoc({ id, ...doc.data() }));
 }
@@ -46,5 +49,6 @@ export async function DELETE(req: Request) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
   await db.collection(Collections.bulkPricingRules).doc(id).delete();
+  invalidatePricingConfigCache();
   return NextResponse.json({ success: true });
 }

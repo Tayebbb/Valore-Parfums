@@ -36,6 +36,9 @@ export interface CreateInvestmentInput {
   profitSharePercentage?: number;
   performedBy: string;
   notes?: string;
+  /** Deduct the amount from the investor's unallocated capital pool
+   *  (deposited cash). Throws when the pool cannot cover it. */
+  fundFromPool?: boolean;
 }
 
 export interface ProcessSaleInput {
@@ -123,6 +126,14 @@ export class InvestmentAccountingService {
       if (!investorSnap.exists) throw new Error("Investor not found");
       const investor = investorSnap.data() as InvestorDoc;
       if (investor.status !== "active") throw new Error("Investor is not active");
+      if (input.fundFromPool) {
+        const pool = investor.unallocatedCapitalMinor || 0;
+        if (pool < amountMinor) {
+          throw new Error(
+            `Insufficient investor capital: needs ৳${(amountMinor / 100).toLocaleString()} but only ৳${(pool / 100).toLocaleString()} is available. Add capital to the investor first.`
+          );
+        }
+      }
 
       const perfumeSnaps = await Promise.all(perfumeRefs.map((r) => tx.get(r)));
       perfumeSnaps.forEach((snap, i) => {
@@ -149,7 +160,7 @@ export class InvestmentAccountingService {
         createdAt: now,
         closedAt: null,
         buybackAt: null,
-        metadata: { notes: input.notes || "" },
+        metadata: { notes: input.notes || "", fundedFromPool: Boolean(input.fundFromPool) },
       };
       const invariantError = validateInvariant({
         amountMinor,
@@ -227,6 +238,7 @@ export class InvestmentAccountingService {
       tx.update(investorRef, {
         totalInvestedMinor: FieldValue.increment(amountMinor),
         activeInvestmentCount: FieldValue.increment(1),
+        ...(input.fundFromPool ? { unallocatedCapitalMinor: FieldValue.increment(-amountMinor) } : {}),
         updatedAt: now,
       });
     });
@@ -244,6 +256,75 @@ export class InvestmentAccountingService {
     });
 
     return { investmentId: investmentRef.id };
+  }
+
+  /**
+   * Record a cash deposit into the investor's unallocated capital pool.
+   * The money is NOT yet deployed — pool-funded investments (fundFromPool)
+   * draw it down as inventory is purchased. Ledgered as capital_contribution
+   * (investmentId = "") so the pool is reconstructable:
+   * pool = Σ contributions − Σ pool-funded investment amounts.
+   */
+  async addCapital(input: {
+    investorId: string;
+    amountMinor: number;
+    performedBy: string;
+    notes?: string;
+  }): Promise<{ newPoolMinor: number }> {
+    const { investorId, amountMinor, performedBy } = input;
+    if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
+      throw new Error("Deposit amount must be a positive amount");
+    }
+    const investorRef = this.db.collection(Collections.investors).doc(investorId);
+    let newPoolMinor = 0;
+
+    await this.db.runTransaction(async (tx) => {
+      const snap = await tx.get(investorRef);
+      if (!snap.exists) throw new Error("Investor not found");
+      const investor = snap.data() as InvestorDoc;
+      if (investor.status !== "active") throw new Error("Investor is not active");
+      const now = Timestamp.now();
+      const previous = investor.unallocatedCapitalMinor || 0;
+      newPoolMinor = previous + amountMinor;
+
+      const entry: LedgerEntryDoc = {
+        type: "capital_contribution",
+        stream: "none",
+        investmentId: "",
+        investorId,
+        referenceOrderId: null,
+        referenceOrderItemId: null,
+        referenceInventoryId: null,
+        referencePerfumeId: null,
+        amountMinor,
+        mlSold: null,
+        previousBalanceMinor: previous,
+        newBalanceMinor: newPoolMinor,
+        performedBy,
+        notes: input.notes || "",
+        idempotencyKey: `contrib_${investorId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: now,
+      };
+      tx.create(ledgerRef(this.db, entry.idempotencyKey), entry);
+      tx.update(investorRef, {
+        unallocatedCapitalMinor: FieldValue.increment(amountMinor),
+        updatedAt: now,
+      });
+    });
+
+    await logAudit({
+      action: AUDIT_ACTIONS.INVESTMENT_CAPITAL_ADDED,
+      userId: performedBy,
+      userEmail: "",
+      userName: "",
+      resource: "investor",
+      resourceId: investorId,
+      changes: {},
+      details: { amountMinor, newPoolMinor },
+      status: "success",
+    });
+
+    return { newPoolMinor };
   }
 
   /**
