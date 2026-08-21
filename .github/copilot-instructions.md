@@ -10,8 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-21 (Instant price propagation — cross-app cache
-  invalidation; admin price/margin changes reach customers immediately; E2E 24/24)
+- **Last updated:** 2026-08-21 (PR #23 merged to `main`: investor capital pool +
+  instant price propagation; hosting labels corrected to Vercel)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -24,11 +24,11 @@ Monorepo with two independent Next.js 16 apps plus docs.
 
 | Path                          | Purpose                                                                                |
 | ----------------------------- | -------------------------------------------------------------------------------------- |
-| `backend/`                    | Next.js API-only server. Deployed to **Render**. Firebase Admin SDK.                   |
-| `frontend/`                   | Next.js storefront + admin panel. Deployed to **Netlify**. Proxies `/api/*` → backend. |
+| `backend/`                    | Next.js API-only server. Deployed to **Vercel** (`valore-parfums-backend`). Firebase Admin SDK. |
+| `frontend/`                   | Next.js storefront + admin panel. Deployed to **Vercel** (`valore-parfums`). Proxies `/api/*` → backend. |
 | `README.md`                   | Full production reference (schemas, business logic, API map).                          |
 | `MOBILE_AUDIT_REPORT.md`      | Mobile-specific audit notes.                                                           |
-| `netlify.toml`, `render.yaml` | Deploy configs.                                                                        |
+| `netlify.toml`, `render.yaml` | Legacy deploy configs from previous hosts — both apps are on Vercel now (proven by PR deploy checks, 2026-08-21). |
 | `valore-parfums/`             | **Ignore** — legacy scaffolding, not built.                                            |
 
 Local dev:
@@ -483,7 +483,7 @@ header with curl. Rules:
 
 ## 8. Environment Variables
 
-### Backend (`backend/.env.local` + Render env in prod)
+### Backend (`backend/.env.local` + Vercel env in prod)
 
 | Key                                                                                          | Meaning                                                                                 |
 | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -500,7 +500,7 @@ header with curl. Rules:
 | `ALLOWED_ORIGINS` (or `ALLOWED_ORIGIN`)                                                      | CORS whitelist (comma-separated)                                                        |
 | `NODE_ENV`                                                                                   | Controls secure cookie flag + logs                                                      |
 
-### Frontend (`frontend/.env.local` + Netlify env)
+### Frontend (`frontend/.env.local` + Vercel env)
 
 | Key                                                                                                                                  | Meaning                                                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
@@ -626,6 +626,14 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-21 (2)** — **PR #23 merged to `main`** (capital pool + price
+  propagation, 28 files, +902/−42). Pre-merge gate: full battery green (24/24 +
+  117/117 + 79/79, tsc/eslint, both prod builds), adversarial code review
+  (0 blocker/high; 3 medium follow-ups: pool deposit correction path, gating the
+  prod-visible E2E fixture, product-page cache-bust load), Vercel preview deploys
+  green. Hosting labels in §1/§8 corrected Render/Netlify → **Vercel** — proven
+  live by the PR's deploy checks (`valore-parfums`, `valore-parfums-backend`).
 
 - **2026-08-21** — **Instant price propagation (admin → customer).** Root cause:
   the storefront renders from the FRONTEND app's `unstable_cache`/ISR (tags
