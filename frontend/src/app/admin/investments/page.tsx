@@ -627,7 +627,7 @@ export default function AdminInvestmentsPage() {
           {showInvestorForm && (
             <div className="p-4 rounded border border-[var(--border)] bg-[var(--bg-surface)] grid md:grid-cols-4 gap-3">
               <input value={investorForm.name} onChange={(e) => setInvestorForm({ ...investorForm, name: e.target.value })} placeholder="Name *" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />
-              <input value={investorForm.email} onChange={(e) => setInvestorForm({ ...investorForm, email: e.target.value })} placeholder="Email * (links to user account)" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />
+              <input value={investorForm.email} onChange={(e) => setInvestorForm({ ...investorForm, email: e.target.value })} placeholder="Email * (portal unlocks when they log in with this Gmail)" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />
               <input value={investorForm.phone} onChange={(e) => setInvestorForm({ ...investorForm, phone: e.target.value })} placeholder="Phone" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />
               <div className="flex gap-2">
                 <input value={investorForm.notes} onChange={(e) => setInvestorForm({ ...investorForm, notes: e.target.value })} placeholder="Notes" className="flex-1 px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />

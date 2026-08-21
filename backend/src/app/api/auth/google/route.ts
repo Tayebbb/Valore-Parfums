@@ -26,6 +26,7 @@ function resolveProjectId(): string {
 interface FirebaseIdTokenPayload {
   sub?: string;
   email?: string;
+  email_verified?: boolean;
   name?: string;
   picture?: string;
 }
@@ -113,6 +114,25 @@ export async function POST(req: Request) {
         updatedAt: now,
         lastLoginAt: now,
       });
+    }
+
+    // Investor auto-link: a Google-VERIFIED email matching a registered investor
+    // grants the investor role. Password signup is unverified by design, so only
+    // this path (email ownership proven by Google) unlocks the investor portal.
+    if (role === "customer" && decoded.email_verified === true) {
+      const invSnap = await db
+        .collection(Collections.investors)
+        .where("email", "==", email)
+        .limit(1)
+        .get();
+      if (!invSnap.empty) {
+        role = "investor";
+        await db.collection(Collections.users).doc(userId).set({ role, updatedAt: now }, { merge: true });
+        const invDoc = invSnap.docs[0];
+        if (!String((invDoc.data() as { userId?: string | null }).userId || "").trim()) {
+          await invDoc.ref.set({ userId, updatedAt: now }, { merge: true });
+        }
+      }
     }
 
     await setSessionCookie({ id: userId, name, email, role });

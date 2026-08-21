@@ -11,7 +11,7 @@
 > user for permission to update this file — it is part of the change.
 
 - **Last updated:** 2026-08-21 (PR #23 merged to `main`; follow-ups: inventory
-  investor-funding UX + funded-perfume visibility in investment lists)
+  investor-funding UX, funded-perfume visibility, Google investor auto-link)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -98,7 +98,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | ------------------- | ------- | ------------ | ----------------------------------------------- |
 | `/api/auth/login`   | POST    | rate-limited | PBKDF2, upgrades legacy SHA-256 hashes on login |
 | `/api/auth/signup`  | POST    | rate-limited | Creates `users` doc with `role: "customer"`     |
-| `/api/auth/google`  | POST    | none         | Verifies Firebase ID token, upserts user        |
+| `/api/auth/google`  | POST    | none         | Verifies Firebase ID token, upserts user. Google-VERIFIED email matching a registered investor auto-grants role `investor` + links `investor.userId` (password login never does — unverified). |
 | `/api/auth/me`      | GET     | session      | Returns session user or 401                     |
 | `/api/auth/profile` | GET/PUT | session      | Update name / phone                             |
 | `/api/auth/logout`  | POST    | none         | Clears `vp-session` cookie                      |
@@ -627,6 +627,19 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-21 (5)** — **Google investor auto-link** (direct to `main`). Backend
+  `/api/auth/google`: after user upsert, a `email_verified` Google login whose
+  normalized email matches a registered investor upgrades role customer→investor
+  (never touches admin), persists it on the users doc, and back-links
+  `investor.userId` when unset — so “register investor with email → they log in
+  with that Gmail → portal unlocks” needs no manual Firestore edit. Password
+  login deliberately never grants the role (signup email is unverified; role
+  gained via Google persists for later password logins of the same account).
+  Frontend google handler unchanged (thin proxy — signs whatever role the
+  backend returns). Admin “always see investor profile” was already covered by
+  the per-investor Statement link (`/investor/statement?investorId=`). Admin
+  investor-form email placeholder now explains the unlock. tsc/eslint/build green.
 
 - **2026-08-21 (4)** — **Funded perfumes visible in investment lists** (direct to
   `main`). Investor-funded bottles added from the inventory page now appear WITH
