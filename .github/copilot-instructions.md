@@ -10,9 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-21 (PR #23 merged to `main`; follow-up: inventory
-  investor-funding UX — inline "(investor)" owner options + exact deduction
-  preview + insufficient-balance guard)
+- **Last updated:** 2026-08-21 (PR #23 merged to `main`; follow-ups: inventory
+  investor-funding UX + funded-perfume visibility in investment lists)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -628,6 +627,16 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-21 (4)** — **Funded perfumes visible in investment lists** (direct to
+  `main`). Investor-funded bottles added from the inventory page now appear WITH
+  their perfume automatically everywhere: `GET /api/investments` (admin) and
+  `/api/investor/dashboard` join the denormalized `investmentAllocations`
+  (perfumeName, fundedMl, remainingMl, soldMl) onto each investment — scoped by
+  `investorId` where given; admin Investments tab gained a “Perfume(s)” column
+  and the investor portal a “Perfume” column (“Name (remaining/funded ml left)”).
+  Detail pages already showed allocations; only the LIST views were blind.
+  e2e-investments extended with 3 allocation-join assertions — **82/82**.
 
 - **2026-08-21 (3)** — **Inventory investor-funding UX pass** (direct to `main`).
   Admin inventory Owner dropdown now lists active investors inline as

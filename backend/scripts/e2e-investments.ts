@@ -463,6 +463,29 @@ async function main() {
     const statementB = await api("GET", `/api/investor/statement?investorId=${investorIdB}`, { cookie: adminCookie });
     eq((statementB.json.position as Record<string, number>)?.undeployedCapital, 2000, "statement shows ৳2,000 undeployed");
 
+    // Lists must surface WHICH perfume each investment funds (allocations join).
+    const adminList = await api("GET", `/api/investments?investorId=${investorIdB}`, { cookie: adminCookie });
+    const listedRows = adminList.json as unknown as Array<Record<string, unknown>>;
+    const listedAllocs = (Array.isArray(listedRows) ? (listedRows[0]?.allocations as Array<{ perfumeName?: string; fundedMl?: number; remainingMl?: number }>) : []) || [];
+    ok(
+      listedAllocs.length === 1 &&
+        listedAllocs[0]?.fundedMl === 50 &&
+        listedAllocs[0]?.remainingMl === 50 &&
+        String(listedAllocs[0]?.perfumeName || "").includes("E2E POOL PERFUME"),
+      "admin investments list attaches funded perfume (name + 50/50 ml)",
+    );
+
+    const dashA = await api("GET", "/api/investor/dashboard", { cookie: investorCookieA });
+    const dashInvs = ((dashA.json as Record<string, unknown>).investments || []) as Array<Record<string, unknown>>;
+    ok(dashA.status === 200 && dashInvs.length > 0, `investor dashboard returns investments (${dashA.status}, ${dashInvs.length})`);
+    ok(
+      dashInvs.some((i) => {
+        const allocs = i.allocations as Array<{ perfumeName?: string }> | undefined;
+        return Array.isArray(allocs) && allocs.length > 0 && Boolean(allocs[0]?.perfumeName);
+      }),
+      "investor dashboard rows include funded perfume names (allocations)",
+    );
+
     // ════════════════════════════════════════════════════
     console.log("\n8. Security battery");
     // ════════════════════════════════════════════════════

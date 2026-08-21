@@ -33,10 +33,25 @@ export async function GET() {
   }
 
   const investor = investorDoc.data() as InvestorDoc;
-  const investmentSnap = await db
-    .collection(Collections.investments)
-    .where("investorId", "==", investorDoc.id)
-    .get();
+  const [investmentSnap, allocSnap] = await Promise.all([
+    db.collection(Collections.investments).where("investorId", "==", investorDoc.id).get(),
+    db.collection(Collections.investmentAllocations).where("investorId", "==", investorDoc.id).get(),
+  ]);
+
+  // Funded-lot info so the portal shows WHICH perfume each investment funds.
+  const allocsByInvestment = new Map<string, unknown[]>();
+  for (const doc of allocSnap.docs) {
+    const a = doc.data();
+    const key = String(a.investmentId || "");
+    const list = allocsByInvestment.get(key) || [];
+    list.push({
+      perfumeName: a.perfumeName,
+      fundedMl: a.fundedMl,
+      remainingMl: a.remainingMl,
+      soldMl: a.soldMl,
+    });
+    allocsByInvestment.set(key, list);
+  }
 
   const investments = investmentSnap.docs
     .map((d) => {
@@ -54,6 +69,7 @@ export async function GET() {
           inv.amountMinor > 0
             ? Math.round((inv.recoveredCapitalMinor / inv.amountMinor) * 100)
             : 0,
+        allocations: allocsByInvestment.get(d.id) || [],
         createdAt: inv.createdAt,
         closedAt: inv.closedAt,
       });

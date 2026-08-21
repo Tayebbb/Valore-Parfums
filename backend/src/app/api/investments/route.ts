@@ -15,9 +15,30 @@ export async function GET(req: Request) {
 
   let query: FirebaseFirestore.Query = db.collection(Collections.investments);
   if (investorId) query = query.where("investorId", "==", investorId);
-  const snap = await query.get();
+  let allocQuery: FirebaseFirestore.Query = db.collection(Collections.investmentAllocations);
+  if (investorId) allocQuery = allocQuery.where("investorId", "==", investorId);
+  const [snap, allocSnap] = await Promise.all([query.get(), allocQuery.get()]);
 
-  let investments = snap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
+  // Attach funded-lot info so lists can show WHICH perfume each investment funds.
+  const allocsByInvestment = new Map<string, unknown[]>();
+  for (const doc of allocSnap.docs) {
+    const a = doc.data();
+    const key = String(a.investmentId || "");
+    const list = allocsByInvestment.get(key) || [];
+    list.push({
+      perfumeId: a.perfumeId,
+      perfumeName: a.perfumeName,
+      fundedMl: a.fundedMl,
+      remainingMl: a.remainingMl,
+      soldMl: a.soldMl,
+      status: a.status,
+    });
+    allocsByInvestment.set(key, list);
+  }
+
+  let investments = snap.docs.map((d) =>
+    serializeDoc({ id: d.id, ...d.data(), allocations: allocsByInvestment.get(d.id) || [] })
+  );
   if (status) investments = investments.filter((i: { status?: string }) => i.status === status);
   investments.sort((a: { createdAt?: string }, b: { createdAt?: string }) =>
     String(b.createdAt || "").localeCompare(String(a.createdAt || ""))

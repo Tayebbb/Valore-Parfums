@@ -58,6 +58,7 @@ interface Investment {
   withdrawnProfitMinor: number;
   profitSharePercentage: number;
   status: string;
+  allocations?: Array<{ perfumeId: string; perfumeName: string; fundedMl: number; remainingMl: number; soldMl: number; status: string }>;
   createdAt?: string;
 }
 
@@ -570,6 +571,7 @@ export default function AdminInvestmentsPage() {
               <thead>
                 <tr className="text-left text-xs text-[var(--text-muted)]">
                   <th className="px-4 py-2.5">Investor</th>
+                  <th className="px-4 py-2.5">Perfume(s)</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Principal</th>
                   <th className="px-4 py-2.5">Recovered</th>
@@ -581,11 +583,16 @@ export default function AdminInvestmentsPage() {
               </thead>
               <tbody>
                 {filteredInvestments.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-6 text-center text-[var(--text-muted)]">No investments</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-6 text-center text-[var(--text-muted)]">No investments</td></tr>
                 )}
                 {filteredInvestments.map((inv) => (
                   <tr key={inv.id} className="border-t border-[var(--border)] hover:bg-[var(--gold-tint)]">
                     <td className="px-4 py-2.5">{inv.investorName || investorById.get(inv.investorId)?.name || inv.investorId.slice(0, 8)}</td>
+                    <td className="px-4 py-2.5 max-w-56">
+                      {(inv.allocations || []).length > 0
+                        ? (inv.allocations || []).map((a) => `${a.perfumeName} (${a.remainingMl}/${a.fundedMl}ml left)`).join(", ")
+                        : "—"}
+                    </td>
                     <td className="px-4 py-2.5"><StatusBadge status={inv.status} /></td>
                     <td className="px-4 py-2.5">{bdt(inv.amountMinor)}</td>
                     <td className="px-4 py-2.5">{bdt(inv.recoveredCapitalMinor)}</td>

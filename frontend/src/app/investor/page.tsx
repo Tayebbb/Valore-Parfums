@@ -29,6 +29,7 @@ interface InvestmentRow {
   withdrawnProfit: number;
   profitSharePercentage: number;
   recoveryPercent: number;
+  allocations?: Array<{ perfumeName: string; fundedMl: number; remainingMl: number; soldMl: number }>;
   createdAt?: string;
 }
 
@@ -195,6 +196,7 @@ export default function InvestorDashboardPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-[var(--text-muted)]">
+              <th className="px-4 py-2">Perfume</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Invested</th>
               <th className="px-4 py-2">Capital Returned</th>
@@ -206,10 +208,15 @@ export default function InvestorDashboardPage() {
           </thead>
           <tbody>
             {investments.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-[var(--text-muted)]">No investments yet</td></tr>
+              <tr><td colSpan={8} className="px-4 py-6 text-center text-[var(--text-muted)]">No investments yet</td></tr>
             )}
             {investments.map((inv) => (
               <tr key={inv.id} className="border-t border-[var(--border)]">
+                <td className="px-4 py-2.5 max-w-56">
+                  {(inv.allocations || []).length > 0
+                    ? (inv.allocations || []).map((a) => `${a.perfumeName} (${a.remainingMl}/${a.fundedMl}ml left)`).join(", ")
+                    : "—"}
+                </td>
                 <td className="px-4 py-2.5"><Badge status={inv.status} /></td>
                 <td className="px-4 py-2.5">{bdtMajor(inv.amount)}</td>
                 <td className="px-4 py-2.5">{bdtMajor(inv.recoveredCapital)}</td>
