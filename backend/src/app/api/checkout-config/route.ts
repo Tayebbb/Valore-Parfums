@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
+import { apiCache } from "@/lib/api-cache";
 
 const CACHE_TTL = 60_000;
 const CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=120";
 
-let checkoutConfigCache: { data: unknown; ts: number } | null = null;
-
 export async function GET() {
-  if (checkoutConfigCache && Date.now() - checkoutConfigCache.ts < CACHE_TTL) {
-    return NextResponse.json(checkoutConfigCache.data, { headers: { "Cache-Control": CACHE_CONTROL } });
+  const cached = apiCache.checkoutConfig;
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return NextResponse.json(cached.data, { headers: { "Cache-Control": CACHE_CONTROL } });
   }
 
   const [settingsDoc, pickupSnap] = await Promise.all([
@@ -41,6 +41,6 @@ export async function GET() {
     pickupLocations,
   };
 
-  checkoutConfigCache = { data, ts: Date.now() };
+  apiCache.checkoutConfig = { data, ts: Date.now() };
   return NextResponse.json(data, { headers: { "Cache-Control": CACHE_CONTROL } });
 }

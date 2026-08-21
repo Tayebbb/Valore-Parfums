@@ -9,6 +9,7 @@ import { getBrandTier } from "@/lib/utils";
 import { sanitizeCloudinaryImagesField } from "@/lib/image-utils";
 import { toMinorUnits } from "@/lib/finance";
 import { investmentAccounting } from "@/lib/investments/accountingService";
+import { apiCache, invalidatePerfumeCaches } from "@/lib/api-cache";
 import {
   buildCanonicalProductPath,
   buildCanonicalProductUrl,
@@ -20,7 +21,7 @@ import {
 
 const PERFUMES_CACHE_TTL = 20_000;
 const PERFUMES_CACHE_CONTROL = "public, s-maxage=20, stale-while-revalidate=60";
-const perfumesCache = new Map<string, { data: unknown[]; ts: number }>();
+const perfumesCache = apiCache.perfumesList;
 const canonicalNotesLibrary = getCanonicalNotesLibrary();
 
 function getDate(value: unknown): Date {
@@ -227,8 +228,9 @@ export async function POST(req: Request) {
     } else {
       await db.collection(Collections.perfumes).doc(id).set(data);
     }
-    perfumesCache.clear();
-    revalidateTag("perfumes", "max");
+    invalidatePerfumeCaches();
+    // Hard-expire: the "max" profile would serve the stale entry once more (SWR).
+    revalidateTag("perfumes", { expire: 0 });
     revalidatePath("/shop");
     return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
   } catch (error: unknown) {

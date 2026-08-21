@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { buildStructuredNotes } from "@/lib/fragrance-notes";
 import { getBrandTier } from "@/lib/utils";
 import { sanitizeCloudinaryImagesField, sanitizeCloudinaryUrl } from "@/lib/image-utils";
+import { invalidatePerfumeCaches } from "@/lib/api-cache";
 import {
   buildCanonicalProductPath,
   buildCanonicalProductUrl,
@@ -115,7 +116,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     await db.collection(Collections.perfumes).doc(id).update(updatePayload);
-    revalidateTag("perfumes", "max");
+    invalidatePerfumeCaches();
+    // Hard-expire: the "max" profile would serve the stale entry once more (SWR).
+    revalidateTag("perfumes", { expire: 0 });
     revalidatePath("/shop");
     const doc = await db.collection(Collections.perfumes).doc(id).get();
     return NextResponse.json(serializePerfumeForApi({ id, ...(doc.data() || {}) }));
@@ -131,7 +134,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   await db.collection(Collections.perfumes).doc(id).delete();
-  revalidateTag("perfumes", "max");
+  invalidatePerfumeCaches();
+  revalidateTag("perfumes", { expire: 0 });
   revalidatePath("/shop");
   return NextResponse.json({ success: true });
 }

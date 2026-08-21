@@ -104,23 +104,32 @@ export default function PerfumePage({
   };
 
   useEffect(() => {
-    if (initialPerfume && (initialPrices?.length ?? 0) > 0) return;
+    // Always revalidate on mount: server-rendered props can come from a cached
+    // (ISR) page, so prices/stock are re-fetched cache-busted and applied on
+    // top without blocking first paint.
+    const hasInitialData = Boolean(initialPerfume && (initialPrices?.length ?? 0) > 0);
+    const bust = Date.now();
 
     Promise.all([
-      fetchJsonSafe<Perfume | null>(`/api/perfumes/${id}`, null),
-      fetchJsonSafe<{ prices?: PriceOption[]; bulkRules?: BulkRule[] }>(`/api/pricing?perfumeId=${id}`, {}),
+      fetchJsonSafe<Perfume | null>(`/api/perfumes/${id}?fresh=${bust}`, null),
+      fetchJsonSafe<{ prices?: PriceOption[]; bulkRules?: BulkRule[] }>(`/api/pricing?perfumeId=${id}&fresh=${bust}`, {}),
     ])
       .then(([p, pricing]) => {
         if (!p) return;
 
         const safePrices = Array.isArray(pricing.prices) ? pricing.prices : [];
         const safeBulkRules = Array.isArray(pricing.bulkRules) ? pricing.bulkRules : [];
+        // Keep the server-rendered data over a failed/empty refresh.
+        if (safePrices.length === 0 && hasInitialData) return;
 
         setPerfume(p);
         setPrices(safePrices);
         setBulkRules(safeBulkRules);
-        const firstAvail = safePrices.find((pr: PriceOption) => pr.available);
-        if (firstAvail) setSelectedMl(firstAvail.ml);
+        // Preserve the user's selection when it is still available.
+        setSelectedMl((prev) => {
+          if (prev !== null && safePrices.some((pr) => pr.ml === prev && pr.available)) return prev;
+          return safePrices.find((pr) => pr.available)?.ml ?? null;
+        });
       })
       .finally(() => setLoading(false));
   }, [id, initialPerfume, initialPrices]);

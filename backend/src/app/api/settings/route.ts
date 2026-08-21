@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { sanitizeCloudinaryUrl } from "@/lib/image-utils";
+import { invalidateCheckoutConfigCache, invalidatePricingConfigCache } from "@/lib/api-cache";
 
 // Default settings values (used if doc doesn't exist yet)
 const DEFAULTS = {
@@ -110,6 +111,9 @@ export async function PUT(req: Request) {
       },
       { merge: true },
     );
+    // Margins/packaging feed /api/pricing; fees/accounts feed /api/checkout-config.
+    invalidatePricingConfigCache();
+    invalidateCheckoutConfigCache();
     const doc = await db.collection(Collections.settings).doc("default").get();
     const saved = doc.data() || {};
     const legacyDeliveryFee = Number(saved.deliveryFee ?? DEFAULTS.deliveryFee);
