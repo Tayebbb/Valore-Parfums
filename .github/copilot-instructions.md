@@ -22,14 +22,14 @@
 
 Monorepo with two independent Next.js 16 apps plus docs.
 
-| Path                          | Purpose                                                                                |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `backend/`                    | Next.js API-only server. Deployed to **Vercel** (`valore-parfums-backend`). Firebase Admin SDK. |
-| `frontend/`                   | Next.js storefront + admin panel. Deployed to **Vercel** (`valore-parfums`). Proxies `/api/*` → backend. |
-| `README.md`                   | Full production reference (schemas, business logic, API map).                          |
-| `MOBILE_AUDIT_REPORT.md`      | Mobile-specific audit notes.                                                           |
+| Path                          | Purpose                                                                                                           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `backend/`                    | Next.js API-only server. Deployed to **Vercel** (`valore-parfums-backend`). Firebase Admin SDK.                   |
+| `frontend/`                   | Next.js storefront + admin panel. Deployed to **Vercel** (`valore-parfums`). Proxies `/api/*` → backend.          |
+| `README.md`                   | Full production reference (schemas, business logic, API map).                                                     |
+| `MOBILE_AUDIT_REPORT.md`      | Mobile-specific audit notes.                                                                                      |
 | `netlify.toml`, `render.yaml` | Legacy deploy configs from previous hosts — both apps are on Vercel now (proven by PR deploy checks, 2026-08-21). |
-| `valore-parfums/`             | **Ignore** — legacy scaffolding, not built.                                            |
+| `valore-parfums/`             | **Ignore** — legacy scaffolding, not built.                                                                       |
 
 Local dev:
 
@@ -44,18 +44,18 @@ Frontend proxies every `/api/*` call to `NEXT_PUBLIC_API_BASE_URL` (see §5).
 
 ## 2. Tech Stack
 
-| Layer         | Tech                                                                                               |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| Framework     | Next.js 16.1.6 App Router, React 19.2.3, TypeScript 5                                              |
-| DB            | Cloud Firestore via `firebase-admin` 13.7.0 (server-only)                                          |
-| Auth          | Custom PBKDF2 password + HMAC-signed session cookie (`vp-session`); Google OAuth via Firebase Auth |
-| Images        | Cloudinary (v2 SDK)                                                                                |
-| Email         | Resend (preferred) with Nodemailer / Gmail SMTP fallback                                           |
-| State         | Zustand v5 (cart, auth, theme). Cart + theme persisted to `localStorage`.                          |
-| Styling       | Tailwind v4, CSS-variable theming                                                                  |
+| Layer         | Tech                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework     | Next.js 16.1.6 App Router, React 19.2.3, TypeScript 5                                                                                                              |
+| DB            | Cloud Firestore via `firebase-admin` 13.7.0 (server-only)                                                                                                          |
+| Auth          | Custom PBKDF2 password + HMAC-signed session cookie (`vp-session`); Google OAuth via Firebase Auth                                                                 |
+| Images        | Cloudinary (v2 SDK)                                                                                                                                                |
+| Email         | Resend (preferred) with Nodemailer / Gmail SMTP fallback                                                                                                           |
+| State         | Zustand v5 (cart, auth, theme). Cart + theme persisted to `localStorage`.                                                                                          |
+| Styling       | Tailwind v4, CSS-variable theming                                                                                                                                  |
 | Caching       | Shared invalidatable store `backend/src/lib/api-cache.ts` (globalThis-anchored) + Next.js `unstable_cache` (tags `perfumes`, `pricing-config`, 300 s TTL fallback) |
-| Rate limiting | In-memory per-IP (`backend/src/lib/rate-limit.ts`)                                                 |
-| CSRF          | Double-submit cookie (`backend/src/lib/csrf.ts`)                                                   |
+| Rate limiting | In-memory per-IP (`backend/src/lib/rate-limit.ts`)                                                                                                                 |
+| CSRF          | Double-submit cookie (`backend/src/lib/csrf.ts`)                                                                                                                   |
 
 ---
 
@@ -169,20 +169,21 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 
 ### Investments (Phase 3 — integrated with orders + UI)
 
-| Route                              | Methods   | Guard                  | Notes                                                                                                 |
-| ---------------------------------- | --------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/api/investors`                   | GET, POST | admin                  | Investor registry; POST links to `users` doc by email when one exists                                 |
-| `/api/investors/[id]`              | GET, PUT  | admin                  | PUT edits profile only — financial totals are ledger-controlled                                       |
-| `/api/investors/[id]/capital`      | POST      | admin                  | Cash deposit into the investor's unallocated pool; ledgered `capital_contribution`; drawn down by inventory-page funding |
-| `/api/investments`                 | GET, POST | admin                  | POST derives amount from allocations (`ml × costPerMl`); rejects personal-collection perfumes; one tx |
-| `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                               |
-| `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                         |
-| `/api/investments/[id]/buyback`    | GET, POST | admin                  | GET quote / POST execute (atomic close)                                                               |
+| Route                              | Methods   | Guard                  | Notes                                                                                                                                                                                                   |
+| ---------------------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------------------- | --- | ---------------- | ----------------------------------------------------------------------------------- |
+| `/api/investors`                   | GET, POST | admin                  | Investor registry; POST links to `users` doc by email when one exists                                                                                                                                   |
+| `/api/investors/[id]`              | GET, PUT  | admin                  | PUT edits profile only — financial totals are ledger-controlled                                                                                                                                         |
+| `/api/investors/[id]/capital`      | POST      | admin                  | Cash deposit into the investor's unallocated pool; ledgered `capital_contribution`; drawn down by inventory-page funding                                                                                |
+| `/api/investments`                 | GET, POST | admin                  | POST derives amount from allocations (`ml × costPerMl`); rejects personal-collection perfumes; one tx                                                                                                   |
+| `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                                                                                                                                 |
+| `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                                                                                                                           |
+| `/api/investments/[id]/buyback`    | GET, POST | admin                  | GET quote / POST execute (atomic close)                                                                                                                                                                 |
 | `/api/investments/reports`         | GET       | admin                  | Aggregates recomputed on read + invariant health + `monthlyBreakdown`, `byPerfume`, withdrawal stats + `profitAttribution` (gross = investor + Valore retained, from persisted `investmentRecognition`) |
-| `/api/investment-withdrawals`      | GET, POST | investor (own) / admin | Profit-only withdrawal requests                                                                       |
-| `/api/investment-withdrawals/[id]` | PUT       | admin                  | `action: approve\|reject\|paid`; approve deducts profit inside tx                                     |
-| `/api/investor/dashboard`          | GET       | investor               | Investor resolved from session (userId/email) — IDOR-proof                                            |
-| `/api/investor/investments/[id]`   | GET       | investor               | Ownership-guarded (404 on foreign ids); allocations + ledger                                          || `/api/investor/statement`          | GET       | investor / admin       | §17 account statement (MAJOR units); admin may pass `?investorId=` for any investor                    |
+| `/api/investment-withdrawals`      | GET, POST | investor (own) / admin | Profit-only withdrawal requests                                                                                                                                                                         |
+| `/api/investment-withdrawals/[id]` | PUT       | admin                  | `action: approve\|reject\|paid`; approve deducts profit inside tx                                                                                                                                       |
+| `/api/investor/dashboard`          | GET       | investor               | Investor resolved from session (userId/email) — IDOR-proof                                                                                                                                              |
+| `/api/investor/investments/[id]`   | GET       | investor               | Ownership-guarded (404 on foreign ids); allocations + ledger                                                                                                                                            |     | `/api/investor/statement` | GET | investor / admin | §17 account statement (MAJOR units); admin may pass `?investorId=` for any investor |
+
 **Order integration:** `orders/[id]` PUT → Dispatched calls
 `processInvestmentSalesForOrder()` FIRST (per-item FIFO consumption, `allowPartial`,
 idempotent ledger keys), persists per-item `investmentRecognition` on order items,
@@ -517,19 +518,19 @@ header with curl. Rules:
 Run with `cd backend && npx tsx scripts/<name>.ts [--apply]`. Everything is dry-run
 until `--apply` is passed. Env comes from `backend/.env.local`.
 
-| Script                                                                                   | Purpose                                                                                                                               |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `set-personal-collection.ts`                                                             | Flag non-Store perfumes as `isPersonalCollection` + patch existing order items.                                                       |
-| `backfill-personal-collection-earnings.ts`                                               | Recompute `ownerProfit` / `otherOwnerProfit` on personal-collection items with the corrected `productCost` derivation.                |
-| `reset-order-financials.ts`                                                              | **Destructive.** Zero order + owner totals.                                                                                           |
-| `purge-orders.ts`                                                                        | **Destructive.** Full wipe of order data. Use with caution.                                                                           |
-| `check-finances.ts`                                                                      | Read-only reconciliation of stored vs recomputed totals.                                                                              |
-| `check-perfumes.ts` / `check-stock.ts` / `check-settings.ts` / `check-store-perfumes.ts` | Read-only inspection helpers.                                                                                                         |
-| `clean-margins.ts` / `fix-bottles.ts` / `fix-decant-sizes.ts`                            | Historical one-shot data fixers (already run).                                                                                        |
-| `test-investments.ts`                                                                     | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure). |
-| `e2e-investments.ts`                                                                      | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup. |
-| `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                  |
-| `e2e-price-propagation.ts`                                                                | Live E2E (needs BOTH dev servers; frontend with `API_BASE_URL=http://localhost:3001`): admin price/margin/create/delete changes must reach the pricing APIs, batch pricing, perfume list, and product-page SSR instantly. Namespaced fixture + settings snapshot/restore + full cleanup. |
+| Script                                                                                   | Purpose                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `set-personal-collection.ts`                                                             | Flag non-Store perfumes as `isPersonalCollection` + patch existing order items.                                                                                                                                                                                                          |
+| `backfill-personal-collection-earnings.ts`                                               | Recompute `ownerProfit` / `otherOwnerProfit` on personal-collection items with the corrected `productCost` derivation.                                                                                                                                                                   |
+| `reset-order-financials.ts`                                                              | **Destructive.** Zero order + owner totals.                                                                                                                                                                                                                                              |
+| `purge-orders.ts`                                                                        | **Destructive.** Full wipe of order data. Use with caution.                                                                                                                                                                                                                              |
+| `check-finances.ts`                                                                      | Read-only reconciliation of stored vs recomputed totals.                                                                                                                                                                                                                                 |
+| `check-perfumes.ts` / `check-stock.ts` / `check-settings.ts` / `check-store-perfumes.ts` | Read-only inspection helpers.                                                                                                                                                                                                                                                            |
+| `clean-margins.ts` / `fix-bottles.ts` / `fix-decant-sizes.ts`                            | Historical one-shot data fixers (already run).                                                                                                                                                                                                                                           |
+| `test-investments.ts`                                                                    | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure).                                                                                                                |
+| `e2e-investments.ts`                                                                     | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup.                                                                                                                               |
+| `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                                                                                                                                                                     |
+| `e2e-price-propagation.ts`                                                               | Live E2E (needs BOTH dev servers; frontend with `API_BASE_URL=http://localhost:3001`): admin price/margin/create/delete changes must reach the pricing APIs, batch pricing, perfume list, and product-page SSR instantly. Namespaced fixture + settings snapshot/restore + full cleanup. |
 
 ---
 
