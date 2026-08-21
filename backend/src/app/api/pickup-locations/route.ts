@@ -3,6 +3,7 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { v4 as uuid } from "uuid";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
+import { invalidateCheckoutConfigCache } from "@/lib/api-cache";
 
 // GET all pickup locations
 export async function GET(req: Request) {
@@ -39,5 +40,6 @@ export async function POST(req: Request) {
   };
 
   await db.collection(Collections.pickupLocations).doc(id).set(data);
+  invalidateCheckoutConfigCache();
   return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
 }

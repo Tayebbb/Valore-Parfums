@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { invalidateCheckoutConfigCache } from "@/lib/api-cache";
 
 // PUT update pickup location — admin only
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -27,6 +28,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   updates.updatedAt = Timestamp.now();
 
   await docRef.update(updates);
+  invalidateCheckoutConfigCache();
   const doc = await docRef.get();
   return NextResponse.json(serializeDoc({ id, ...doc.data() }));
 }
@@ -44,5 +46,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
 
   await docRef.delete();
+  invalidateCheckoutConfigCache();
   return NextResponse.json({ success: true });
 }

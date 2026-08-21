@@ -715,6 +715,37 @@ export function generateAdminNewOrderAlertEmail(orderData: {
   };
 }
 
+export function generateInvestorWelcomeEmail(data: {
+  name: string;
+  email: string;
+}): EmailNotification {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeName = esc(data.name);
+  const safeEmail = esc(data.email);
+
+  const html = createEmailShell(`
+      <p style="font-family:'Cormorant Garamond',serif; font-size:11px; letter-spacing:4px; color:#c9a96e; text-transform:uppercase; margin-bottom:28px;">Investor Portal</p>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400; color:#111; margin-bottom:24px; line-height:1.3;">Welcome to<br><em>Valore Parfums Investments</em></h2>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9; margin-bottom:20px;">Dear <strong>${safeName}</strong>,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#555; line-height:1.9; margin-bottom:28px;">You have been registered as an investor with Valore Parfums. Your personal portal shows your deposited capital, the perfumes your capital funds, capital recovery, and withdrawable profit — updated automatically with every sale.</p>
+      <div style="border-left: 2px solid #c9a96e; padding: 16px 20px; background:#fff; margin-bottom:28px;">
+        <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#8B7500; text-transform:uppercase; margin-bottom:10px;">How to access your portal</p>
+        <p style="font-family:'Montserrat',sans-serif; font-size:13px; color:#444; line-height:1.9;">Sign in with <strong>Google</strong> using this email address (<strong>${safeEmail}</strong>) at <a href="https://www.valoreparfums.app/investor" style="color:#8B7500; text-decoration:underline;">valoreparfums.app/investor</a>. Your portal unlocks automatically on your first Google sign-in.</p>
+      </div>
+      <p style="font-family:'Montserrat',sans-serif; font-size:12px; color:#888; line-height:1.9;">If you did not expect this email, please contact us and we will remove the registration.</p>
+      <div style="height:1px; background:#e8e4dc; margin: 36px 0 28px;"></div>
+      <p style="font-family:'Cormorant Garamond',serif; font-size:16px; color:#111; font-style:italic;">With gratitude,</p>
+      <p style="font-family:'Montserrat',sans-serif; font-size:10px; letter-spacing:3px; color:#c9a96e; text-transform:uppercase; margin-top:6px;">Valore Parfums</p>
+  `);
+
+  return {
+    to: data.email,
+    subject: "Your Valore Parfums investor portal",
+    html,
+    text: `Dear ${data.name},\nYou have been registered as an investor with Valore Parfums. Sign in with Google using ${data.email} at https://www.valoreparfums.app/investor to view your portal.`,
+  };
+}
+
 if (process.env.RESEND_API_KEY) {
   const fromAddress = process.env.RESEND_FROM_EMAIL || "Valore Parfums <orders@valoreparfums.app>";
   const provider = new ResendEmailProvider(process.env.RESEND_API_KEY, fromAddress);

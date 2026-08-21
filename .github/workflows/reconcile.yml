@@ -1,0 +1,51 @@
+name: Weekly reconciliation
+
+# Replays the investment ledger against Firestore: check-investments.ts exits
+# non-zero on any invariant violation (the job fails loudly). check-finances.ts
+# is an informational totals report attached to the run log (fails only on
+# crash). Requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and
+# FIREBASE_PRIVATE_KEY repository secrets; skips with a notice until they are
+# configured.
+#
+# Firestore BACKUPS are a GCP-side concern — schedule them once with:
+#   gcloud firestore export gs://<your-backup-bucket> --project <project-id>
+# (e.g. via Cloud Scheduler) — they cannot run from GitHub without GCS access.
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # Sundays 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Guard — require Firestore secrets
+        id: guard
+        env:
+          HAS_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY != '' }}
+        run: |
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::FIREBASE_* secrets are not configured — reconciliation skipped."
+          fi
+      - name: Investment ledger reconciliation (fails on violation)
+        if: steps.guard.outputs.skip != 'true'
+        run: npx tsx scripts/check-investments.ts
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+      - name: Financial totals report (informational)
+        if: steps.guard.outputs.skip != 'true'
+        run: npx tsx scripts/check-finances.ts

@@ -3,6 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireAdmin, normalizeEmail } from "@/lib/auth";
 import { logAudit, AUDIT_ACTIONS } from "@/lib/audit-log";
+import { sendEmail, generateInvestorWelcomeEmail } from "@/lib/email";
 import type { InvestorDoc } from "@/lib/investments/types";
 
 // GET all investors — admin only. Supports ?status=active|inactive
@@ -77,6 +78,14 @@ export async function POST(req: Request) {
       updatedAt: now,
     };
     const ref = await db.collection(Collections.investors).add(investor);
+
+    // Onboarding email — must never fail the registration.
+    try {
+      const emailResult = await sendEmail(generateInvestorWelcomeEmail({ name, email }));
+      if (!emailResult.success) console.warn("Investor welcome email failed:", emailResult.error);
+    } catch (emailError) {
+      console.warn("Investor welcome email failed:", emailError);
+    }
 
     await logAudit({
       action: AUDIT_ACTIONS.INVESTOR_CREATED,

@@ -217,4 +217,7 @@ async function main() {
   console.log("\n════════════════════════════════════════════════════════\n");
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

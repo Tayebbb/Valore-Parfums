@@ -61,6 +61,7 @@ export const AUDIT_ACTIONS = {
   INVESTOR_UPDATED: "admin:investor_updated",
   INVESTMENT_CREATED: "admin:investment_created",
   INVESTMENT_CAPITAL_ADDED: "admin:investment_capital_added",
+  INVESTMENT_CAPITAL_CORRECTED: "admin:investment_capital_corrected",
   INVESTMENT_SALE_PROCESSED: "investment:sale_processed",
   INVESTMENT_SALE_REVERSED: "investment:sale_reversed",
   INVESTMENT_BUYBACK: "admin:investment_buyback",

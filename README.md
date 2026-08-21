@@ -34,7 +34,7 @@
 | **Business Purpose** | Online perfume decant store serving the Bangladesh market. Customers sample luxury and niche fragrances in small sizes (3 ml–30 ml) before committing to full bottles.                                                                                                    |
 | **Target Users**     | Fragrance buyers in Bangladesh (customers); two co-owners who manage inventory, orders, and finances (admin).                                                                                                                                                             |
 | **Business Model**   | Direct-to-consumer e-commerce. Revenue from decant sales + markup over cost. Profit split between two named owners. Full-bottle sourcing on request (lead capture).                                                                                                       |
-| **Architecture**     | Monorepo with two independent Next.js applications: `frontend/` (customer storefront + admin panel, deployed on Netlify) and `backend/` (JSON API server, deployed on Render.com). The frontend proxies every `/api/*` call to the backend via a catch-all route handler. |
+| **Architecture**     | Monorepo with two independent Next.js applications: `frontend/` (customer storefront + admin panel, deployed on Vercel) and `backend/` (JSON API server, deployed on Vercel). The frontend proxies every `/api/*` call to the backend via a catch-all route handler. |
 
 ### Architecture Diagram
 
@@ -42,10 +42,10 @@
 Browser
   │
   ▼
-frontend/ (Netlify, port 3000)
+frontend/ (Vercel, port 3000)
   ├── Storefront pages (SSR/ISR)
   ├── Admin panel (SSR, role-gated)
-  └── /api/[...path] → proxy → backend/ (Render, port 3001)
+  └── /api/[...path] → proxy → backend/ (Vercel, port 3001)
                                     │
                                     ├── Firestore (Google Cloud)
                                     ├── Cloudinary (image storage)
@@ -82,8 +82,8 @@ Frontend API calls are proxied to backend via `NEXT_PUBLIC_API_BASE_URL`.
 | **Auth**               | Custom session-based auth                | PBKDF2 + HMAC-signed cookies; Google OAuth via Firebase Auth             |
 | **Storage / Images**   | Cloudinary                               | v2.9.0 via cloudinary SDK                                                |
 | **Email**              | Nodemailer → Gmail SMTP                  | nodemailer 8.0.4; SMTP via Gmail app password                            |
-| **Hosting — Frontend** | Netlify                                  | @netlify/plugin-nextjs                                                   |
-| **Hosting — Backend**  | Render.com                               | Node web service                                                         |
+| **Hosting — Frontend** | Vercel                                   | project `valore-parfums`                                                 |
+| **Hosting — Backend**  | Vercel                                   | project `valore-parfums-backend`                                         |
 | **Styling**            | Tailwind CSS v4                          | CSS variable-based theming                                               |
 | **State management**   | Zustand v5                               | Cart store + Auth store + Theme store                                    |
 | **Charts**             | Recharts v3                              | Admin dashboard only, dynamically imported                               |
@@ -830,12 +830,9 @@ All Firestore access is server-side Admin SDK only. The client Firebase SDK is o
 ```
 Valore-Parfums/                     # Monorepo root
 ├── README.md                       # This file
-├── netlify.toml                    # Root-level Netlify config (unused; frontend/ has its own)
-├── render.yaml                     # Render.com deployment config for backend
 ├── package.json                    # Root package (no scripts; workspace anchor)
-├── _orders_page_head.tsx           # Stray file — not imported anywhere (see §14)
 │
-├── backend/                        # Next.js API server — deployed on Render.com
+├── backend/                        # Next.js API server — deployed on Vercel
 │   ├── next.config.ts              # Image optimisation, cache headers, Turbopack config
 │   ├── firestore.rules             # Deny-all client rules (Admin SDK bypasses)
 │   ├── package.json                # Dependencies: firebase-admin, cloudinary, nodemailer, recharts
@@ -880,9 +877,8 @@ Valore-Parfums/                     # Monorepo root
 │       └── types/
 │           └── product.ts          # Product, PerfumeVariant, StockStatus TypeScript types
 │
-├── frontend/                       # Next.js storefront + admin — deployed on Netlify
+├── frontend/                       # Next.js storefront + admin — deployed on Vercel
 │   ├── next.config.ts              # Remote image patterns, cache headers
-│   ├── netlify.toml                # Build command, @netlify/plugin-nextjs
 │   ├── firestore.rules             # Copy of backend rules (not deployed separately)
 │   ├── public/images/payments/     # Payment method logos
 │   ├── scripts/                    # Duplicates of backend maintenance scripts
@@ -1083,10 +1079,8 @@ flowchart TD
 | **`SESSION_SIGNING_KEY` has insecure default**     | `backend/src/lib/auth.ts`                 | Critical | Falls back to `"default-insecure-key-change-in-production"`. Sessions can be forged if env var is not set.                                           |
 | **Duplicate lib/ between frontend and backend**    | `frontend/src/lib/` vs `backend/src/lib/` | Medium   | Auth, email, finance, Firestore, seo-catalog, and more are duplicated. Changes must be applied in both places.                                       |
 | **`prisma.ts` naming confusion**                   | `backend/src/lib/prisma.ts`               | Low      | Re-exports `firebase-admin`; remnant of original Prisma/SQLite implementation. All imports of "prisma" in API routes actually use Firestore.         |
-| **`valore-parfums/` directory at root**            | `/valore-parfums/`                        | Low      | Contains only `next-env.d.ts`; appears to be a remnant of an early workspace setup. Not deployed.                                                    |
-| **`_orders_page_head.tsx` at repo root**           | `/_orders_page_head.tsx`                  | Low      | Stray file not imported anywhere; likely a development scratch file.                                                                                 |
+| **`valore-parfums/` directory at root**            | `/valore-parfums/`                        | Low      | Untracked remnant of an early workspace setup (local only). Not deployed.                                                                            |
 | **Extensive `any` types**                          | All API route handlers                    | Medium   | API routes use `as any` casts and `// eslint-disable` comments throughout.                                                                           |
-| **`products.ts` uses hardcoded brand tier**        | `backend/src/lib/products.ts`             | Medium   | `BRAND_TIER_MARGINS` is hardcoded instead of reading from configurable `settings/default` tierMargins field.                                         |
 | **`frontend/scripts/` duplicates backend scripts** | `frontend/scripts/`                       | Low      | Five maintenance scripts duplicated from `backend/scripts/`. Should live in one place.                                                               |
 | **No Redis / distributed cache**                   | All in-memory caches                      | High     | Perfumes, pricing, notifications, and checkout config caches are per-process. Multiple backend instances would have inconsistent state.              |
 | **CSRF middleware not applied**                    | `backend/src/lib/csrf.ts`                 | Medium   | Module exists but no route uses it. `SameSite=strict` provides partial mitigation for same-site requests only.                                       |

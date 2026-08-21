@@ -10,8 +10,9 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-21 (PR #23 merged to `main`; follow-ups: inventory
-  investor-funding UX, funded-perfume visibility, Google investor auto-link)
+- **Last updated:** 2026-08-21 (hardening batch: CI + weekly reconciliation
+  workflows, capital corrections + idempotent deposits, investor welcome email,
+  E2E prod gate, dead-file cleanup)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -28,8 +29,8 @@ Monorepo with two independent Next.js 16 apps plus docs.
 | `frontend/`                   | Next.js storefront + admin panel. Deployed to **Vercel** (`valore-parfums`). Proxies `/api/*` → backend.          |
 | `README.md`                   | Full production reference (schemas, business logic, API map).                                                     |
 | `MOBILE_AUDIT_REPORT.md`      | Mobile-specific audit notes.                                                                                      |
-| `netlify.toml`, `render.yaml` | Legacy deploy configs from previous hosts — both apps are on Vercel now (proven by PR deploy checks, 2026-08-21). |
-| `valore-parfums/`             | **Ignore** — legacy scaffolding, not built.                                                                       |
+| `.github/workflows/`          | `ci.yml` (types/lint/engine-tests/builds on push+PR) + `reconcile.yml` (weekly ledger replay; needs FIREBASE_* secrets). |
+| `valore-parfums/`             | **Ignore** — untracked local remnant, not in the repo.                                                            |
 
 Local dev:
 
@@ -173,7 +174,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | ---------------------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------------------- | --- | ---------------- | ----------------------------------------------------------------------------------- |
 | `/api/investors`                   | GET, POST | admin                  | Investor registry; POST links to `users` doc by email when one exists                                                                                                                                   |
 | `/api/investors/[id]`              | GET, PUT  | admin                  | PUT edits profile only — financial totals are ledger-controlled                                                                                                                                         |
-| `/api/investors/[id]/capital`      | POST      | admin                  | Cash deposit into the investor's unallocated pool; ledgered `capital_contribution`; drawn down by inventory-page funding                                                                                |
+| `/api/investors/[id]/capital`      | POST      | admin                  | Cash deposit into the investor's unallocated pool; NEGATIVE amount = ledgered correction (note required, never below 0); optional `idempotencyKey` → retries are `{ duplicate: true }` no-ops; domain errors 400, infra 500                                                          |
 | `/api/investments`                 | GET, POST | admin                  | POST derives amount from allocations (`ml × costPerMl`); rejects personal-collection perfumes; one tx                                                                                                   |
 | `/api/investments/[id]`            | GET, PUT  | admin                  | PUT accepts ONLY `{ adjustment }` (ledgered correction)                                                                                                                                                 |
 | `/api/investments/[id]/ledger`     | GET       | admin                  | Immutable ledger; `?stream=` `?type=` filters, in-memory sort                                                                                                                                           |
@@ -280,10 +281,9 @@ Do **not** add new API handlers here unless they only touch frontend concerns.
 | `auth.ts`                          | PBKDF2 hash / verify, session cookie sign / verify, `getSessionUser`, `requireAdmin`                           |
 | `finance.ts`                       | Minor-unit math, `computeItemBreakdown`, `buildOrderPricingSnapshot`, `splitProfitMinor`                       |
 | `ownerEarnings.ts`                 | `calculatePersonalBottleEarnings` (85/15 split with liquid-cost recovery)                                      |
-| `products.ts`                      | Decant price + stock helpers                                                                                   |
 | `utils.ts`                         | `calculateSellingPrice`, `getBrandTier`, `getTierProfitMargin`, `splitProfit`, `DEFAULT_TIER_MARGINS`          |
 | `orderStatusConfig.ts`             | Status transitions + email triggers (duplicated in frontend)                                                   |
-| `email.ts`                         | Resend / Nodemailer dispatch + all templates                                                                   |
+| `email.ts`                         | Resend / Nodemailer dispatch + all templates (incl. `generateInvestorWelcomeEmail`)                            |
 | `cloudinary.ts`                    | Upload / delete / URL parsing                                                                                  |
 | `image-utils.ts`                   | `parseImageList`, `sanitizeCloudinaryImagesField`, `sanitizeCloudinaryUrl`                                     |
 | `fragrance-notes.ts`               | Canonical notes + `buildStructuredNotes`                                                                       |
@@ -530,7 +530,7 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 | `test-investments.ts`                                                                    | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure).                                                                                                                |
 | `e2e-investments.ts`                                                                     | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup.                                                                                                                               |
 | `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                                                                                                                                                                     |
-| `e2e-price-propagation.ts`                                                               | Live E2E (needs BOTH dev servers; frontend with `API_BASE_URL=http://localhost:3001`): admin price/margin/create/delete changes must reach the pricing APIs, batch pricing, perfume list, and product-page SSR instantly. Namespaced fixture + settings snapshot/restore + full cleanup. |
+| `e2e-price-propagation.ts`                                                               | Live E2E (needs BOTH dev servers; frontend with `API_BASE_URL=http://localhost:3001`, and `E2E_ALLOW_PROD=1` — it briefly exposes a live fixture perfume): admin price/margin/create/delete changes must reach the pricing APIs, batch pricing, perfume list, and product-page SSR instantly. Namespaced fixture + settings snapshot/restore + full cleanup. |
 
 ---
 
@@ -627,6 +627,29 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-08-21 (6)** — **Hardening batch** (direct to `main`). (1) **CI**:
+  `.github/workflows/ci.yml` — tsc/eslint/117-assertion engine suite/production
+  builds for both apps on every push+PR (FIREBASE_PROJECT_ID falls back to a
+  placeholder; catalog prerender degrades gracefully). `reconcile.yml` — weekly
+  ledger replay (`check-investments.ts` fails the run on violation;
+  `check-finances.ts` attached as report, now exits 1 on crash); skips until
+  FIREBASE_* secrets are configured. (2) **Capital corrections**: `addCapital`
+  accepts negative amounts (note required, in-tx `pool ≥ |amount|` guard),
+  ledgered as negative `capital_contribution` — reconciliation replay unchanged;
+  audit `INVESTMENT_CAPITAL_CORRECTED`. (3) **Deposit idempotency**: client
+  `idempotencyKey` → ledger doc id; tx.create collision → `{ duplicate: true }`
+  no-op; admin UI sends one uuid per form session (retries reuse it). Capital
+  route maps domain errors 400 / infra 500. (4) **Investor welcome email**
+  (`generateInvestorWelcomeEmail`, backend-only template) sent fire-and-safe on
+  investor creation. (5) `e2e-price-propagation.ts` refuses to run without
+  `E2E_ALLOW_PROD=1`. (6) pickup-locations mutations now invalidate the
+  checkout-config cache. (7) Deleted dead files: `netlify.toml`, `render.yaml`,
+  `frontend/netlify.toml`, `_orders_page_head.tsx`, both `lib/products.ts` +
+  `types/product.ts` copies (unimported legacy with a rival pricing formula);
+  README hosting labels swept to Vercel. (8) Deleted leftover probe user doc
+  from `users`. e2e-investments now 89/89 (7 new correction/idempotency
+  assertions); engine 117/117; reconciliation pass; tsc/eslint/builds green.
 
 - **2026-08-21 (5)** — **Google investor auto-link** (direct to `main`). Backend
   `/api/auth/google`: after user upsert, a `email_verified` Google login whose

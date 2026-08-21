@@ -486,6 +486,40 @@ async function main() {
       "investor dashboard rows include funded perfume names (allocations)",
     );
 
+    // Idempotent deposits: a retry with the same key must NOT double-credit.
+    const idemKey = `e2e-idem-${RUN}`;
+    const dep1 = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: adminCookie,
+      body: { amount: 500, notes: "e2e idem deposit", idempotencyKey: idemKey },
+    });
+    ok(dep1.status === 201 && dep1.json.duplicate === false, `keyed deposit recorded (${dep1.status})`);
+    const dep2 = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: adminCookie,
+      body: { amount: 500, notes: "e2e idem deposit", idempotencyKey: idemKey },
+    });
+    ok(dep2.status === 200 && dep2.json.duplicate === true, `same-key retry is a no-op (${dep2.status})`);
+    const afterIdem = (await db.collection(Collections.investors).doc(investorIdB).get()).data()!;
+    eq(afterIdem.unallocatedCapitalMinor, 250_000, "pool credited exactly once (৳2,000 + ৳500)");
+
+    // Corrections: negative amount, note required, never below zero.
+    const noNote = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: adminCookie,
+      body: { amount: -100 },
+    });
+    ok(noNote.status === 400, `correction without a note rejected (${noNote.status})`);
+    const overCorrect = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: adminCookie,
+      body: { amount: -99999, notes: "e2e over-correction" },
+    });
+    ok(overCorrect.status === 400, `correction beyond pool rejected (${overCorrect.status})`);
+    const correction = await api("POST", `/api/investors/${investorIdB}/capital`, {
+      cookie: adminCookie,
+      body: { amount: -500, notes: "e2e correction of the idem deposit" },
+    });
+    ok(correction.status === 201, `correction applied (${correction.status})`);
+    const afterCorrection = (await db.collection(Collections.investors).doc(investorIdB).get()).data()!;
+    eq(afterCorrection.unallocatedCapitalMinor, 200_000, "pool back to ৳2,000 after correction");
+
     // ════════════════════════════════════════════════════
     console.log("\n8. Security battery");
     // ════════════════════════════════════════════════════

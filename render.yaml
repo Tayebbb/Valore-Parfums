@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: valore-parfums-backend
-    runtime: node
-    rootDir: backend
-    buildCommand: npm run build
-    startCommand: npx next start -p $PORT
-    autoDeploy: true

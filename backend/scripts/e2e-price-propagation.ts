@@ -19,6 +19,15 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
+// This suite creates a LIVE, orderable fixture perfume in the production
+// Firestore for a few seconds (the storefront reads the same project).
+// Require explicit acknowledgement so it is never run casually.
+if (process.env.E2E_ALLOW_PROD !== "1") {
+  console.error("Refusing to run: this suite briefly exposes a live test perfume on the storefront.");
+  console.error("Set E2E_ALLOW_PROD=1 to acknowledge and run.");
+  process.exit(2);
+}
+
 const BACKEND = process.env.E2E_BACKEND_URL || "http://localhost:3001";
 const FRONTEND = process.env.E2E_FRONTEND_URL || "http://localhost:3000";
 const RUN = Date.now().toString(36);

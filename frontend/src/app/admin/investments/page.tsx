@@ -128,6 +128,12 @@ export default function AdminInvestmentsPage() {
   const [capitalTarget, setCapitalTarget] = useState<Investor | null>(null);
   const [capitalAmount, setCapitalAmount] = useState("");
   const [capitalNotes, setCapitalNotes] = useState("");
+  // One key per form session: a retry after a timeout reuses it, so the
+  // backend treats the resubmission as a no-op instead of double-crediting.
+  const [capitalIdemKey, setCapitalIdemKey] = useState("");
+  useEffect(() => {
+    if (capitalTarget) setCapitalIdemKey(crypto.randomUUID());
+  }, [capitalTarget]);
   const [showInvestmentForm, setShowInvestmentForm] = useState(false);
   const [invForm, setInvForm] = useState({ investorId: "", profitSharePercentage: "", notes: "" });
   const [allocRows, setAllocRows] = useState<AllocationRow[]>([{ perfumeId: "", ml: "", costPerMl: "" }]);
@@ -213,17 +219,30 @@ export default function AdminInvestmentsPage() {
   const addCapital = async () => {
     if (!capitalTarget) return;
     const amount = Number(capitalAmount);
-    if (!Number.isFinite(amount) || amount <= 0) return toast("Enter a valid amount", "error");
+    if (!Number.isFinite(amount) || amount === 0) return toast("Enter a non-zero amount", "error");
+    if (amount < 0 && !capitalNotes.trim()) {
+      return toast("A correction (negative amount) requires a note", "error");
+    }
+    if (amount < 0 && Math.round(Math.abs(amount) * 100) > (capitalTarget.unallocatedCapitalMinor || 0)) {
+      return toast("Correction exceeds the investor's undeployed balance", "error");
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/investors/${capitalTarget.id}/capital`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, notes: capitalNotes }),
+        body: JSON.stringify({ amount, notes: capitalNotes, idempotencyKey: capitalIdemKey }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      toast(`৳${amount.toLocaleString("en-BD")} added to ${capitalTarget.name}'s capital`, "success");
+      toast(
+        data.duplicate
+          ? "Already recorded — this submission was a retry"
+          : amount < 0
+            ? `৳${Math.abs(amount).toLocaleString("en-BD")} correction applied to ${capitalTarget.name}'s capital`
+            : `৳${amount.toLocaleString("en-BD")} added to ${capitalTarget.name}'s capital`,
+        "success",
+      );
       setCapitalTarget(null);
       setCapitalAmount("");
       setCapitalNotes("");
@@ -645,6 +664,7 @@ export default function AdminInvestmentsPage() {
               </p>
               <p className="text-xs text-[var(--text-muted)]">
                 Deposited cash is deducted automatically when you add investor-funded bottles from the Inventory page.
+                Enter a <strong>negative amount</strong> to correct a mistaken deposit (a note is required).
               </p>
               <div className="grid md:grid-cols-3 gap-2">
                 <input value={capitalAmount} onChange={(e) => setCapitalAmount(e.target.value)} placeholder="Amount (BDT) *" className="px-3 py-2 text-sm rounded border border-[var(--border)] bg-[var(--bg-base)]" />

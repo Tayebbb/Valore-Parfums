@@ -74,6 +74,12 @@ function ledgerRef(firestore: Firestore, idempotencyKey: string) {
   return firestore.collection(Collections.investmentTransactions).doc(idempotencyKey);
 }
 
+// Firestore tx.create on an existing doc → gRPC ALREADY_EXISTS (code 6).
+function isAlreadyExistsError(error: unknown): boolean {
+  const e = error as { code?: number | string; message?: string };
+  return e?.code === 6 || /already.?exists/i.test(String(e?.message || ""));
+}
+
 export class InvestmentAccountingService {
   private db: Firestore;
 
@@ -259,61 +265,86 @@ export class InvestmentAccountingService {
   }
 
   /**
-   * Record a cash deposit into the investor's unallocated capital pool.
+   * Record a cash deposit into the investor's unallocated capital pool, or a
+   * CORRECTION of a mistaken deposit (negative amount, note required).
    * The money is NOT yet deployed — pool-funded investments (fundFromPool)
    * draw it down as inventory is purchased. Ledgered as capital_contribution
    * (investmentId = "") so the pool is reconstructable:
-   * pool = Σ contributions − Σ pool-funded investment amounts.
+   * pool = Σ contributions (corrections included as negatives) − Σ pool-funded amounts.
+   * A client-supplied idempotencyKey makes retries after timeouts no-ops.
    */
   async addCapital(input: {
     investorId: string;
     amountMinor: number;
     performedBy: string;
     notes?: string;
-  }): Promise<{ newPoolMinor: number }> {
+    idempotencyKey?: string;
+  }): Promise<{ newPoolMinor: number; duplicate: boolean }> {
     const { investorId, amountMinor, performedBy } = input;
-    if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
-      throw new Error("Deposit amount must be a positive amount");
+    if (!Number.isInteger(amountMinor) || amountMinor === 0) {
+      throw new Error("Deposit amount must be a non-zero amount");
     }
+    if (amountMinor < 0 && !String(input.notes || "").trim()) {
+      throw new Error("A capital correction requires a note explaining it");
+    }
+    const clientKey = String(input.idempotencyKey || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+    const ledgerKey = clientKey
+      ? `contrib_${investorId}_${clientKey}`
+      : `contrib_${investorId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const investorRef = this.db.collection(Collections.investors).doc(investorId);
     let newPoolMinor = 0;
 
-    await this.db.runTransaction(async (tx) => {
-      const snap = await tx.get(investorRef);
-      if (!snap.exists) throw new Error("Investor not found");
-      const investor = snap.data() as InvestorDoc;
-      if (investor.status !== "active") throw new Error("Investor is not active");
-      const now = Timestamp.now();
-      const previous = investor.unallocatedCapitalMinor || 0;
-      newPoolMinor = previous + amountMinor;
+    try {
+      await this.db.runTransaction(async (tx) => {
+        const snap = await tx.get(investorRef);
+        if (!snap.exists) throw new Error("Investor not found");
+        const investor = snap.data() as InvestorDoc;
+        if (investor.status !== "active") throw new Error("Investor is not active");
+        const now = Timestamp.now();
+        const previous = investor.unallocatedCapitalMinor || 0;
+        if (amountMinor < 0 && previous + amountMinor < 0) {
+          throw new Error(
+            `Correction exceeds pool: only ৳${(previous / 100).toLocaleString()} is undeployed`
+          );
+        }
+        newPoolMinor = previous + amountMinor;
 
-      const entry: LedgerEntryDoc = {
-        type: "capital_contribution",
-        stream: "none",
-        investmentId: "",
-        investorId,
-        referenceOrderId: null,
-        referenceOrderItemId: null,
-        referenceInventoryId: null,
-        referencePerfumeId: null,
-        amountMinor,
-        mlSold: null,
-        previousBalanceMinor: previous,
-        newBalanceMinor: newPoolMinor,
-        performedBy,
-        notes: input.notes || "",
-        idempotencyKey: `contrib_${investorId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: now,
-      };
-      tx.create(ledgerRef(this.db, entry.idempotencyKey), entry);
-      tx.update(investorRef, {
-        unallocatedCapitalMinor: FieldValue.increment(amountMinor),
-        updatedAt: now,
+        const entry: LedgerEntryDoc = {
+          type: "capital_contribution",
+          stream: "none",
+          investmentId: "",
+          investorId,
+          referenceOrderId: null,
+          referenceOrderItemId: null,
+          referenceInventoryId: null,
+          referencePerfumeId: null,
+          amountMinor,
+          mlSold: null,
+          previousBalanceMinor: previous,
+          newBalanceMinor: newPoolMinor,
+          performedBy,
+          notes: input.notes || "",
+          idempotencyKey: ledgerKey,
+          createdAt: now,
+        };
+        tx.create(ledgerRef(this.db, entry.idempotencyKey), entry);
+        tx.update(investorRef, {
+          unallocatedCapitalMinor: FieldValue.increment(amountMinor),
+          updatedAt: now,
+        });
       });
-    });
+    } catch (error) {
+      // Same client key already ledgered → the original request committed; report success.
+      if (clientKey && isAlreadyExistsError(error)) {
+        const snap = await investorRef.get();
+        const pool = (snap.data() as InvestorDoc | undefined)?.unallocatedCapitalMinor || 0;
+        return { newPoolMinor: pool, duplicate: true };
+      }
+      throw error;
+    }
 
     await logAudit({
-      action: AUDIT_ACTIONS.INVESTMENT_CAPITAL_ADDED,
+      action: amountMinor < 0 ? AUDIT_ACTIONS.INVESTMENT_CAPITAL_CORRECTED : AUDIT_ACTIONS.INVESTMENT_CAPITAL_ADDED,
       userId: performedBy,
       userEmail: "",
       userName: "",
@@ -324,7 +355,7 @@ export class InvestmentAccountingService {
       status: "success",
     });
 
-    return { newPoolMinor };
+    return { newPoolMinor, duplicate: false };
   }
 
   /**
