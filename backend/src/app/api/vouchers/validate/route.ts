@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
-
-// Hardcoded owner voucher: prices every item at cost (zero profit). Applied server-side
-// in /api/orders POST; here we preview the equivalent discount so the checkout summary
-// shows the reduced total. Full-bottle lines are excluded (same rule as order creation).
-const OWNER_VOUCHER_CODE = "VALORE1290";
+import { requireAdmin } from "@/lib/auth";
 
 type CartItem = {
   perfumeId?: string;
@@ -51,14 +47,21 @@ async function computeOwnerVoucherDiscount(items: CartItem[]): Promise<number> {
 export async function POST(req: Request) {
   const { code, orderTotal, hasFullBottle, customerEmail, items } = await req.json();
 
-  if (String(code || "").trim().toUpperCase() === OWNER_VOUCHER_CODE) {
+  const configuredOwnerCode = (process.env.OWNER_VOUCHER_CODE || "VALORE1290").trim().toUpperCase();
+  const normalizedCode = String(code || "").trim().toUpperCase();
+
+  if (normalizedCode && normalizedCode === configuredOwnerCode) {
+    const admin = await requireAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: "Invalid voucher code" }, { status: 400 });
+    }
     const ownerDiscount = await computeOwnerVoucherDiscount(items as CartItem[]);
     return NextResponse.json({
       valid: true,
       discount: ownerDiscount,
       discountType: "owner",
       discountValue: ownerDiscount,
-      code: OWNER_VOUCHER_CODE,
+      code: normalizedCode,
       message: ownerDiscount > 0
         ? `Owner voucher applied — items billed at cost price (-${ownerDiscount} BDT).`
         : "Owner voucher applied — items will be billed at cost price on the final invoice.",

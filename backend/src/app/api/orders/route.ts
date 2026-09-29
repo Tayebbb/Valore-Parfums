@@ -180,11 +180,19 @@ export async function POST(req: Request) {
     const sessionUser = await getSessionUser();
     const manualAdminOrder = Boolean(orderData.manualAdminOrder);
 
-    // Owner-only hardcoded voucher: sells at cost price (zero profit)
-    const OWNER_VOUCHER_CODE = "VALORE1290";
-    const normalizedVoucherCode = String(rawVoucherCode || "").trim();
-    const isOwnerVoucher = normalizedVoucherCode.toUpperCase() === OWNER_VOUCHER_CODE;
-    const voucherCode = isOwnerVoucher ? OWNER_VOUCHER_CODE : normalizedVoucherCode;
+    // Owner voucher: sells at cost price (zero profit) - requires admin authorization
+    const OWNER_VOUCHER_CODE = (process.env.OWNER_VOUCHER_CODE || "VALORE1290").trim().toUpperCase();
+    const normalizedVoucherCode = String(rawVoucherCode || "").trim().toUpperCase();
+    const isOwnerVoucher = Boolean(normalizedVoucherCode && normalizedVoucherCode === OWNER_VOUCHER_CODE);
+
+    if (isOwnerVoucher) {
+      const admin = await requireAdmin();
+      if (!admin) {
+        return NextResponse.json({ error: "Unauthorized: Admin privileges required to use owner voucher" }, { status: 403 });
+      }
+    }
+
+    const voucherCode = isOwnerVoucher ? OWNER_VOUCHER_CODE : String(rawVoucherCode || "").trim();
 
     if (manualAdminOrder) {
       const admin = await requireAdmin();

@@ -409,7 +409,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const itemsSnap = await itemsRef.get();
 
       // Owner voucher: manual full-bottle prices are forced to cost (zero profit).
-      const isOwnerVoucherOrder = String(order.voucherCode || "").trim().toUpperCase() === "VALORE1290";
+      const OWNER_VOUCHER_CODE = (process.env.OWNER_VOUCHER_CODE || "VALORE1290").trim().toUpperCase();
+      const isOwnerVoucherOrder = Boolean(
+        order.voucherCode && String(order.voucherCode).trim().toUpperCase() === OWNER_VOUCHER_CODE
+      );
 
       for (const itemDoc of itemsSnap.docs) {
         const itemUpdate = updatesMap.get(itemDoc.id);

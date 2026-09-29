@@ -24,8 +24,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# env files (tracked ones can remain in git)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
