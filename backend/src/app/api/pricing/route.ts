@@ -4,6 +4,7 @@ import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMarg
 import type { OwnerType } from "@/lib/utils";
 import { FieldPath } from "firebase-admin/firestore";
 import { apiCache } from "@/lib/api-cache";
+import { requireAdmin } from "@/lib/auth";
 
 // Short shared-cache window so admin price changes reach CDN-cached responses fast.
 const CACHE_CONTROL = "public, s-maxage=15, stale-while-revalidate=30";
@@ -100,9 +101,10 @@ export async function GET(req: Request) {
   if (!perfumeId) return NextResponse.json({ error: "perfumeId required" }, { status: 400 });
 
   // Only the perfume itself needs a fresh read; config is cached
-  const [perfumeDoc, config] = await Promise.all([
+  const [perfumeDoc, config, admin] = await Promise.all([
     db.collection(Collections.perfumes).doc(perfumeId).get(),
     getPricingConfig(),
+    requireAdmin(),
   ]);
 
   if (!perfumeDoc.exists) return NextResponse.json({ error: "Perfume not found" }, { status: 404 });
@@ -146,6 +148,18 @@ export async function GET(req: Request) {
     // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
     const bottleAvailable = !bottle || bottle.availableCount > 0;
 
+    if (!admin) {
+      return {
+        ml: size.ml,
+        sellingPrice,
+        inStock,
+        bottleAvailable,
+        available: inStock && bottleAvailable,
+        isPartialDeal,
+        partialDealType: isPartialDeal ? partialType : null,
+      };
+    }
+
     return {
       ml: size.ml,
       sellingPrice,
@@ -166,6 +180,15 @@ export async function GET(req: Request) {
     };
   });
 
+  if (!admin) {
+    return NextResponse.json({
+      perfumeId: perfume.id,
+      perfumeName: perfume.name,
+      prices,
+      bulkRules: bulkRules.map((r) => ({ minQuantity: r.minQuantity, discountPercent: r.discountPercent })),
+    }, { headers: { "Cache-Control": CACHE_CONTROL } });
+  }
+
   return NextResponse.json({
     perfumeId: perfume.id,
     perfumeName: perfume.name,
@@ -174,7 +197,7 @@ export async function GET(req: Request) {
     isPersonalCollection: perfume.isPersonalCollection,
     prices,
     bulkRules: bulkRules.map((r) => ({ minQuantity: r.minQuantity, discountPercent: r.discountPercent })),
-  }, { headers: { "Cache-Control": CACHE_CONTROL } });
+  }, { headers: { "Cache-Control": "private, no-cache" } });
 }
 
 // ── Batch pricing: POST { perfumeIds: string[] } → { [perfumeId]: { prices } } ──
