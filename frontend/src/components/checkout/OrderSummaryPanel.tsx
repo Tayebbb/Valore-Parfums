@@ -1,6 +1,8 @@
 "use client";
 
 import { memo } from "react";
+import type { PackCartItem } from "@/store/cart";
+import { packDiscountLabel } from "@/types/pack";
 
 export interface OrderSummaryItem {
   perfumeId: string;
@@ -14,6 +16,8 @@ export interface OrderSummaryItem {
 
 interface OrderSummaryPanelProps {
   items: OrderSummaryItem[];
+  /** Perfume Pack lines, rendered as one grouped block each (original → discount → pack price). */
+  packs?: PackCartItem[];
   displaySubtotal: number;
   discount: number;
   deliveryFee: number;
@@ -22,8 +26,11 @@ interface OrderSummaryPanelProps {
   compact?: boolean;
 }
 
+const fmtBdt = (n: number) => `${n.toLocaleString("en-BD")} BDT`;
+
 function OrderSummaryPanelBase({
   items,
+  packs = [],
   displaySubtotal,
   discount,
   deliveryFee,
@@ -34,6 +41,47 @@ function OrderSummaryPanelBase({
   return (
     <div>
       <div className={compact ? "space-y-2.5" : "space-y-3"}>
+        {packs.map((pack) => (
+          <div
+            key={`pack-${pack.packId}`}
+            className="rounded border border-[var(--border-gold)] bg-[var(--bg-surface)] px-3 py-2.5"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--gold)]">Perfume Pack</p>
+                <p className="line-clamp-2 text-sm font-medium text-[var(--text-primary)]">
+                  {pack.packName} x{pack.quantity}
+                </p>
+              </div>
+              <p className="shrink-0 text-sm font-medium text-[var(--text-primary)]">
+                {fmtBdt(pack.unitPrice * pack.quantity)}
+              </p>
+            </div>
+            <ul className="mt-1.5 space-y-0.5">
+              {pack.packItems.map((c) => (
+                <li key={c.perfumeId} className="truncate text-xs text-[var(--text-secondary)]">
+                  {c.name} — {pack.decantSizeMl}ml
+                </li>
+              ))}
+            </ul>
+            {pack.discountAmount > 0 ? (
+              <div className="mt-2 space-y-0.5 border-t border-[var(--border)] pt-2 text-xs">
+                <div className="flex items-center justify-between text-[var(--text-muted)]">
+                  <span>Original</span>
+                  <span className="line-through">{fmtBdt(pack.originalPrice * pack.quantity)}</span>
+                </div>
+                <div className="flex items-center justify-between text-emerald-400">
+                  <span>Pack discount ({packDiscountLabel(pack.discountType, pack.discountValue).toLowerCase()})</span>
+                  <span>-{fmtBdt(pack.discountAmount * pack.quantity)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[var(--text-primary)]">
+                  <span>Pack price</span>
+                  <span>{fmtBdt(pack.unitPrice * pack.quantity)}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ))}
         {items.map((item) => (
           <div
             key={`${item.perfumeId}-${item.ml}-${item.isFullBottle ? "full" : "decant"}-${item.fullBottleSize || ""}`}

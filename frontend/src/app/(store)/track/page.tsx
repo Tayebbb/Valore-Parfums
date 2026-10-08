@@ -13,6 +13,10 @@ import {
   mapDbStatusToTrackStep,
   normalizeOrderStatusKey,
 } from "@/lib/orderStatusConfig";
+import { countOrderLines, groupOrderItems } from "@/lib/packs-order";
+import type { OrderItemPackFields } from "@/lib/packs-order";
+import PackImage from "@/components/store/PackImage";
+import type { PackOrderSnapshot } from "@/types/pack";
 
 interface OrderResult {
   id: string;
@@ -37,7 +41,9 @@ interface OrderResult {
   deliveryAddress?: string;
   customerName: string;
   createdAt: string;
-  items: {
+  /** Immutable pack snapshots from purchase time. */
+  packs?: PackOrderSnapshot[];
+  items: ({
     perfumeId?: string;
     perfumeSlug?: string;
     perfumeCanonicalPath?: string;
@@ -48,7 +54,8 @@ interface OrderResult {
     fullBottleSize?: string;
     quantity: number;
     unitPrice: number;
-  }[];
+    totalPrice?: number;
+  } & OrderItemPackFields)[];
 }
 
 
@@ -281,7 +288,7 @@ export default function TrackOrderPage() {
           ) : null}
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Items</span>
-            <p>{order.items?.length ?? 0}</p>
+            <p>{countOrderLines(order.items)}</p>
           </div>
           <div className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Total</span>
@@ -299,7 +306,49 @@ export default function TrackOrderPage() {
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Products</p>
             <div className="space-y-2">
-              {order.items.map((item, idx) => {
+              {groupOrderItems(order.items, order.packs).map((line, idx) => {
+                if (line.kind === "pack") {
+                  // Rendered from the ORDER's own snapshot — later edits/deletion of the pack never change this.
+                  const images = line.components.map((c) => resolveImageSrc(c.perfumeImage));
+                  return (
+                    <div
+                      key={`${order.id}-pack-${line.groupId}`}
+                      className="p-2.5 rounded-lg border border-[var(--border-gold)] bg-[var(--bg-surface)]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="relative w-14 h-14 rounded overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] flex-shrink-0">
+                          <PackImage images={images} fallbackLetter={line.name[0]} sizes="56px" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--gold)]">Perfume Pack</p>
+                          <p className="text-sm leading-snug">{line.name} <span className="text-[var(--text-muted)]">×{line.quantity}</span></p>
+                          <p className="text-xs text-[var(--text-muted)]">{line.ml}ml × {line.components.length}</p>
+                        </div>
+                        <p className="font-serif text-[var(--gold)] whitespace-nowrap">{line.finalTotal.toLocaleString("en-BD")} BDT</p>
+                      </div>
+                      <ul className="mt-2 space-y-0.5 pl-1">
+                        {line.components.map((c, ci) => (
+                          <li key={`${line.groupId}-${ci}`} className="text-xs text-[var(--text-secondary)]">
+                            • {c.perfumeName} <span className="text-[var(--text-muted)]">— {c.ml}ml</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {line.discountTotal > 0 ? (
+                        <div className="mt-2 border-t border-[var(--border)] pt-2 text-[11px] space-y-0.5">
+                          <div className="flex justify-between text-[var(--text-muted)]">
+                            <span>Original</span>
+                            <span className="line-through">{line.originalTotal.toLocaleString("en-BD")} BDT</span>
+                          </div>
+                          <div className="flex justify-between text-[var(--success)]">
+                            <span>Pack discount ({line.discountLabel.toLowerCase()})</span>
+                            <span>-{line.discountTotal.toLocaleString("en-BD")} BDT</span>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                }
+                const item = line.item;
                 const sizeLabel = item.isFullBottle
                   ? `Full Bottle (${item.fullBottleSize || "Custom"})`
                   : `${item.ml}ml`;

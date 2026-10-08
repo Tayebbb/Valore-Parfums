@@ -16,6 +16,7 @@ import {
   generateOrderDispatchedEmail,
   generatePickupConfirmationEmail,
   generatePickupReadyEmail,
+  pickPackEmailFields,
   sendEmail,
 } from "@/lib/email";
 import { validateString } from "@/lib/validation";
@@ -295,6 +296,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   // Handle item removals requested by admin
   if (Array.isArray(removeItemIds) && removeItemIds.length > 0) {
     const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
+
+    // Pack components are priced as a set (the pack discount is spread across them), so a pack may only
+    // be removed whole — removing one component would leave the rest with a meaningless discounted price.
+    const removeSet = new Set(removeItemIds.map((rawId: unknown) => String(rawId || "").trim()).filter(Boolean));
+    const allItemsSnap = await itemsRef.get();
+    const packGroupMembers = new Map<string, string[]>();
+    for (const d of allItemsSnap.docs) {
+      const groupId = String((d.data() as { packGroupId?: unknown }).packGroupId || "");
+      if (groupId) packGroupMembers.set(groupId, [...(packGroupMembers.get(groupId) || []), d.id]);
+    }
+    const removedPackGroupIds = new Set<string>();
+    for (const [groupId, members] of packGroupMembers) {
+      const removedCount = members.filter((memberId) => removeSet.has(memberId)).length;
+      if (removedCount > 0 && removedCount < members.length) {
+        return NextResponse.json(
+          { error: "A pack must be removed as a whole — remove every item of the pack together." },
+          { status: 409 },
+        );
+      }
+      if (removedCount === members.length) removedPackGroupIds.add(groupId);
+    }
+
     for (const rawId of removeItemIds) {
       const itemId = String(rawId || "").trim();
       if (!itemId) continue;
@@ -317,6 +340,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       await itemsRef.doc(itemId).delete();
     }
     await recomputeOrderTotals();
+    if (removedPackGroupIds.size > 0 && Array.isArray(order.packs)) {
+      // Keep the order's pack snapshot in step with the remaining items.
+      await db.collection(Collections.orders).doc(id).update({
+        packs: order.packs.filter((p: { packGroupId?: string }) => !removedPackGroupIds.has(String(p?.packGroupId || ""))),
+        updatedAt: now,
+      });
+    }
   }
 
   // Handle admin-added items
@@ -1111,6 +1141,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       quantity: Number(row.quantity || 0),
       ml: Number(row.ml || 0),
       unitPrice: Number(row.unitPrice || 0),
+      ...pickPackEmailFields(row),
       isFullBottle,
       fullBottleSize: String(row.fullBottleSize || "").trim() || undefined,
       fullBottleCondition: isFullBottle
@@ -1284,6 +1315,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
               quantity,
               ml: Number(row.ml || 0),
               totalPrice: Number(row.totalPrice || quantity * unitPrice),
+              ...pickPackEmailFields(row),
               isFullBottle,
               fullBottleSize: String(row.fullBottleSize || "").trim() || undefined,
               fullBottleCondition: isFullBottle

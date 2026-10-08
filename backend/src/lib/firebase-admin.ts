@@ -99,4 +99,5 @@ export const Collections = {
   investmentTransactions: "investmentTransactions",
   investmentWithdrawals: "investmentWithdrawals",
   buybacks: "buybacks",
+  packs: "packs",
 } as const;

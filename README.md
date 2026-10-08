@@ -95,7 +95,7 @@ Frontend API calls are proxied to backend via `NEXT_PUBLIC_API_BASE_URL`.
 
 ### Firestore Collections (summary)
 
-`perfumes`, `perfumeReviews`, `notesLibrary`, `decantSizes`, `bottles`, `settings`, `bulkPricingRules`, `orders` (+`items` subcollection), `vouchers`, `stockRequests`, `users`, `wishlists`, `notifications`, `withdrawals`, `pickupLocations`, `requests`, `fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`, `investors`, `investments`, `investmentAllocations`, `investmentTransactions`, `investmentWithdrawals`, `buybacks`
+`perfumes`, `perfumeReviews`, `notesLibrary`, `decantSizes`, `bottles`, `settings`, `bulkPricingRules`, `orders` (+`items` subcollection), `vouchers`, `stockRequests`, `users`, `wishlists`, `notifications`, `withdrawals`, `pickupLocations`, `requests`, `fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`, `investors`, `investments`, `investmentAllocations`, `investmentTransactions`, `investmentWithdrawals`, `buybacks`, `packs`
 
 ---
 
@@ -241,6 +241,7 @@ Email provider: Gmail SMTP via `nodemailer`. Initialized once at module load if 
 **Key fields:** `customerName`, `customerEmail`, `customerPhone`, `placedByEmail`, `userId`, `status`, `pickupMethod`, `paymentMethod`, `orderSource`, `subtotal`, `discount`, `deliveryFee`, `total`, `profit`, `financialsMinor{subtotalMinor, discountMinor, deliveryFeeMinor, totalMinor, totalCostMinor, totalProfitMinor}`, `notes`, `bkashPayment{transactionNumber}`, `bankPayment{transactionNumber}`, `createdAt`, `updatedAt`
 **Subcollection:** `items` — each line item: `perfumeId`, `perfumeName`, `ml`, `quantity`, `unitPrice`, `totalPrice`, `ownerName`, `isPersonalCollection`, `pricingSnapshot`, `ownerProfit`, `otherOwnerProfit`, `computedProfitMinor`
 **Relationships:** Items read via `collectionGroup("items")` for dashboard aggregates
+**Pack orders:** an order containing Perfume Packs also stores `packs[]` — an immutable snapshot per purchased pack line (`packGroupId`, `packId`, `packName`, `decantSizeMl`, `quantity`, `items[{perfumeId, perfumeName, brand, ml, unitPrice, listUnitPrice}]`, `discountType`, `discountValue`, `originalUnitPrice`, `discountUnitAmount`, `finalUnitPrice`, `originalTotal`, `discountTotal`, `finalTotal`; no cost/profit data). Each pack component is an ordinary item that additionally carries `itemType: "pack_component"`, `packId`, `packName`, `packGroupId`, `packQuantity`, `packDecantSizeMl`, `packOriginalSubtotal`, `packDiscountType`, `packDiscountValue`, `packDiscountAmount`, `packFinalPrice` (whole line — repeated on every component of the group, aggregate by `packGroupId`), `packListUnitPrice` and `packDiscountShare` (per unit). Its `unitPrice`/`totalPrice`/`financialBreakdown` already contain the component's share of the pack price.
 **Security:** Server-only
 
 #### `users`
@@ -275,6 +276,13 @@ Email provider: Gmail SMTP via `nodemailer`. Initialized once at module load if 
 
 **Purpose:** Discount voucher codes.
 **Key fields:** `code`, `discountType` (`"percentage"` | `"fixed"`), `discountValue`, `minOrderValue`, `usageLimit`, `usedCount`, `isActive`, `expiresAt`
+
+#### `packs`
+
+**Purpose:** Admin-curated Perfume Packs — several perfumes at one decant size with a pack discount.
+**Key fields:** `name`, `slug`, `description`, `isActive`, `sortOrder`, `decantSizeMl`, `items[{perfumeId}]` (1–6, unique), `discountType` (`"percentage"` | `"fixed"`), `discountValue`, `createdAt`, `updatedAt`
+**Relationships:** References `perfumes` (source of truth for stock and current price). **A pack never stores a price** — it is derived at read/purchase time (see §6.13).
+**Security:** Server-only; writes are admin-only.
 
 #### `perfumeReviews`
 
@@ -384,6 +392,23 @@ All routes live in `backend/src/app/api/`. Auth is checked via `getSessionUser()
 | PUT    | `/api/orders/[id]`                | Admin   | Update order (status, notes, tracking) | Sends status-specific email on each transition                  |
 | POST   | `/api/orders/[id]/cancel`         | Admin   | Cancel order                           | Requires `cancelReason`; sends cancellation email               |
 | POST   | `/api/orders/[id]/verify-payment` | Admin   | Mark payment received                  | Sets `paymentVerified: true` on order                           |
+
+### Packs
+
+| Method | Path                 | Auth  | Purpose                                              | Notes                                                                                   |
+| ------ | -------------------- | ----- | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| GET    | `/api/packs`         | None  | Active packs with live prices + availability         | Public fields only (no stock/cost). Cached 20 s; invalidated on any pack/perfume/price change |
+| POST   | `/api/packs`         | Admin | Create pack                                          | Validates perfumes, size, duplicates, discount, unique slug                              |
+| GET    | `/api/packs/[id]`    | None  | One active pack by id or slug                        | 404 for inactive/deleted                                                                |
+| PUT    | `/api/packs/[id]`    | Admin | Update pack (partial bodies merge onto stored pack)  | Re-validated in full                                                                    |
+| DELETE | `/api/packs/[id]`    | Admin | Delete pack                                          | Deletes only the pack doc; orders keep their own snapshot                               |
+| GET    | `/api/packs/admin`   | Admin | All packs incl. inactive with stock/cost/status      | Never cached                                                                            |
+| POST   | `/api/packs/preview` | Admin | Live price preview for the admin form                | Per-component price, discount, final, warnings                                          |
+| POST   | `/api/packs/quote`   | None  | Fresh price/availability for packs in a cart         | Uncached; checkout still re-prices                                                      |
+| POST   | `/api/packs/reorder` | Admin | Persist display order                                | `{ ids: string[] }`                                                                     |
+
+`POST /api/orders` accepts `packs: [{ packId, quantity, expectedUnitPrice? }]` next to `items`.
+A stale `expectedUnitPrice` returns `409 { code: "PRICE_CHANGED", packs: [...fresh] }`; an inactive/unavailable pack returns `409 PACK_UNAVAILABLE`; insufficient inventory returns `409 INSUFFICIENT_STOCK`.
 
 ### Pricing & Configuration
 
@@ -564,7 +589,27 @@ Validation checks: `isActive`, not expired, `usedCount < usageLimit`, `orderTota
 
 Source: `backend/src/app/api/vouchers/validate/route.ts`
 
-### 6.10 Delivery Fees
+### 6.13 Perfume Packs
+
+```
+componentPrice_i = computeDecantPrice(perfume_i, pack.decantSizeMl)      // normal price, NO bulk discount
+original         = Σ componentPrice_i
+discount         = percentage ? round(original × pct / 100) : round(value)   // clamped to [0, original]
+packPrice        = original − discount                                       // never negative
+unitPrice_i      = largest-remainder allocation of packPrice ∝ componentPrice_i   // Σ unitPrice_i === packPrice exactly
+```
+
+- The price is recomputed on **every** read and **every** order; the cart/localStorage price is display-only.
+- Ordering a pack ×k creates one decant order item per component (`quantity = k`, `itemType: "pack_component"`, shared `packGroupId`) so stock, owner/investor profit, cancellation and ledgers work per perfume. `totalOrders` rises by `k` for each component perfume.
+- An order containing packs is written in one Firestore transaction that re-checks perfume ml and atomiser counts (aggregated across the whole order), so a shortage leaves nothing half-written.
+- The order-level voucher applies once, after the pack discount. The owner voucher and manual admin orders are rejected with packs.
+- Cancelling restores every component's ml and atomisers through the existing guarded transaction (`stockRestoredAt`), so a repeated cancel cannot double-restore.
+
+Source: `backend/src/lib/pricing-engine.ts`, `backend/src/lib/packs/`, `backend/src/app/api/orders/route.ts`
+
+---
+
+## 7. SEO System
 
 Two configurable rates stored in `settings/default`:
 
@@ -659,7 +704,7 @@ Each `/products/[slug]` page generates:
 `frontend/src/app/sitemap.ts` generates:
 
 - Homepage (priority 1.0)
-- `/shop` (0.8)
+- `/shop` (0.8), `/packs` (0.8) and every active pack `/packs/[slug]` (0.8)
 - `/category/decants`, `/category/full-bottles` (0.8)
 - All 6 SEO landing pages (0.8)
 - All blog post URLs (0.8)

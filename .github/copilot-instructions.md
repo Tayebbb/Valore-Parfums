@@ -10,9 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-08-21 (hardening batch: CI + weekly reconciliation
-  workflows, capital corrections + idempotent deposits, investor welcome email,
-  E2E prod gate, dead-file cleanup)
+- **Last updated:** 2026-10-08 (Perfume Packs: admin-curated bundles priced from
+  the canonical decant price, ordered as per-perfume component items; see §7.10)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -69,7 +68,11 @@ Collections (see `backend/src/lib/firebase-admin.ts::Collections`):
 `wishlists`, `notifications`, `withdrawals`, `pickupLocations`, `requests`,
 `fullBottleLeads`, `blogPosts`, `ownerAccounts`, `profitTransactions`, `auditLogs`,
 `investors`, `investments`, `investmentAllocations`, `investmentTransactions`,
-`investmentWithdrawals`, `buybacks`.
+`investmentWithdrawals`, `buybacks`, `packs`.
+
+**`packs/{id}`** — `name, slug, description, isActive, sortOrder, decantSizeMl,
+items:[{perfumeId}], discountType ("percentage"|"fixed"), discountValue,
+createdAt, updatedAt`. A pack stores **no price** — it is always derived (§7.10).
 
 **Subcollections:** `orders/{orderId}/items` — order line items. Queried via
 `collectionGroup("items")` in `dashboard`, `owner-accounts`, `withdrawals`, and the
@@ -121,6 +124,19 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | `/api/orders/[id]`                | GET, PUT  | session (GET) / admin (PUT)    | PUT sends status-specific email                                                                            |
 | `/api/orders/[id]/cancel`         | POST      | admin                          | Requires `cancelReason`; sends cancellation email                                                          |
 | `/api/orders/[id]/verify-payment` | POST      | admin                          | Marks manual bKash / bank payment received                                                                 |
+
+### Packs (`/api/packs*`)
+
+| Route                  | Methods              | Guard  | Notes                                                                                                                                  |
+| ---------------------- | -------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/packs`           | GET, POST            | POST admin | GET = active packs, priced + availability (public fields only; 20 s cache, `invalidatePackCaches`). POST validates + creates.     |
+| `/api/packs/[id]`      | GET, PUT, DELETE     | mutations admin | GET by id **or slug**, active only. PUT merges the body onto the stored pack and re-validates. DELETE removes only the pack doc. |
+| `/api/packs/admin`     | GET                  | admin  | All packs incl. inactive, with stock, cost, status per component and warnings. Never cached.                                          |
+| `/api/packs/preview`   | POST                 | admin  | Live price preview for the admin form (per-component price, discount, warnings). Stores nothing.                                       |
+| `/api/packs/quote`     | POST                 | none   | `{packs:[{id,quantity}]}` → fresh public pricing/availability for cart refresh. Uncached.                                              |
+| `/api/packs/reorder`   | POST                 | admin  | `{ids[]}` → rewrites `sortOrder`.                                                                                                      |
+
+`POST /api/orders` also accepts `packs:[{packId, quantity, expectedUnitPrice}]`.
 
 ### Pricing & Config
 
@@ -204,7 +220,8 @@ Never add a mutating admin endpoint without `requireAdmin()`.
 ### Storefront routes (`app/(store)/`)
 
 `/`, `/shop`, `/cart`, `/checkout`, `/login`, `/signup`, `/wishlist`, `/track`,
-`/requests`, `/partials`, `/products/[slug]`, `/perfume/[id]` (legacy id fallback).
+`/requests`, `/partials`, `/products/[slug]`, `/perfume/[id]` (legacy id fallback),
+`/packs`, `/packs/[slug]` (server-rendered from the backend pack API; Product/Offer JSON-LD).
 
 ### SEO / content routes
 
@@ -219,7 +236,7 @@ Never add a mutating admin endpoint without `requireAdmin()`.
 `/admin` (dashboard), `/admin/orders`, `/admin/inventory`, `/admin/settings`,
 `/admin/vouchers`, `/admin/decant-sizes`, `/admin/bottles`, `/admin/requests`,
 `/admin/notifications`, `/admin/brand-sections`, `/admin/export`, `/admin/reports`,
-`/admin/pickup-locations`, `/admin/investments` (overview + tabs: investments /
+`/admin/pickup-locations`, `/admin/packs`, `/admin/investments` (overview + tabs: investments /
 investors / withdrawals), `/admin/investments/[id]` (balances, allocations,
 ledger, buyback, manual adjustments).
 Two legacy paths are permanent redirects to consolidated pages:
@@ -282,6 +299,12 @@ Do **not** add new API handlers here unless they only touch frontend concerns.
 | `finance.ts`                       | Minor-unit math, `computeItemBreakdown`, `buildOrderPricingSnapshot`, `splitProfitMinor`                       |
 | `ownerEarnings.ts`                 | `calculatePersonalBottleEarnings` (85/15 split with liquid-cost recovery)                                      |
 | `utils.ts`                         | `calculateSellingPrice`, `getBrandTier`, `getTierProfitMargin`, `splitProfit`, `DEFAULT_TIER_MARGINS`          |
+| `pricing-engine.ts`                | PURE `computeDecantPrice` — canonical decant price (used by `/api/pricing` and packs). Output pinned by `test-packs.ts` |
+| `pricing-config.ts`                | `getPricingConfig({fresh?})` — sizes, bottles, margins, packaging, `lowStockAlertMl` (cached 60 s)             |
+| `packs/pricing.ts`                 | PURE pack math + validation: `computePackTotals`, `allocatePackPrice` (largest remainder), `evaluateComponent`  |
+| `packs/service.ts`                 | `resolvePack(s)` (one batch perfume read + cached config), `toPublicPack` / `toAdminPack`, cached public list   |
+| `packs/order.ts`                   | Order-time pack preparation: validate, price, allocate, expand into component items + `packs[]` snapshot       |
+| `packs/admin.ts`                   | Admin write validation needing Firestore (perfumes exist/active, size enabled, slug unique)                    |
 | `orderStatusConfig.ts`             | Status transitions + email triggers (duplicated in frontend)                                                   |
 | `email.ts`                         | Resend / Nodemailer dispatch + all templates (incl. `generateInvestorWelcomeEmail`)                            |
 | `cloudinary.ts`                    | Upload / delete / URL parsing                                                                                  |
@@ -308,7 +331,9 @@ Mirrors backend for: `auth`, `finance`, `email`, `seo-catalog`, `seo-content`,
 `orderStatusConfig`, `validation`, `fragrance-notes`, `image-utils`, `utils`,
 `products`, `firebase-admin` (legacy copy — client should use `firebase-client.ts`).
 Frontend-only: `public-api.ts` (`toPublicApiUrl`), `fetch-with-timeout.ts`,
-`fetch-hooks.ts`, `safe-storage.ts`.
+`fetch-hooks.ts`, `safe-storage.ts`, `packs-api.ts` (server fetch of the pack API,
+`packs` cache tag), `packs-cart.ts`, `packs-order.ts` (group order items by
+`packGroupId`), `usePackRefresh.ts` (re-quote pack lines in the cart/checkout).
 
 **Duplication policy:** When editing any duplicated file, update **both** copies in
 the same commit. Priority pairs: `seo-catalog.ts`, `orderStatusConfig.ts`,
@@ -482,6 +507,42 @@ header with curl. Rules:
 
 ---
 
+### 7.10 Perfume Packs (do not regress)
+
+- **A pack never stores a price.** Price = Σ current canonical decant prices of its
+  components (`computeDecantPrice`, normal price, **no bulk discount**) minus the
+  pack discount (`computePackTotals`: percentage `round(list×pct/100)` or fixed,
+  clamped to `[0, list]`). The server recomputes it on every order; the client
+  price and `expectedUnitPrice` are never trusted (a mismatch → `409 PRICE_CHANGED`
+  carrying the fresh prices).
+- **Packs are stored as ordinary component items.** Each purchased pack line expands
+  into one decant item per component perfume (`quantity` = pack quantity,
+  `itemType:"pack_component"`, shared `packGroupId`) whose `unitPrice` /
+  `totalPrice` / `financialBreakdown` already hold the component's share of the
+  pack price (`allocatePackPrice`, Σ === pack price exactly). Owner/investor
+  profit, stock, cancel/restore and ledgers therefore work per perfume unchanged.
+- **Never write a pack "header" doc into `orders/{id}/items`** — every
+  `collectionGroup("items")` reader would double count it. The pack summary lives in
+  `orders/{id}.packs[]` (`PackOrderSnapshot`: names, components, discount, prices; no
+  cost/profit). History is read from this snapshot, never from the live pack.
+- Item pack fields: `packId, packName, packGroupId, packQuantity, packDecantSizeMl,
+  packOriginalSubtotal, packDiscountType/Value, packDiscountAmount, packFinalPrice`
+  (**whole line, repeated on every component — aggregate by `packGroupId`, never
+  sum across components**) and per component `packListUnitPrice`, `packDiscountShare`.
+- **Atomicity**: an order containing packs defers all stock changes and writes the
+  order, items, stock decrements and `totalOrders` in one `db.runTransaction` that
+  also verifies perfume ml and atomiser counts (all items in the order, aggregated).
+  Orders without packs keep the original code path.
+- **Combinations**: voucher applies at order level after the pack discount (once);
+  the owner (cost) voucher and manual admin orders are rejected with packs; bulk
+  pricing is skipped for components only.
+- Admin order edit: a pack can only be removed whole (`409` otherwise); the cart
+  line (`type:"pack"`, `lineId`) is display-only and re-quoted via `/api/packs/quote`.
+- Caching: `packs` tag in the frontend proxy (public GET only; `admin/preview/quote/
+  reorder` never cached); purged by pack/perfume/settings/size/bottle mutations and
+  successful `POST /api/orders`. Backend `apiCache.packsPublic` is cleared by
+  `invalidatePackCaches/PerfumeCaches/PricingConfigCache`.
+
 ## 8. Environment Variables
 
 ### Backend (`backend/.env.local` + Vercel env in prod)
@@ -529,6 +590,8 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 | `clean-margins.ts` / `fix-bottles.ts` / `fix-decant-sizes.ts`                            | Historical one-shot data fixers (already run).                                                                                                                                                                                                                                           |
 | `test-investments.ts`                                                                    | Investment engine test suite (117 assertions incl. partial-FIFO, reversal math, buyback stream separation, owner P&L carve-out, combined P&L; exits non-zero on failure).                                                                                                                |
 | `e2e-investments.ts`                                                                     | Live E2E over HTTP (needs `npm run dev`): full investor lifecycle + security battery against real Firestore with namespaced fixtures and complete cleanup.                                                                                                                               |
+| `test-packs.ts`                                                                          | Pack engine tests (pure; golden `computeDecantPrice`, discounts, exact allocation, availability, validation). Run in CI.                                                                                                                                                                 |
+| `e2e-packs.ts`                                                                           | Live E2E over HTTP for packs (admin CRUD, public API, tampering, stock/bottle/totalOrders, snapshot immutability, cancel/restore, vouchers). Requires `E2E_CONFIRM_PROJECT=<FIREBASE_PROJECT_ID>`; briefly creates a fixture 7ml size; full cleanup.                                      |
 | `check-investments.ts`                                                                   | Read-only reconciliation: invariant, lot capital, ml conservation, ledger replay, investor counters.                                                                                                                                                                                     |
 | `e2e-price-propagation.ts`                                                               | Live E2E (needs BOTH dev servers; frontend with `API_BASE_URL=http://localhost:3001`, and `E2E_ALLOW_PROD=1` — it briefly exposes a live fixture perfume): admin price/margin/create/delete changes must reach the pricing APIs, batch pricing, perfume list, and product-page SSR instantly. Namespaced fixture + settings snapshot/restore + full cleanup. |
 
@@ -577,7 +640,8 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
   `orderStatusConfig.ts` AND update `/memories/repo/order-status-email-flow.md`.
 - **Firestore item shape**: order items in `orders/{id}/items` must always store
   `pricingSnapshot` (with `packagingCost`, `bottleCost`, `costPricePerMl`, `marketPricePerMl`)
-  so recompute paths (dashboard / owner-accounts / backfill) work.
+  so recompute paths (dashboard / owner-accounts / backfill) work. Pack components
+  carry the extra `pack*` fields of §7.10 and the same snapshot.
 - **Session cookies** are signed with `SESSION_SIGNING_KEY`. Rotating the key logs
   every user out — coordinate. See §7.8 for the trust model.
 - **Never trust an unverified `vp-session` payload.** Always go through
@@ -627,6 +691,21 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-10-08** — **Perfume Packs.** New `packs` collection + `/api/packs*` (public
+  list/detail, admin CRUD/preview/reorder, public quote). Pack price is derived
+  from the canonical decant price (new pure `pricing-engine.ts`, extracted from
+  `/api/pricing` with identical output) with a percentage/fixed discount applied
+  once; bulk pricing never stacks. `POST /api/orders` accepts `packs[]`, reprices
+  server-side (409 `PRICE_CHANGED` on stale prices), expands each pack into
+  per-perfume component items (exact proportional discount allocation) +
+  `orders/{id}.packs[]` snapshot, and writes order + items + stock atomically in a
+  transaction. Cancel/restore, profit, investor and ledger code unchanged.
+  Frontend: `/packs`, `/packs/[slug]`, nav + homepage strip, sitemap, cart store
+  v2 (`type`, `lineId`, pack lines), checkout/summary grouping, `/track` + admin
+  orders grouped by `packGroupId`, `/admin/packs` + pack form with live preview.
+  Emails group pack components (+ "PACK ORDER" admin alert). Proxy gains the
+  `packs` cache tag. Tests: `scripts/test-packs.ts` (CI), `scripts/e2e-packs.ts`.
 
 - **2026-08-21 (6)** — **Hardening batch** (direct to `main`). (1) **CI**:
   `.github/workflows/ci.yml` — tsc/eslint/117-assertion engine suite/production

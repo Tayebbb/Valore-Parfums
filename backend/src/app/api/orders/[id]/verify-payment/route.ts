@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
-import { generateOrderConfirmedEmail, generateOrderPaidEmail, sendEmail } from "@/lib/email";
+import { generateOrderConfirmedEmail, generateOrderPaidEmail, pickPackEmailFields, sendEmail } from "@/lib/email";
 import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -94,6 +94,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       quantity: Number(row.quantity || 0),
       ml: Number(row.ml || 0),
       unitPrice: Number(row.unitPrice || 0),
+      ...pickPackEmailFields(row),
       isFullBottle,
       fullBottleSize: String(row.fullBottleSize || "").trim() || undefined,
       fullBottleCondition: isFullBottle

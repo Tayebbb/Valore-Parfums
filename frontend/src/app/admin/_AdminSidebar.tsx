@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
+  Boxes,
   FlaskConical,
   Wine,
   Settings,
@@ -24,6 +25,7 @@ import {
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/inventory", label: "Inventory", icon: Package },
+  { href: "/admin/packs", label: "Packs", icon: Boxes },
   { href: "/admin/brand-sections", label: "Brand Sections", icon: Tag },
   { href: "/admin/decant-sizes", label: "Decant Sizes", icon: FlaskConical },
   { href: "/admin/bottles", label: "Bottles", icon: Wine },

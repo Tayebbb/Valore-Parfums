@@ -12,7 +12,20 @@ export interface EmailProvider {
   send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-interface EmailOrderItem {
+/** Pack metadata carried by order item docs that belong to a Perfume Pack. */
+export interface EmailPackFields {
+  packGroupId?: string;
+  packName?: string;
+  packQuantity?: number;
+  packDecantSizeMl?: number;
+  /** Whole purchased line (× quantity) — identical on every component of a group. */
+  packOriginalSubtotal?: number;
+  packDiscountAmount?: number;
+  packDiscountType?: string;
+  packDiscountValue?: number;
+}
+
+interface EmailOrderItem extends EmailPackFields {
   perfumeName: string;
   quantity: number;
   ml: number;
@@ -22,7 +35,7 @@ interface EmailOrderItem {
   fullBottleCondition?: string;
 }
 
-interface EmailCancelledItem {
+interface EmailCancelledItem extends EmailPackFields {
   perfumeName: string;
   quantity: number;
   ml: number;
@@ -30,6 +43,101 @@ interface EmailCancelledItem {
   isFullBottle?: boolean;
   fullBottleSize?: string;
   fullBottleCondition?: string;
+}
+
+/** Copy the pack metadata (if any) from a Firestore order item row into an email item. */
+export function pickPackEmailFields(row: Record<string, unknown>): EmailPackFields {
+  const groupId = String(row.packGroupId || "").trim();
+  if (!groupId) return {};
+  return {
+    packGroupId: groupId,
+    packName: String(row.packName || "Perfume Pack"),
+    packQuantity: Number(row.packQuantity || row.quantity || 1),
+    packDecantSizeMl: Number(row.packDecantSizeMl || row.ml || 0),
+    packOriginalSubtotal: Number(row.packOriginalSubtotal || 0),
+    packDiscountAmount: Number(row.packDiscountAmount || 0),
+    packDiscountType: String(row.packDiscountType || "") || undefined,
+    packDiscountValue: Number(row.packDiscountValue || 0),
+  };
+}
+
+type PackRow<T> = {
+  kind: "pack";
+  groupId: string;
+  name: string;
+  quantity: number;
+  ml: number;
+  original: number;
+  discount: number;
+  discountLabel: string;
+  components: T[];
+};
+type PackGroupRow<T> = { kind: "item"; item: T } | PackRow<T>;
+
+/**
+ * Collapse items that share a packGroupId into one pack row (first-appearance order).
+ * Items without a packGroupId pass through untouched, so ordinary orders render exactly as before.
+ */
+function groupItemsForDisplay<T extends EmailPackFields>(items: T[]): PackGroupRow<T>[] {
+  const rows: PackGroupRow<T>[] = [];
+  const groups = new Map<string, PackRow<T>>();
+  for (const item of items) {
+    const groupId = item.packGroupId;
+    if (!groupId) {
+      rows.push({ kind: "item", item });
+      continue;
+    }
+    let group = groups.get(groupId);
+    if (!group) {
+      const isPercent = item.packDiscountType === "percentage";
+      group = {
+        kind: "pack",
+        groupId,
+        name: item.packName || "Perfume Pack",
+        quantity: Number(item.packQuantity || 1),
+        ml: Number(item.packDecantSizeMl || 0),
+        original: Number(item.packOriginalSubtotal || 0),
+        discount: Number(item.packDiscountAmount || 0),
+        discountLabel: isPercent && item.packDiscountValue ? `${item.packDiscountValue}% off` : "Pack discount",
+        components: [],
+      };
+      groups.set(groupId, group);
+      rows.push(group);
+    }
+    group.components.push(item);
+  }
+  return rows;
+}
+
+const PACK_BADGE = `<span style="font-size:9px; letter-spacing:2px; color:#c9a96e; text-transform:uppercase;">Perfume Pack</span>`;
+
+/** Rows for one pack: header (pack name, qty, pack total) + indented components + discount line. */
+function renderPackRows<T extends EmailPackFields & { perfumeName: string; ml: number }>(
+  group: PackRow<T>,
+  lineTotal: (item: T) => number,
+  struck = false,
+): string {
+  const textColor = struck ? "#6f6b66" : "#333";
+  const decoration = struck ? " text-decoration:line-through;" : "";
+  const total = group.components.reduce((sum, c) => sum + lineTotal(c), 0);
+  const components = group.components
+    .map((c) => `<span style="display:block; font-size:11px; color:${struck ? "#8f887f" : "#666"}; padding-top:3px;">• ${c.perfumeName} — ${Number(c.ml || group.ml)}ml</span>`)
+    .join("");
+  const savings = group.discount > 0
+    ? `<span style="display:block; font-size:10px; color:#999; padding-top:6px;">Original ৳ ${group.original} · ${group.discountLabel} −৳ ${group.discount}</span>`
+    : "";
+  return `
+        <tr style="border-bottom:1px solid #f0ece4;">
+          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:${textColor}; padding:14px 0;${decoration}">
+            ${PACK_BADGE}<br>
+            <strong style="font-weight:600;">${group.name}</strong> × ${group.quantity}
+            ${components}
+            ${savings}
+          </td>
+          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:${textColor}; text-align:center; padding:14px 0;${decoration}">${group.quantity}</td>
+          <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:${struck ? "#6f6b66" : "#111"}; text-align:right; padding:14px 0;${decoration}">৳ ${total}</td>
+        </tr>
+      `;
 }
 
 class ResendEmailProvider implements EmailProvider {
@@ -156,15 +264,15 @@ function renderOrderedItemsBlock(
   totalOverride?: number,
 ): string {
   const rows = items && items.length > 0
-    ? items
-      .map((item) => `
+    ? groupItemsForDisplay(items)
+      .map((row) => row.kind === "pack" ? renderPackRows(row, (c) => c.unitPrice * c.quantity) : `
         <tr style="border-bottom:1px solid #f0ece4;">
           <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#333; padding:14px 0 14px;">
-            ${item.perfumeName}<br>
-            <span style="font-size:10px; color:#999;">${getItemSizeLabel(item)}</span>
+            ${row.item.perfumeName}<br>
+            <span style="font-size:10px; color:#999;">${getItemSizeLabel(row.item)}</span>
           </td>
-          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#333; text-align:center; padding:14px 0;">${item.quantity}</td>
-          <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#111; text-align:right; padding:14px 0;">৳ ${item.unitPrice * item.quantity}</td>
+          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#333; text-align:center; padding:14px 0;">${row.item.quantity}</td>
+          <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#111; text-align:right; padding:14px 0;">৳ ${row.item.unitPrice * row.item.quantity}</td>
         </tr>
       `)
       .join("")
@@ -208,15 +316,15 @@ function renderCancelledItemsBlock(
   refundApplicable: boolean = true,
 ): string {
   const rows = items && items.length > 0
-    ? items
-      .map((item) => `
+    ? groupItemsForDisplay(items)
+      .map((row) => row.kind === "pack" ? renderPackRows(row, (c) => c.totalPrice, true) : `
         <tr style="border-bottom:1px solid #f0ece4;">
           <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; padding:14px 0; text-decoration:line-through;">
-            ${item.perfumeName}<br>
-            <span style="font-size:10px; color:#8f887f;">${getItemSizeLabel(item)}</span>
+            ${row.item.perfumeName}<br>
+            <span style="font-size:10px; color:#8f887f;">${getItemSizeLabel(row.item)}</span>
           </td>
-          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; text-align:center; padding:14px 0; text-decoration:line-through;">${item.quantity}</td>
-          <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#6f6b66; text-align:right; padding:14px 0; text-decoration:line-through;">৳ ${item.totalPrice}</td>
+          <td style="font-family:'Montserrat',sans-serif; font-size:12px; color:#6f6b66; text-align:center; padding:14px 0; text-decoration:line-through;">${row.item.quantity}</td>
+          <td style="font-family:'Cormorant Garamond',serif; font-size:15px; color:#6f6b66; text-align:right; padding:14px 0; text-decoration:line-through;">৳ ${row.item.totalPrice}</td>
         </tr>
       `)
       .join("")
@@ -672,13 +780,19 @@ export function generateAdminNewOrderAlertEmail(orderData: {
   deliveryZone?: string;
   area?: string;
 }): EmailNotification {
-  const itemRows = orderData.items.map((item) => `
+  const groupedItems = groupItemsForDisplay(orderData.items);
+  const packNames = groupedItems.flatMap((row) => (row.kind === "pack" ? [`${row.name} ×${row.quantity}`] : []));
+  const hasPack = packNames.length > 0;
+  const itemRows = groupedItems.map((row) => row.kind === "pack" ? renderPackRows(row, (c) => c.unitPrice * c.quantity) : `
     <tr>
-      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:10px 0;border-bottom:1px solid #f0ece4;">${item.perfumeName} — ${getItemSizeLabel(item)}</td>
-      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;text-align:center;padding:10px 0;border-bottom:1px solid #f0ece4;">×${item.quantity}</td>
-      <td style="font-family:'Cormorant Garamond',serif;font-size:14px;color:#111;text-align:right;padding:10px 0;border-bottom:1px solid #f0ece4;">৳ ${item.unitPrice * item.quantity}</td>
+      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:10px 0;border-bottom:1px solid #f0ece4;">${row.item.perfumeName} — ${getItemSizeLabel(row.item)}</td>
+      <td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;text-align:center;padding:10px 0;border-bottom:1px solid #f0ece4;">×${row.item.quantity}</td>
+      <td style="font-family:'Cormorant Garamond',serif;font-size:14px;color:#111;text-align:right;padding:10px 0;border-bottom:1px solid #f0ece4;">৳ ${row.item.unitPrice * row.item.quantity}</td>
     </tr>
   `).join("");
+  const packBanner = hasPack
+    ? `<div style="border-left:2px solid #c9a96e;background:#fff;padding:12px 16px;margin-bottom:20px;font-family:'Montserrat',sans-serif;font-size:12px;color:#333;"><strong style="letter-spacing:2px;text-transform:uppercase;font-size:10px;color:#8B7500;">Pack order</strong><br>${packNames.join(", ")} — each pack deducts every component perfume from stock.</div>`
+    : "";
 
   const fulfillmentLine = orderData.pickupMethod === "Pickup"
     ? "Pickup"
@@ -687,6 +801,7 @@ export function generateAdminNewOrderAlertEmail(orderData: {
   const html = createEmailShell(`
     <p style="font-family:'Cormorant Garamond',serif;font-size:11px;letter-spacing:4px;color:#c9a96e;text-transform:uppercase;margin-bottom:20px;">New Order Alert</p>
     <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;color:#111;margin-bottom:20px;">Order <em>#${orderData.orderId}</em> Placed</h2>
+    ${packBanner}
     <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
       <tr><td style="font-family:'Montserrat',sans-serif;font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;padding:6px 0;width:40%;">Customer</td><td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:6px 0;">${orderData.customerName}</td></tr>
       <tr><td style="font-family:'Montserrat',sans-serif;font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;padding:6px 0;">Email</td><td style="font-family:'Montserrat',sans-serif;font-size:12px;color:#333;padding:6px 0;">${orderData.customerEmail}</td></tr>
@@ -709,9 +824,9 @@ export function generateAdminNewOrderAlertEmail(orderData: {
 
   return {
     to: "enid.hasan.21@gmail.com",
-    subject: `New Order #${orderData.orderId} — ${orderData.customerName} (৳${orderData.total})`,
+    subject: `New ${hasPack ? "PACK " : ""}Order #${orderData.orderId} — ${orderData.customerName} (৳${orderData.total})`,
     html,
-    text: `New order #${orderData.orderId} from ${orderData.customerName} (${orderData.customerEmail}). Total: ৳${orderData.total}. Payment: ${orderData.paymentMethod}.`,
+    text: `New ${hasPack ? `pack order (${packNames.join(", ")})` : "order"} #${orderData.orderId} from ${orderData.customerName} (${orderData.customerEmail}). Total: ৳${orderData.total}. Payment: ${orderData.paymentMethod}.`,
   };
 }
 

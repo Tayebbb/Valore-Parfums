@@ -4,8 +4,21 @@ import { revalidateTag } from "next/cache";
 // Storefront pages render from THIS app's unstable_cache/ISR entries (tags
 // "perfumes" / "pricing-config"), which the backend's own revalidateTag can
 // never reach. Admin mutations flow through this proxy, so purge here.
-const PRICE_DATA_PATH_RE = /^(perfumes|settings|decant-sizes|bottles|bulk-pricing)(\/|$)/;
+const PRICE_DATA_PATH_RE = /^(perfumes|settings|decant-sizes|bottles|bulk-pricing|packs)(\/|$)/;
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// Perfume Packs: the public list (`packs`) and a single active pack (`packs/<id|slug>`) are cached
+// under their own "packs" tag. These sub-paths are admin-only or per-request and must NEVER be
+// cached (they carry cost data / cookies / per-cart quotes), and the read-only POSTs must not purge.
+const PACK_UNCACHED_SEGMENTS = new Set(["admin", "preview", "quote", "reorder"]);
+function isPublicPackPath(pathname: string): boolean {
+  if (pathname === "packs") return true;
+  const parts = pathname.split("/");
+  return parts.length === 2 && parts[0] === "packs" && !PACK_UNCACHED_SEGMENTS.has(parts[1]);
+}
+function isPackReadOnlyPost(pathname: string): boolean {
+  return pathname === "packs/quote" || pathname === "packs/preview";
+}
 
 function resolveBackendBaseUrl(): string | null {
   const raw =
@@ -78,7 +91,8 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
     pathname === "perfumes" ||
     pathname === "notifications" ||
     pathname === "notes-library" ||
-    pathname.startsWith("perfumes/search");
+    pathname.startsWith("perfumes/search") ||
+    isPublicPackPath(pathname);
   const useCatalogCache = isGetLike && isPublicCatalogPath;
 
   const headers = new Headers(req.headers);
@@ -113,7 +127,7 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
         redirect: "manual",
         signal: controller.signal,
         cache: useCatalogCache ? "force-cache" : "no-store",
-        next: useCatalogCache ? { revalidate: 20, tags: ["perfumes"] } : undefined,
+        next: useCatalogCache ? { revalidate: 20, tags: isPublicPackPath(pathname) ? ["packs"] : ["perfumes"] } : undefined,
       });
     } finally {
       clearTimeout(timeoutId);
@@ -154,12 +168,24 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
   // Successful admin write to pricing-relevant data → storefront caches are stale.
   // { expire: 0 } hard-expires the tag; the "max" profile would keep serving the
   // stale entry once more (stale-while-revalidate) — not acceptable for prices.
-  if (upstream.ok && MUTATING_METHODS.has(method) && PRICE_DATA_PATH_RE.test(pathname)) {
+  if (upstream.ok && MUTATING_METHODS.has(method) && PRICE_DATA_PATH_RE.test(pathname) && !isPackReadOnlyPost(pathname)) {
     try {
       revalidateTag("perfumes", { expire: 0 });
       revalidateTag("pricing-config", { expire: 0 });
+      // Pack prices/availability derive from perfumes, sizes, bottles and margins, so any of
+      // those changing — or a pack itself changing — makes the cached pack list stale.
+      revalidateTag("packs", { expire: 0 });
     } catch (error) {
       console.error("Storefront cache revalidation failed", { pathname, error });
+    }
+  }
+
+  // A successful order changes stock, which changes pack availability.
+  if (upstream.ok && method === "POST" && pathname === "orders") {
+    try {
+      revalidateTag("packs", { expire: 0 });
+    } catch (error) {
+      console.error("Storefront pack cache revalidation failed", { pathname, error });
     }
   }
 

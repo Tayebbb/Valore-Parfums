@@ -1,14 +1,16 @@
 import type { MetadataRoute } from "next";
 import { blogPosts, landingPages } from "@/lib/seo-content";
 import { SITE_URL, getActivePerfumes, buildCanonicalProductPath } from "@/lib/seo-catalog";
+import { getPublicPacks } from "@/lib/packs-api";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const perfumes = await getActivePerfumes();
+  const [perfumes, packs] = await Promise.all([getActivePerfumes(), getPublicPacks()]);
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
     "",
     "/shop",
+    "/packs",
     "/category/decants",
     "/category/full-bottles",
     "/guides/decant-vs-full-bottle",
@@ -28,5 +30,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9,
   }));
 
-  return [...staticPages, ...productPages];
+  const packPages: MetadataRoute.Sitemap = packs.map((pack) => ({
+    url: `${SITE_URL}/packs/${pack.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }));
+
+  return [...staticPages, ...productPages, ...packPages];
 }

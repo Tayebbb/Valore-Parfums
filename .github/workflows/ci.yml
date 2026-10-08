@@ -31,6 +31,8 @@ jobs:
         run: npm run lint
       - name: Investment engine tests (pure, no Firestore)
         run: npx tsx scripts/test-investments.ts
+      - name: Pack pricing tests (pure, no Firestore)
+        run: npx tsx scripts/test-packs.ts
       - name: Production build
         run: npm run build
         env:

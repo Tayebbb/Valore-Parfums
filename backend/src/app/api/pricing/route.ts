@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
-import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, splitProfit } from "@/lib/utils";
+import { getBrandTier, splitProfit } from "@/lib/utils";
 import type { OwnerType } from "@/lib/utils";
+import { computeDecantPrice } from "@/lib/pricing-engine";
+import { getPricingConfig } from "@/lib/pricing-config";
 import { FieldPath } from "firebase-admin/firestore";
 import { apiCache } from "@/lib/api-cache";
 import { requireAdmin } from "@/lib/auth";
@@ -9,10 +11,10 @@ import { requireAdmin } from "@/lib/auth";
 // Short shared-cache window so admin price changes reach CDN-cached responses fast.
 const CACHE_CONTROL = "public, s-maxage=15, stale-while-revalidate=30";
 
-// Config (sizes, bottles, settings, bulk rules) + batch results live in the
-// shared api-cache store so admin mutations can invalidate them instantly;
-// the TTLs below are only a fallback for direct Firestore edits.
-const CACHE_TTL = 60_000; // 60 seconds
+// Config (sizes, bottles, settings, bulk rules — see lib/pricing-config.ts) and
+// batch results live in the shared api-cache store so admin mutations can
+// invalidate them instantly; the TTL below is only a fallback for direct
+// Firestore edits.
 const PRICE_RESULT_CACHE_TTL = 30_000;
 
 type PricingPerfume = {
@@ -60,39 +62,6 @@ async function getPerfumesByIds(ids: string[]): Promise<PricingPerfume[]> {
   return ids.map((id) => map.get(id)).filter(Boolean) as PricingPerfume[];
 }
 
-async function getPricingConfig() {
-  const cached = apiCache.pricingConfig;
-  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached;
-
-  const [sizesSnap, bottlesSnap, settingsDoc, bulkSnap] = await Promise.all([
-    db.collection(Collections.decantSizes).get(),
-    db.collection(Collections.bottles).get(),
-    db.collection(Collections.settings).doc("default").get(),
-    db.collection(Collections.bulkPricingRules).get(),
-  ]);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sizes = sizesSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((s: any) => s.enabled === true).sort((a: any, b: any) => a.ml - b.ml) as any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bottles = bottlesSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = settingsDoc.exists ? settingsDoc.data() as any : null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bulkRules = bulkSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r: any) => r.isActive === true).sort((a: any, b: any) => a.minQuantity - b.minQuantity) as any[];
-
-  const fresh = {
-    sizes,
-    bottles,
-    packagingCost: settings?.packagingCost ?? 20,
-    ownerProfitPercent: settings?.ownerProfitPercent ?? 85,
-    margins: parseTierMargins(settings?.tierMargins),
-    bulkRules,
-    ts: Date.now(),
-  };
-  apiCache.pricingConfig = fresh;
-  return fresh;
-}
-
 // Get prices for a specific perfume across all enabled decant sizes
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -113,31 +82,16 @@ export async function GET(req: Request) {
   const perfume = { id: perfumeDoc.id, ...perfumeDoc.data() } as any;
   const { sizes, bottles, packagingCost, margins, bulkRules } = config;
 
-  // Personal collection: market price = purchase price
-  const effectiveMarketPricePerMl = perfume.isPersonalCollection
-    ? perfume.purchasePricePerMl
-    : perfume.marketPricePerMl;
-
-  const fullBottlePrice = effectiveMarketPricePerMl * 100;
-  const tier = getBrandTier(fullBottlePrice);
   const owner = (perfume.owner || "Store") as OwnerType;
+  // Personal collection: market price = purchase price
+  const tier = getBrandTier((perfume.isPersonalCollection ? perfume.purchasePricePerMl : perfume.marketPricePerMl) * 100);
 
   const prices = sizes.map((size) => {
     const bottle = bottles.find((b) => b.ml === size.ml);
     const bottleCost = bottle?.costPerBottle ?? 0;
-    const profitMargin = getTierProfitMargin(tier, size.ml, margins);
-    const partialType = String(perfume.partialDealType || "").toLowerCase();
-    const isPartialDeal = partialType === "decant" || partialType === "full_bottle";
-    const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
-    const sellingPrice = isPartialDeal
-      ? Math.ceil(Math.max(0, partialSellingPrice))
-      : calculateSellingPrice(
-        effectiveMarketPricePerMl,
-        size.ml,
-        bottleCost,
-        packagingCost,
-        profitMargin,
-      );
+    const decant = computeDecantPrice(perfume, size.ml, { packagingCost, margins, bottleCost });
+    const { sellingPrice, profitMargin, isPartialDeal } = decant;
+    const partialType = decant.partialDealType ?? "";
     const totalCost = isPartialDeal
       ? calcPartialDealCost(perfume.purchasePricePerMl, size.ml)
       : Math.ceil(perfume.purchasePricePerMl * size.ml + packagingCost);
@@ -226,28 +180,10 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: Record<string, any> = {};
   for (const perfume of perfumes) {
-    const effectiveMarketPricePerMl = perfume.isPersonalCollection
-      ? perfume.purchasePricePerMl
-      : perfume.marketPricePerMl;
-    const fullBottlePrice = effectiveMarketPricePerMl * 100;
-    const tier = getBrandTier(fullBottlePrice);
-    const partialType = String(perfume.partialDealType || "").toLowerCase();
-    const isPartialDeal = partialType === "decant" || partialType === "full_bottle";
-    const partialSellingPrice = Number(perfume.partialSellingPrice ?? perfume.partialSellingPricePerMl ?? 0);
-
     const prices = sizes.map((size) => {
       const bottle = bottles.find((b) => b.ml === size.ml);
       const bottleCost = bottle?.costPerBottle ?? 0;
-      const profitMargin = getTierProfitMargin(tier, size.ml, margins);
-      const sellingPrice = isPartialDeal
-        ? Math.ceil(Math.max(0, partialSellingPrice))
-        : calculateSellingPrice(
-          effectiveMarketPricePerMl,
-          size.ml,
-          bottleCost,
-          packagingCost,
-          profitMargin,
-        );
+      const { sellingPrice } = computeDecantPrice(perfume, size.ml, { packagingCost, margins, bottleCost });
       const inStock = perfume.totalStockMl >= size.ml;
       // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
       const bottleAvailable = !bottle || bottle.availableCount > 0;

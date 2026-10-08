@@ -6,9 +6,15 @@ import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { validateBatch, validateEmail, validatePhone, validateString } from "@/lib/validation";
-import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, generateAdminNewOrderAlertEmail, sendEmail } from "@/lib/email";
+import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, generateAdminNewOrderAlertEmail, pickPackEmailFields, sendEmail } from "@/lib/email";
 import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
 import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
+import { invalidatePackCaches } from "@/lib/api-cache";
+import { parsePackRequests, preparePackOrderLines } from "@/lib/packs/order";
+import type { PackComponentMeta, PackOrderLine } from "@/lib/packs/order";
+
+/** Thrown inside the pack-order transaction when inventory cannot cover the order. */
+class OrderStockError extends Error {}
 
 function normalizeLookupEmail(value: unknown): string {
   return String(value || "").trim().toLowerCase();
@@ -176,7 +182,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { items, voucherCode: rawVoucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
+    // `packs` is pulled out of the body so client input can never reach the order doc via ...orderData.
+    const { items: rawItems, packs: rawPacks, voucherCode: rawVoucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items: any[] = Array.isArray(rawItems) ? rawItems : [];
     const sessionUser = await getSessionUser();
     const manualAdminOrder = Boolean(orderData.manualAdminOrder);
 
@@ -231,8 +240,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid order input", errors: validation.errors }, { status: 400 });
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
+    const parsedPacks = parsePackRequests(rawPacks);
+    if (!parsedPacks.ok) {
+      return NextResponse.json({ error: parsedPacks.error }, { status: 400 });
+    }
+    const packRequests = parsedPacks.requests;
+
+    if (items.length === 0 && packRequests.length === 0) {
       return NextResponse.json({ error: "Cart items are required" }, { status: 400 });
+    }
+
+    if (packRequests.length > 0) {
+      // Owner voucher sells at cost and would overwrite the pack price; manual admin orders are
+      // priced by hand. Neither can be combined with packs.
+      if (isOwnerVoucher) {
+        return NextResponse.json({ error: "The owner voucher cannot be combined with packs" }, { status: 400 });
+      }
+      if (manualAdminOrder) {
+        return NextResponse.json({ error: "Packs cannot be added to manual admin orders" }, { status: 400 });
+      }
     }
 
     if (!String(orderData.customerName || "").trim()) {
@@ -265,7 +291,7 @@ export async function POST(req: Request) {
     }
 
     const orderCountByPerfume = new Map<string, number>();
-    const orderItems: {
+    const orderItems: ({
     perfumeId?: string;
     perfumeName: string;
     perfumeImage?: string;
@@ -300,7 +326,7 @@ export async function POST(req: Request) {
       discountPercent: number;
       pricingTier: string;
     };
-    }[] = [];
+    } & Record<string, unknown>)[] = [];
 
     // Fetch settings (replaces prisma.settings.findUnique)
     const settingsDoc = await db.collection(Collections.settings).doc("default").get();
@@ -372,12 +398,39 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── Packs: load + verify + price server-side BEFORE touching any inventory ──
+    // Each pack line expands into ordinary decant components (see lib/packs/order.ts) that run
+    // through the same per-item pipeline below, so stock / owner / investor math is unchanged.
+    let packLines: PackOrderLine[] = [];
+    if (packRequests.length > 0) {
+      const preparedPacks = await preparePackOrderLines(packRequests);
+      if (!preparedPacks.ok) {
+        return NextResponse.json(preparedPacks.body, { status: preparedPacks.status });
+      }
+      packLines = preparedPacks.lines;
+    }
+    const hasPacks = packLines.length > 0;
+    // Server-created component items → pack metadata. WeakMap keyed by object identity so a
+    // client-supplied cart item can never claim pack pricing.
+    const packMetaByItem = new WeakMap<object, PackComponentMeta>();
+    const packComponentItems = packLines.flatMap((line) =>
+      line.components.map((component) => {
+        packMetaByItem.set(component.item, component.meta);
+        return component.item;
+      }),
+    );
+    // With packs the order is written atomically (see transaction below), so inventory changes
+    // are collected here instead of being applied mid-loop.
+    const perfumeStockNeeds = new Map<string, number>();
+    const bottleStockNeeds = new Map<string, number>();
+
     // Load bulk pricing rules — fetch all, filter/sort in memory to avoid composite index
     const bulkSnap = await db.collection(Collections.bulkPricingRules).get();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bulkRules = bulkSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r: any) => r.isActive === true).sort((a: any, b: any) => b.minQuantity - a.minQuantity) as any[];
 
-    for (const item of items) {
+    for (const item of [...items, ...packComponentItems]) {
+      const packMeta = packMetaByItem.get(item);
       const isFullBottleItem = Boolean(item.isFullBottle);
       const requestedFullBottleSize = String(item.fullBottleSize || "").trim();
       const requestedFullBottleConditionRaw = String(item.fullBottleCondition || "").trim().toLowerCase();
@@ -467,12 +520,17 @@ export async function POST(req: Request) {
           );
 
     // Apply bulk discount if applicable — skip when admin provided explicit pricing
-    const bulkRule = !hasAdminUnitPrice
+    const bulkRule = !hasAdminUnitPrice && !packMeta
       ? bulkRules.find((r: { minQuantity: number }) => quantity >= r.minQuantity)
       : undefined;
     const discountPercent = bulkRule ? Number(bulkRule.discountPercent || 0) : 0;
     if (bulkRule) {
       unitPrice = Math.ceil(unitPrice * (1 - discountPercent / 100));
+    }
+    // Pack component: the pack discount is already baked into the allocated unit price
+    // (computed from the NORMAL price — bulk pricing is intentionally skipped above).
+    if (packMeta) {
+      unitPrice = packMeta.allocatedUnitPrice;
     }
 
     const unitCost = isFullBottleItem
@@ -531,6 +589,13 @@ export async function POST(req: Request) {
       otherOwnerProfit = fromMinorUnits(otherOwnerProfitMinor);
     }
 
+    if (hasPacks) {
+      // Deferred: validated + applied atomically with the order write (transaction below).
+      if (!isFullBottleItem) {
+        perfumeStockNeeds.set(perfumeId, (perfumeStockNeeds.get(perfumeId) || 0) + requestedFullBottleMl * quantity);
+        if (bottle) bottleStockNeeds.set(bottle.id, (bottleStockNeeds.get(bottle.id) || 0) + quantity);
+      }
+    } else {
     // Deduct stock (replaces prisma.perfume.update with decrement)
     if (!isFullBottleItem) {
       await db.collection(Collections.perfumes).doc(perfumeId).update({
@@ -543,6 +608,7 @@ export async function POST(req: Request) {
       await db.collection(Collections.bottles).doc(bottle.id).update({
         availableCount: FieldValue.increment(-quantity),
       });
+    }
     }
 
       orderItems.push({
@@ -573,6 +639,7 @@ export async function POST(req: Request) {
           discountPercent,
           pricingTier: tier,
         },
+        ...(packMeta ? packMeta.itemFields : {}),
       });
 
       if (perfumeId) {
@@ -586,6 +653,7 @@ export async function POST(req: Request) {
 
     // Apply voucher (replaces prisma.voucher.findUnique + update)
     let discountMinor = 0;
+    let voucherIdToIncrement: string | null = null;
     const subtotalMinor = orderItems.reduce((sum, item) => sum + item.financialBreakdown.totalRevenueMinor, 0);
     if (voucherCode && !isOwnerVoucher) {
     const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
@@ -599,10 +667,14 @@ export async function POST(req: Request) {
         } else {
           discountMinor = toMinorUnits(Number(voucher.discountValue || 0));
         }
-        // Increment usage count
-        await db.collection(Collections.vouchers).doc(voucherDoc.id).update({
-          usedCount: FieldValue.increment(1),
-        });
+        // Increment usage count (with packs: after the order transaction succeeds)
+        if (hasPacks) {
+          voucherIdToIncrement = voucherDoc.id;
+        } else {
+          await db.collection(Collections.vouchers).doc(voucherDoc.id).update({
+            usedCount: FieldValue.increment(1),
+          });
+        }
       }
     }
   }
@@ -706,10 +778,69 @@ export async function POST(req: Request) {
     },
     profitDistribution,
     financialsLocked: false,
+    // Immutable pack snapshot (names, components, discount, prices at purchase time). Written after
+    // the ...orderData spread; contains no cost/profit data. Historical views read THIS, never the live pack.
+    ...(hasPacks ? { packs: packLines.map((line) => line.snapshot) } : {}),
     createdAt: now,
     updatedAt: now,
     };
-    await db.collection(Collections.orders).doc(orderId).set(orderDoc);
+    const itemIds = orderItems.map(() => uuid());
+
+    if (hasPacks) {
+      // Atomic: validate stock for EVERY affected perfume/atomiser, then write the order, all item
+      // docs, the stock decrements and the totalOrders counters in one transaction. A shortage (or
+      // any failure) leaves inventory and orders exactly as they were.
+      try {
+        await db.runTransaction(async (tx) => {
+          const perfumeEntries = [...perfumeStockNeeds.entries()].map(([id, need]) => ({ ref: db.collection(Collections.perfumes).doc(id), need }));
+          const bottleEntries = [...bottleStockNeeds.entries()].map(([id, need]) => ({ ref: db.collection(Collections.bottles).doc(id), need }));
+          const [perfumeSnaps, bottleSnaps] = await Promise.all([
+            perfumeEntries.length ? tx.getAll(...perfumeEntries.map((e) => e.ref)) : Promise.resolve([]),
+            bottleEntries.length ? tx.getAll(...bottleEntries.map((e) => e.ref)) : Promise.resolve([]),
+          ]);
+
+          perfumeSnaps.forEach((snap, i) => {
+            const stock = Number(snap.data()?.totalStockMl ?? 0);
+            if (!snap.exists || stock < perfumeEntries[i].need) {
+              throw new OrderStockError(`Not enough stock for ${String(snap.data()?.name || "a perfume in your pack")}. Please update your cart.`);
+            }
+          });
+          bottleSnaps.forEach((snap, i) => {
+            const available = Number(snap.data()?.availableCount ?? 0);
+            if (!snap.exists || available < bottleEntries[i].need) {
+              throw new OrderStockError("Not enough atomisers in stock for this order. Please update your cart.");
+            }
+          });
+
+          perfumeEntries.forEach((e) => tx.update(e.ref, { totalStockMl: FieldValue.increment(-e.need) }));
+          bottleEntries.forEach((e) => tx.update(e.ref, { availableCount: FieldValue.increment(-e.need) }));
+          orderCountByPerfume.forEach((count, perfumeId) => {
+            tx.set(
+              db.collection(Collections.perfumes).doc(perfumeId),
+              { totalOrders: FieldValue.increment(count), lastOrderedAt: now, updatedAt: now },
+              { merge: true },
+            );
+          });
+          tx.set(db.collection(Collections.orders).doc(orderId), orderDoc);
+          orderItems.forEach((oi, index) => {
+            tx.set(db.collection(Collections.orders).doc(orderId).collection("items").doc(itemIds[index]), { ...oi, orderId });
+          });
+        });
+      } catch (error) {
+        if (error instanceof OrderStockError) {
+          invalidatePackCaches();
+          return NextResponse.json({ code: "INSUFFICIENT_STOCK", error: error.message }, { status: 409 });
+        }
+        throw error;
+      }
+      if (voucherIdToIncrement) {
+        await db.collection(Collections.vouchers).doc(voucherIdToIncrement).update({ usedCount: FieldValue.increment(1) });
+      }
+      // Stock changed → pack availability changed.
+      invalidatePackCaches();
+    } else {
+      await db.collection(Collections.orders).doc(orderId).set(orderDoc);
+    }
 
     if (isBankManualPayment) {
       const notificationId = uuid();
@@ -739,7 +870,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (orderCountByPerfume.size > 0) {
+    if (!hasPacks && orderCountByPerfume.size > 0) {
       await Promise.all(
         Array.from(orderCountByPerfume.entries()).map(([perfumeId, count]) =>
           db.collection(Collections.perfumes).doc(perfumeId).set(
@@ -756,9 +887,11 @@ export async function POST(req: Request) {
 
     // Create items as subcollection (replaces Prisma nested create)
     const createdItems = [];
-    for (const oi of orderItems) {
-      const itemId = uuid();
-      await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set({ ...oi, orderId });
+    for (const [index, oi] of orderItems.entries()) {
+      const itemId = itemIds[index];
+      if (!hasPacks) {
+        await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set({ ...oi, orderId });
+      }
       createdItems.push({ id: itemId, ...oi });
     }
 
@@ -774,6 +907,7 @@ export async function POST(req: Request) {
         quantity: Number(it.quantity || 0),
         ml: Number(it.ml || 0),
         unitPrice: Number(it.unitPrice || 0),
+        ...pickPackEmailFields(it as Record<string, unknown>),
         isFullBottle,
         fullBottleSize: String(it.fullBottleSize || "").trim() || undefined,
         fullBottleCondition: isFullBottle
@@ -827,6 +961,7 @@ export async function POST(req: Request) {
       quantity: Number(it.quantity || 0),
       ml: Number(it.ml || 0),
       unitPrice: Number(it.unitPrice || 0),
+      ...pickPackEmailFields(it as Record<string, unknown>),
       isFullBottle,
       fullBottleSize: String(it.fullBottleSize || "").trim() || undefined,
       fullBottleCondition: isFullBottle

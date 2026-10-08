@@ -22,6 +22,7 @@ const shopDropdown = [
   { label: "Unisex", href: "/shop?category=Unisex" },
   { label: "Formal Fragrances", href: "/shop?category=Oud" },
   { label: "Partials", href: "/partials" },
+  { label: "Perfume Packs", href: "/packs" },
   { label: "Best Sellers", href: "/shop?bestSeller=true" },
 ];
 
@@ -401,6 +402,14 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
               onOpen={() => openDropdownWithIntent("brands")}
               onCloseImmediate={closeDropdownImmediately}
             />
+            <Link
+              href="/packs"
+              className={`hidden xl:inline text-[11px] uppercase tracking-[0.15em] transition-colors ${
+                pathname.startsWith("/packs") ? "text-[var(--gold)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              Packs
+            </Link>
             {user ? (
               <>
                 <Link
@@ -717,6 +726,9 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
                 </div>
               )}
             </div>
+            <Link href="/packs" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
+              Packs
+            </Link>
             <Link href="/track" className="block py-3 text-sm uppercase tracking-wider border-b border-[var(--border)]">
               {user ? "My Orders" : "Track Order"}
             </Link>

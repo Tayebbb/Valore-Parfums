@@ -18,8 +18,11 @@ import {
 } from "@/types/payment";
 import { CourierSlipModal } from "@/components/admin/CourierSlipModal";
 import type { CourierSlipData } from "@/components/admin/CourierSlip";
+import { describeOrderLines, groupOrderItems } from "@/lib/packs-order";
+import type { OrderItemPackFields } from "@/lib/packs-order";
+import type { PackOrderSnapshot } from "@/types/pack";
 
-interface OrderItem {
+interface OrderItem extends OrderItemPackFields {
   id: string;
   perfumeId?: string;
   perfumeName: string;
@@ -78,6 +81,8 @@ interface Order {
   };
   createdAt: string;
   items: OrderItem[];
+  /** Immutable pack snapshots taken at purchase time (never the live pack). */
+  packs?: PackOrderSnapshot[];
 }
 
 interface StockRequest {
@@ -249,7 +254,7 @@ const orderToCourierSlipData = (order: Order): CourierSlipData => {
     amountToCollect,
     isCOD,
     items: (order.items || []).map((i) => ({
-      perfumeName: i.perfumeName,
+      perfumeName: i.packGroupId && i.packName ? `${i.perfumeName} (${i.packName} pack)` : i.perfumeName,
       ml: i.ml,
       isFullBottle: Boolean(i.isFullBottle),
       fullBottleSize: i.fullBottleSize,
@@ -1296,7 +1301,7 @@ export default function OrdersPage() {
                     <div className="bg-[var(--bg-card)] rounded p-3 border border-[var(--border)] col-span-2">
                       <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Items</p>
                       <p className="text-xs text-[var(--text-secondary)]">
-                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
+                        {describeOrderLines(o.items, o.packs)}
                       </p>
                     </div>
                   </div>
@@ -1374,7 +1379,7 @@ export default function OrdersPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-xs text-[var(--text-secondary)]">
-                        {o.items?.map((i) => `${i.perfumeName} ${i.isFullBottle ? `Full Bottle (${i.fullBottleSize || "Custom"})` : `${i.ml}ml`}×${i.quantity}`).join(", ") || "-"}
+                        {describeOrderLines(o.items, o.packs)}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex flex-col items-center gap-1">
@@ -1593,7 +1598,48 @@ export default function OrdersPage() {
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Items</p>
                     <div className="space-y-1">
-                      {selectedOrder.items?.map((item) => (
+                      {groupOrderItems(selectedOrder.items, selectedOrder.packs).map((line) => {
+                        if (line.kind === "pack") {
+                          // A pack is priced as a set, so it can only be removed (or restored) as a whole.
+                          const ids = line.components.map((c) => c.id);
+                          const marked = ids.every((id) => itemsMarkedForRemoval.has(id));
+                          return (
+                            <div
+                              key={line.groupId}
+                              className={`py-1.5 px-2 rounded border ${marked ? "border-[var(--error)] opacity-50" : "border-[var(--border-gold)]"}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className={`text-xs flex-1 min-w-0 truncate ${marked ? "line-through" : ""}`}>
+                                  <span className="text-[9px] uppercase tracking-wider text-[var(--gold)] mr-1.5">Pack</span>
+                                  {line.name} ×{line.quantity}
+                                </span>
+                                <span className="text-xs text-[var(--gold)] whitespace-nowrap">{fmt(line.finalTotal)} BDT</span>
+                                {marked ? (
+                                  <button
+                                    onClick={() => setItemsMarkedForRemoval((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; })}
+                                    className="text-[9px] text-[var(--text-muted)] uppercase hover:text-[var(--text-primary)] whitespace-nowrap"
+                                  >
+                                    Restore
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => setItemsMarkedForRemoval((prev) => new Set([...prev, ...ids]))}
+                                    className="text-[9px] text-[var(--error)] uppercase hover:opacity-70 whitespace-nowrap"
+                                  >
+                                    Remove pack
+                                  </button>
+                                )}
+                              </div>
+                              <ul className="mt-1 pl-3 text-[10px] text-[var(--text-muted)]">
+                                {line.components.map((c) => (
+                                  <li key={c.id}>• {c.perfumeName} — {c.ml}ml</li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        }
+                        const item = line.item;
+                        return (
                         <div
                           key={item.id}
                           className={`flex items-center justify-between gap-2 py-1.5 px-2 rounded border ${itemsMarkedForRemoval.has(item.id) ? "border-[var(--error)] opacity-50 line-through" : "border-[var(--border)]"}`}
@@ -1618,7 +1664,8 @@ export default function OrdersPage() {
                             </button>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Add new items — drafts + catalog */}
@@ -1980,7 +2027,40 @@ export default function OrdersPage() {
 
               <div className="gold-line my-3" />
               <h4 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Items</h4>
-              {selectedOrder.items?.map((item) => (
+              {groupOrderItems(selectedOrder.items, selectedOrder.packs).map((line) => {
+                const profitLine = (item: OrderItem) =>
+                  item.ownerName === "Store"
+                    ? `Store split - Tayeb (60%): ${fmt(Number(item.ownerProfit ?? 0))} BDT, Enid (40%): ${fmt(Number(item.otherOwnerProfit ?? 0))} BDT`
+                    : `Owner profit (${item.ownerName || "Owner"}): ${fmt(Number(item.ownerProfit ?? 0))} BDT, Other owner: ${fmt(Number(item.otherOwnerProfit ?? 0))} BDT`;
+                if (line.kind === "pack") {
+                  return (
+                    <div key={line.groupId} className="py-2 my-1 border border-[var(--border-gold)] rounded px-2.5 bg-[var(--gold-tint)]">
+                      <div className="flex justify-between gap-3">
+                        <span>
+                          <span className="text-[9px] uppercase tracking-wider text-[var(--gold)] mr-1.5">Pack</span>
+                          {line.name} ×{line.quantity}
+                        </span>
+                        <span className="font-serif text-[var(--gold)] whitespace-nowrap">{fmt(line.finalTotal)} BDT</span>
+                      </div>
+                      <ul className="mt-1 space-y-0.5">
+                        {line.components.map((c) => (
+                          <li key={c.id} className="text-xs text-[var(--text-secondary)]">
+                            • {c.perfumeName} — {c.ml}ml
+                            <span className="text-[10px] text-[var(--text-muted)]"> · {fmt(c.totalPrice ?? 0)} BDT</span>
+                            <span className="block pl-3 text-[10px] text-[var(--text-muted)]">{profitLine(c)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-[11px] space-y-0.5">
+                        <div className="flex justify-between text-[var(--text-muted)]"><span>Original</span><span>{fmt(line.originalTotal)} BDT</span></div>
+                        <div className="flex justify-between text-[var(--success)]"><span>Pack discount ({line.discountLabel.toLowerCase()})</span><span>-{fmt(line.discountTotal)} BDT</span></div>
+                        <div className="flex justify-between"><span>Pack total</span><span>{fmt(line.finalTotal)} BDT</span></div>
+                      </div>
+                    </div>
+                  );
+                }
+                const item = line.item;
+                return (
                 <div key={item.id} className="py-1">
                   <div className="flex justify-between gap-3">
                     <span>
@@ -1988,13 +2068,10 @@ export default function OrdersPage() {
                     </span>
                     <span className="font-serif text-[var(--gold)] whitespace-nowrap">{fmt(item.totalPrice ?? 0)} BDT</span>
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                    {item.ownerName === "Store"
-                      ? `Store split - Tayeb (60%): ${fmt(Number(item.ownerProfit ?? 0))} BDT, Enid (40%): ${fmt(Number(item.otherOwnerProfit ?? 0))} BDT`
-                      : `Owner profit (${item.ownerName || "Owner"}): ${fmt(Number(item.ownerProfit ?? 0))} BDT, Other owner: ${fmt(Number(item.otherOwnerProfit ?? 0))} BDT`}
-                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{profitLine(item)}</p>
                 </div>
-              ))}
+                );
+              })}
 
               {(selectedOrder.items?.some((item) => item.isFullBottle) ?? false) && (
                 <>

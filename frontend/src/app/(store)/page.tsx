@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { getActivePerfumes, getPerfumeOffers, parseImageList, type PerfumeDocument } from "@/lib/seo-catalog";
+import PackCard from "@/components/store/PackCard";
+import { getPublicPacks } from "@/lib/packs-api";
 
 export const revalidate = 300;
 
@@ -90,6 +92,8 @@ export default async function HomePage() {
     }),
   );
   const priceMap = Object.fromEntries(pricingEntries);
+  // Featured packs come from the backend pack API (canonical pricing) — empty array if unavailable.
+  const featuredPacks = (await getPublicPacks()).slice(0, 3);
 
   return (
     <div>
@@ -149,6 +153,31 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Perfume Packs */}
+      {featuredPacks.length > 0 && (
+        <>
+          <div className="gold-line" />
+          <section className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--gold)] mb-2">Curated Sets</p>
+                <h2 className="font-serif text-3xl font-light">Perfume Packs</h2>
+              </div>
+              <Link href="/packs" className="text-xs uppercase tracking-wider text-[var(--gold)] hover:underline flex items-center gap-1">
+                View All <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              {featuredPacks.map((pack, i) => (
+                <div key={pack.id} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+                  <PackCard pack={pack} />
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       <div className="gold-line" />

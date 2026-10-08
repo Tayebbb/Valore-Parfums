@@ -3,7 +3,10 @@
 import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useCart } from "@/store/cart";
+import { isPackItem, useCart } from "@/store/cart";
+import type { PackCartItem, PerfumeCartItem } from "@/store/cart";
+import { PACK_PRICE_CHANGED_MESSAGE, usePackRefresh } from "@/lib/usePackRefresh";
+import type { PackPublic } from "@/types/pack";
 import { toast } from "@/components/ui/Toaster";
 import { CopyOrderIdButton } from "@/components/ui/CopyOrderIdButton";
 import {
@@ -13,7 +16,7 @@ import {
 import { StickyPlaceOrderBar } from "@/components/checkout/StickyPlaceOrderBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, ChevronDown } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle, ChevronDown, Info } from "lucide-react";
 import { useAuth } from "@/store/auth";
 
 interface PickupLocation {
@@ -110,6 +113,10 @@ interface PerfumeResponse {
 
 interface OrderErrorPayload {
   error?: string;
+  /** PRICE_CHANGED | PACK_UNAVAILABLE | INSUFFICIENT_STOCK (409 responses involving packs). */
+  code?: string;
+  /** Fresh authoritative pack quotes attached to a PRICE_CHANGED response. */
+  packs?: PackPublic[];
   fieldErrors?: Record<string, string>;
   errors?: Array<{ field?: string; message?: string }>;
 }
@@ -163,7 +170,8 @@ function getDesktopPlaceOrderLabel(paymentMethod: CheckoutPaymentMethod, placing
 }
 
 function CheckoutContent() {
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, clearCart, refreshPacks } = useCart();
+  const { priceChangedPacks, noteChanged, dismiss: dismissPriceNotice } = usePackRefresh();
   const router = useRouter();
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -237,10 +245,17 @@ function CheckoutContent() {
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const firstInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Perfume lines and pack lines are kept apart: perfumes keep their existing flow untouched, packs are
+  // sent as `packs: [{packId, quantity, expectedUnitPrice}]` and re-priced server-side.
   const displayItems: DisplayItem[] = useMemo(
-    () => (isBuyNow ? (directItem ? [directItem] : []) : (items as DisplayItem[])),
+    () => (isBuyNow ? (directItem ? [directItem] : []) : (items.filter((i): i is PerfumeCartItem => !isPackItem(i)) as DisplayItem[])),
     [directItem, isBuyNow, items],
   );
+  const packLines: PackCartItem[] = useMemo(
+    () => (isBuyNow ? [] : items.filter(isPackItem)),
+    [isBuyNow, items],
+  );
+  const hasUnavailablePack = packLines.some((p) => p.unavailable);
   const displaySubtotal = useMemo(
     () => (isBuyNow ? (directItem ? directItem.unitPrice * directItem.quantity : 0) : subtotal()),
     [directItem, isBuyNow, subtotal],
@@ -363,10 +378,10 @@ function CheckoutContent() {
   }, [isBuyNow, productId, mlStr, qtyStr]);
 
   useEffect(() => {
-    if (!orderId && displayItems.length === 0 && !isBuyNow && !loadingDirect) {
+    if (!orderId && displayItems.length === 0 && packLines.length === 0 && !isBuyNow && !loadingDirect) {
       router.push("/cart");
     }
-  }, [displayItems.length, router, orderId, isBuyNow, loadingDirect]);
+  }, [displayItems.length, packLines.length, router, orderId, isBuyNow, loadingDirect]);
 
   useEffect(() => {
     if (user?.email) {
@@ -627,6 +642,11 @@ function CheckoutContent() {
   const placeOrder = useCallback(async () => {
     if (placing) return;
 
+    if (hasUnavailablePack) {
+      toast("A pack in your cart is currently unavailable. Please remove it to continue.", "error");
+      return;
+    }
+
     const newErrors: Record<string, string> = {};
 
     if (!form.customerName.trim()) newErrors.customerName = "Name is required";
@@ -728,6 +748,13 @@ function CheckoutContent() {
             fullBottleSize: item.fullBottleSize || "",
             quantity: item.quantity,
           })),
+          // Only identity + quantity matter: the server recomputes the price from the live pack and
+          // perfume prices. `expectedUnitPrice` just lets it tell us our displayed price is stale.
+          packs: packLines.map((pack) => ({
+            packId: pack.packId,
+            quantity: pack.quantity,
+            expectedUnitPrice: pack.unitPrice,
+          })),
         }),
       });
 
@@ -750,6 +777,14 @@ function CheckoutContent() {
       let message = "Failed to place order";
       if (errorData) {
         if (errorData.error) message = errorData.error;
+        if (res.status === 409 && errorData.code === "PRICE_CHANGED" && Array.isArray(errorData.packs)) {
+          // The server's price differs from what the customer saw: adopt the authoritative prices and
+          // let them re-confirm instead of silently charging a different amount.
+          const changed = refreshPacks(errorData.packs.map((pack) => ({ id: pack.id, available: pack.available, pack })));
+          noteChanged(changed.length > 0 ? changed : errorData.packs.map((pack) => pack.name));
+          toast(PACK_PRICE_CHANGED_MESSAGE, "info");
+          return;
+        }
         // If there are field errors, show them inline
         if (errorData.fieldErrors && typeof errorData.fieldErrors === "object") {
           setErrors((prev) => ({ ...prev, ...errorData.fieldErrors }));
@@ -794,6 +829,10 @@ function CheckoutContent() {
     deliveryAddress,
     deliveryFee,
     displayItems,
+    packLines,
+    hasUnavailablePack,
+    refreshPacks,
+    noteChanged,
     form.customerName,
     form.customerPhone,
     form.recipientEmail,
@@ -870,7 +909,7 @@ function CheckoutContent() {
     );
   }
 
-  if (displayItems.length === 0) {
+  if (displayItems.length === 0 && packLines.length === 0) {
     return null;
   }
 
@@ -909,6 +948,31 @@ function CheckoutContent() {
             </button>
           ))}
         </div>
+
+        {priceChangedPacks.length > 0 ? (
+          <div
+            role="status"
+            className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--border-gold)] bg-[var(--gold-tint)] px-3.5 py-3 text-sm text-text-primary"
+          >
+            <Info size={16} className="mt-0.5 shrink-0 text-gold" />
+            <div className="flex-1">
+              <p>{PACK_PRICE_CHANGED_MESSAGE}</p>
+              <p className="mt-0.5 text-xs text-text-muted">Updated: {priceChangedPacks.join(", ")}</p>
+            </div>
+            <button type="button" onClick={dismissPriceNotice} className="text-xs uppercase tracking-wider text-gold hover:underline">
+              Dismiss
+            </button>
+          </div>
+        ) : null}
+        {hasUnavailablePack ? (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-[rgba(248,113,113,0.3)] bg-[rgba(248,113,113,0.06)] px-3.5 py-3 text-sm text-[var(--error)]">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <p>
+              A pack in your cart is currently unavailable.{" "}
+              <Link href="/cart" className="underline">Return to your cart</Link> to remove it.
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5 lg:items-start">
           <div className="space-y-4 lg:col-span-3">
@@ -1515,6 +1579,7 @@ function CheckoutContent() {
               <div className="mt-3">
                 <OrderSummaryPanel
                   items={displayItems}
+                  packs={packLines}
                   displaySubtotal={displaySubtotal}
                   discount={discount}
                   deliveryFee={deliveryFee}
@@ -1540,6 +1605,7 @@ function CheckoutContent() {
               <div className="mt-3">
                 <OrderSummaryPanel
                   items={displayItems}
+                  packs={packLines}
                   displaySubtotal={displaySubtotal}
                   discount={discount}
                   deliveryFee={deliveryFee}

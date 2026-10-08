@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { requireAdmin } from "@/lib/auth";
-import { generateOrderCancelledEmail, sendEmail } from "@/lib/email";
+import { generateOrderCancelledEmail, pickPackEmailFields, sendEmail } from "@/lib/email";
+import type { EmailPackFields } from "@/lib/email";
 import { validateString } from "@/lib/validation";
 import { normalizeOrderStatus, isValidTransition } from "@/lib/orderStatusConfig";
 import { reverseInvestmentSalesForOrder } from "@/lib/investments/orderIntegration";
@@ -100,7 +101,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       isFullBottle?: boolean;
       fullBottleSize?: string;
       fullBottleCondition?: "new" | "partial";
-    }> = [];
+    } & EmailPackFields> = [];
 
     // Restore inventory for all items (writes are claim-guarded below;
     // this loop only computes the refund + email item list).
@@ -115,6 +116,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         quantity: Number(item.quantity || 0),
         ml: Number(item.ml || 0),
         totalPrice: Number(item.totalPrice || 0),
+        ...pickPackEmailFields(item),
         isFullBottle,
         fullBottleSize: String(item.fullBottleSize || "").trim() || undefined,
         fullBottleCondition: isFullBottle
