@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { requireAdmin } from "@/lib/auth";
 import { getCloudinaryFolder, uploadImageBufferToCloudinary } from "@/lib/cloudinary";
 
@@ -30,15 +29,23 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const folder = getCloudinaryFolder("images", "payments");
-    const webpBuffer = await sharp(buffer)
-      .resize(900, 900, { fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 90 })
-      .toBuffer();
+    let uploadBuffer = buffer;
+    let format: "png" | "jpg" | "webp" = file.type === "image/jpeg" ? "jpg" : file.type === "image/webp" ? "webp" : "png";
+    try {
+      const { default: sharp } = await import("sharp");
+      uploadBuffer = await sharp(buffer)
+        .resize(900, 900, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 90 })
+        .toBuffer();
+      format = "webp";
+    } catch (error) {
+      console.warn("Image optimization unavailable; using original payment QR", error);
+    }
 
-    const uploaded = await uploadImageBufferToCloudinary(webpBuffer, {
+    const uploaded = await uploadImageBufferToCloudinary(uploadBuffer, {
       folder,
-      publicId: `${id}-webp`,
-      format: "webp",
+      publicId: `${id}-${format}`,
+      format,
     });
 
     return NextResponse.json({

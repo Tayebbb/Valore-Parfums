@@ -29,7 +29,17 @@ const nextConfig: NextConfig = {
   },
 
   // Performance: reduce unused JS from server-only packages
-  serverExternalPackages: ["firebase-admin"],
+  serverExternalPackages: ["firebase-admin", "cloudinary"],
+
+  // Sharp loads native binaries and libvips at runtime. Include the installed
+  // platform packages explicitly so Vercel's upload functions retain them.
+  outputFileTracingIncludes: {
+    "/api/uploads/*": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-*/**/*",
+      "./node_modules/@img/colour/**/*",
+    ],
+  },
 
   // Headers for caching and security
   async headers() {

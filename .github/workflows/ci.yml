@@ -33,6 +33,8 @@ jobs:
         run: npx tsx scripts/test-investments.ts
       - name: Pack pricing tests (pure, no Firestore)
         run: npx tsx scripts/test-packs.ts
+      - name: Image upload regression tests (no external writes)
+        run: node --import tsx scripts/test-image-uploads.cjs
       - name: Production build
         run: npm run build
         env:
@@ -58,6 +60,8 @@ jobs:
         run: npx tsc --noEmit
       - name: Lint
         run: npm run lint
+      - name: Content Security Policy regression test
+        run: npx tsx scripts/test-security-headers.ts
       - name: Production build
         run: npm run build
         env:

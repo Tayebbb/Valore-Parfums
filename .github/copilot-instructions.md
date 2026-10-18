@@ -10,8 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-10-08 (Perfume Packs: admin-curated bundles priced from
-  the canonical decant price, ordered as per-perfume component items; see §7.10)
+- **Last updated:** 2026-10-18 (upload dependency loading/fallbacks, native file tracing,
+  and Vercel Toolbar CSP compatibility)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
 - **Site:** https://www.valoreparfums.app
@@ -675,6 +675,11 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 - **The frontend CSP is built at module load in `frontend/src/proxy.ts`.** Adding any
   new third-party host (analytics, payment widget, CDN) requires updating
   `buildContentSecurityPolicy()` or the browser silently blocks it.
+- **Upload dependencies must load inside the authenticated error boundary.** Sharp
+  is loaded only during optimization; if it cannot load, uploads use the original
+  image. Cloudinary is loaded/configured lazily and externalized in the backend
+  config. Upload-specific file tracing includes Sharp and its `@img` runtime files.
+  Do not catch storage errors as decoding errors or retry them as raw-image uploads.
 - **Node >= 22 is required in production** (`engines` in both `package.json` files) —
   `firebase-admin` 14 refuses/breaks on older runtimes. Do not remove the pin when
   upgrading dependencies.
@@ -691,6 +696,15 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-10-18** — Fixed upload startup failure paths: defer Sharp and Cloudinary
+  imports until authenticated requests, retain original images when optimization
+  fails, externalize Cloudinary, explicitly trace Sharp runtime packages, and
+  separate storage failures from image decoding fallback. Both upload routes are
+  covered by `scripts/test-image-uploads.cjs` without external writes. Frontend CSP
+  now allows the documented Vercel Toolbar resource origins, covered by
+  `scripts/test-security-headers.ts`. Both regression checks run in CI. Production
+  returned backend HTML 500s before auth; redeploy both apps and verify uploads.
 
 - **2026-10-08** — **Perfume Packs.** New `packs` collection + `/api/packs*` (public
   list/detail, admin CRUD/preview/reorder, public quote). Pack price is derived

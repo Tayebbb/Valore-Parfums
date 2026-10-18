@@ -82,6 +82,8 @@ function buildContentSecurityPolicy(): string {
     "https://res.cloudinary.com",
     "https://*.google-analytics.com",
     "https://*.googletagmanager.com",
+    "https://vercel.live",
+    "wss://ws-us3.pusher.com",
   ];
   const apiOrigin = getApiOrigin();
   if (apiOrigin) connectSrc.push(apiOrigin);
@@ -89,13 +91,15 @@ function buildContentSecurityPolicy(): string {
   return [
     "default-src 'self'",
     // Next.js injects inline bootstrap scripts; 'unsafe-inline' is required here.
-    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.googleusercontent.com https://www.googletagmanager.com https://*.google-analytics.com",
-    "font-src 'self' data:",
+    // Vercel injects its feedback toolbar on enabled deployments. Keep its
+    // resource origins aligned with the Vercel Toolbar CSP documentation.
+    "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com https://vercel.live",
+    "style-src 'self' 'unsafe-inline' https://vercel.live",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.googleusercontent.com https://www.googletagmanager.com https://*.google-analytics.com https://vercel.live https://vercel.com",
+    "font-src 'self' data: https://vercel.live https://assets.vercel.com",
     `connect-src ${connectSrc.join(" ")}`,
     // signInWithPopup loads a gapi iframe from apis.google.com.
-    "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://apis.google.com",
+    "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://vercel.live",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
+import type sharp from "sharp";
 import { requireAdmin } from "@/lib/auth";
 import { getCloudinaryFolder, uploadImageBufferToCloudinary } from "@/lib/cloudinary";
 
@@ -17,15 +17,15 @@ function hasPngSignature(buffer: Buffer): boolean {
 
 const MAX_RAW_DIMENSION = 2000; // cap before BFS to bound memory usage (~2000×2000×4 ≈ 16 MB)
 
-async function removeNearWhiteBackground(buffer: Buffer): Promise<Buffer> {
+async function removeNearWhiteBackground(buffer: Buffer, imageProcessor: typeof sharp): Promise<Buffer> {
   // Resize down to at most MAX_RAW_DIMENSION on each axis before decoding to raw RGBA,
   // so that the uncompressed buffer and BFS arrays stay within a predictable memory bound.
-  const resized = await sharp(buffer, { failOn: "warning" })
+  const resized = await imageProcessor(buffer, { failOn: "warning" })
     .resize(MAX_RAW_DIMENSION, MAX_RAW_DIMENSION, { fit: "inside", withoutEnlargement: true })
     .png()
     .toBuffer();
 
-  const { data, info } = await sharp(resized, { failOn: "warning" })
+  const { data, info } = await imageProcessor(resized, { failOn: "warning" })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -108,7 +108,7 @@ async function removeNearWhiteBackground(buffer: Buffer): Promise<Buffer> {
     }
   }
 
-  return sharp(pixels, {
+  return imageProcessor(pixels, {
     raw: {
       width: info.width,
       height: info.height,
@@ -157,16 +157,19 @@ export async function POST(req: Request) {
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const folder = getCloudinaryFolder("images", "perfumes");
-    let imageUrl = "";
-    let fallbackUrl = "";
+    let webpBuffer: Buffer | undefined;
+    let pngBuffer = buffer;
 
     try {
+      // A native-module load failure must reach the original-PNG fallback,
+      // not crash the route before authentication or error handling runs.
+      const { default: sharp } = await import("sharp");
       const metadata = await sharp(buffer, { failOn: "warning" }).metadata();
       if (metadata.format !== "png") {
         return NextResponse.json({ error: "Only PNG files are allowed" }, { status: 400 });
       }
 
-      const transparentSource = await removeNearWhiteBackground(buffer);
+      const transparentSource = await removeNearWhiteBackground(buffer, sharp);
 
       const composed = await sharp(transparentSource, { failOn: "warning" })
         .resize(CANVAS_SIZE, CANVAS_SIZE, {
@@ -176,24 +179,24 @@ export async function POST(req: Request) {
         })
         .toBuffer();
 
-      const [webpBuffer, pngBuffer] = await Promise.all([
+      [webpBuffer, pngBuffer] = await Promise.all([
         sharp(composed).webp({ quality: 86 }).toBuffer(),
         sharp(composed).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer(),
       ]);
-
-      const [webpUpload, pngUpload] = await Promise.all([
-        uploadImageBufferToCloudinary(webpBuffer, { folder, publicId: `${id}-webp`, format: "webp" }),
-        uploadImageBufferToCloudinary(pngBuffer, { folder, publicId: `${id}-png`, format: "png" }),
-      ]);
-
-      imageUrl = webpUpload.secure_url;
-      fallbackUrl = pngUpload.secure_url;
     } catch (decodeError) {
-      console.warn("Sharp could not decode PNG; using raw PNG fallback", decodeError);
-      const fallbackUpload = await uploadImageBufferToCloudinary(buffer, { folder, publicId: `${id}-png`, format: "png" });
-      imageUrl = fallbackUpload.secure_url;
-      fallbackUrl = imageUrl;
+      console.warn("Image optimization unavailable; using original PNG", decodeError);
     }
+
+    // Storage failures are not decoding failures. Let the outer error handler
+    // report them without attempting the same failing upload a third time.
+    const [webpUpload, pngUpload] = await Promise.all([
+      webpBuffer
+        ? uploadImageBufferToCloudinary(webpBuffer, { folder, publicId: `${id}-webp`, format: "webp" })
+        : Promise.resolve(null),
+      uploadImageBufferToCloudinary(pngBuffer, { folder, publicId: `${id}-png`, format: "png" }),
+    ]);
+    const imageUrl = webpUpload?.secure_url || pngUpload.secure_url;
+    const fallbackUrl = pngUpload.secure_url;
 
     return NextResponse.json({
       imageUrl,

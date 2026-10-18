@@ -1,6 +1,6 @@
-import { v2 as cloudinary, type UploadApiResponse, type UploadApiErrorResponse } from "cloudinary";
+import type { UploadApiResponse, UploadApiErrorResponse } from "cloudinary";
 
-let isConfigured = false;
+let configuredClient: typeof import("cloudinary").v2 | undefined;
 
 function parseCloudinaryUrl(value: string | undefined): {
   cloudName: string;
@@ -18,14 +18,14 @@ function parseCloudinaryUrl(value: string | undefined): {
   return { cloudName, apiKey, apiSecret };
 }
 
-function ensureCloudinaryConfig() {
-  if (isConfigured) return;
+async function ensureCloudinaryConfig() {
+  if (configuredClient) return configuredClient;
 
   const fromUrl = parseCloudinaryUrl(process.env.CLOUDINARY_URL);
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || fromUrl?.cloudName;
-  const apiKey = process.env.CLOUDINARY_API_KEY || fromUrl?.apiKey;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET || fromUrl?.apiSecret;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim() || fromUrl?.cloudName;
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim() || fromUrl?.apiKey;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim() || fromUrl?.apiSecret;
 
   if (!cloudName || !apiKey || !apiSecret) {
     throw new Error(
@@ -33,6 +33,9 @@ function ensureCloudinaryConfig() {
     );
   }
 
+  // The SDK reads CLOUDINARY_URL during module initialization and can throw.
+  // Load it only inside the authenticated upload's error-handling boundary.
+  const { v2: cloudinary } = await import("cloudinary");
   cloudinary.config({
     cloud_name: cloudName,
     api_key: apiKey,
@@ -40,7 +43,8 @@ function ensureCloudinaryConfig() {
     secure: true,
   });
 
-  isConfigured = true;
+  configuredClient = cloudinary;
+  return cloudinary;
 }
 
 export function getCloudinaryFolder(...segments: string[]): string {
@@ -61,7 +65,7 @@ export async function uploadImageBufferToCloudinary(
     resourceType?: "image";
   },
 ): Promise<UploadApiResponse> {
-  ensureCloudinaryConfig();
+  const cloudinary = await ensureCloudinaryConfig();
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -73,7 +77,7 @@ export async function uploadImageBufferToCloudinary(
         overwrite: true,
       },
       (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
-        if (error) return reject(error);
+        if (error) return reject(new Error(error.message || "Cloudinary upload failed."));
         if (!result) return reject(new Error("Cloudinary upload failed with empty result."));
         resolve(result);
       },
