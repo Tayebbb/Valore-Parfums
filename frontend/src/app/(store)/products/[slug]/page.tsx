@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import PerfumePageClient from "@/components/store/PerfumeDetailClient";
 import {
@@ -10,10 +9,8 @@ import {
   buildProductJsonLd,
   buildProductMetaDescription,
   buildProductMetaTitle,
-  computeAggregateRating,
   getActivePerfumes,
   getPerfumeOffers,
-  getPerfumeReviews,
   getProductKeywordBundle,
   resolveBrandSlug,
   resolvePerfumeSlug,
@@ -32,32 +29,6 @@ export async function generateStaticParams() {
 type RouteProps = {
   params: Promise<{ slug: string }>;
 };
-
-// Fetches reviews and injects the full Product JSON-LD (with aggregate rating).
-// Wrapped in <Suspense> so the above-fold product content streams first on ISR
-// cold requests, then this script tag follows once reviews are resolved.
-async function ProductSchemaWithReviews({
-  product,
-  offers,
-}: {
-  product: Awaited<ReturnType<typeof getPerfumeByProductSlug>>;
-  offers: Awaited<ReturnType<typeof getPerfumeOffers>>;
-}) {
-  if (!product) return null;
-  const reviews = await getPerfumeReviews(product.id);
-  const reviewAverage =
-    reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / reviews.length
-      : product.rating;
-  const aggregate = computeAggregateRating(product, reviews.length, reviewAverage);
-  const productJsonLd = buildProductJsonLd(product, offers, aggregate);
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
-    />
-  );
-}
 
 async function getPerfumeByProductSlug(slug: string) {
   const perfumes = await getActivePerfumes();
@@ -126,7 +97,7 @@ export default async function ProductPage({ params }: RouteProps) {
   }
 
   const offers = await getPerfumeOffers(product);
-
+  const productJsonLd = buildProductJsonLd(product, offers);
   const faqJsonLd = buildFaqJsonLd(product);
   const canonicalUrl = `${SITE_URL}${canonicalPath}`;
   const initialPrices = offers.decantOffers.map((offer) => ({
@@ -144,9 +115,7 @@ export default async function ProductPage({ params }: RouteProps) {
 
   return (
     <>
-      <Suspense fallback={null}>
-        <ProductSchemaWithReviews product={product} offers={offers} />
-      </Suspense>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <script
         type="application/ld+json"

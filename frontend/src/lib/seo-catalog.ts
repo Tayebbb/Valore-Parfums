@@ -534,28 +534,9 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
   return { decantOffers, fullBottleOffer };
 }
 
-export function computeAggregateRating(perfume: PerfumeDocument, reviewCountOverride?: number, ratingOverride?: number): { ratingValue: number; reviewCount: number } {
-  const reviewCount = Number(reviewCountOverride ?? perfume.reviewCount ?? perfume.reviews?.length ?? 0);
-  if (ratingOverride && reviewCount > 0) {
-    return { ratingValue: Number(ratingOverride.toFixed(2)), reviewCount };
-  }
-
-  if (Array.isArray(perfume.reviews) && perfume.reviews.length > 0) {
-    const total = perfume.reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0);
-    const ratingValue = total / perfume.reviews.length;
-    return { ratingValue: Number(ratingValue.toFixed(2)), reviewCount: perfume.reviews.length };
-  }
-
-  return {
-    ratingValue: Number((Number(perfume.rating || 4.9)).toFixed(2)),
-    reviewCount: reviewCount || 1,
-  };
-}
-
 export function buildProductJsonLd(
   perfume: PerfumeDocument,
   offers: { decantOffers: PerfumeOffer[]; fullBottleOffer: PerfumeOffer },
-  aggregate: { ratingValue: number; reviewCount: number },
 ) {
   const images = parseImageList(perfume.images).map((img) => (img.startsWith("http") ? img : `${SITE_URL}${img}`));
   const offerPolicy = buildOfferPolicyNodes();
@@ -600,13 +581,8 @@ export function buildProductJsonLd(
       "@type": "Brand",
       name: perfume.brand,
     },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: String(aggregate.ratingValue),
-      reviewCount: String(aggregate.reviewCount),
-      bestRating: "5",
-      worstRating: "1",
-    },
+    // Add review/rating markup only when genuine reviews are also displayed on this page.
+    // Offers alone satisfy Google's Product snippet requirements.
     offers: offerNodes,
   };
 }

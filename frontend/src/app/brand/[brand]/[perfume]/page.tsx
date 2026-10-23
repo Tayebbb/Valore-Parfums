@@ -9,10 +9,8 @@ import {
   buildProductJsonLd,
   buildProductMetaDescription,
   buildProductMetaTitle,
-  computeAggregateRating,
   getPerfumeByBrandAndSlug,
   getPerfumeOffers,
-  getPerfumeReviews,
   getProductKeywordBundle,
   serializePerfumeForApi,
 } from "@/lib/seo-catalog";
@@ -75,18 +73,8 @@ export default async function BrandProductPage({ params }: RouteProps) {
     redirect(canonicalPath);
   }
 
-  const [offers, reviews] = await Promise.all([
-    getPerfumeOffers(product),
-    getPerfumeReviews(product.id),
-  ]);
-
-  const reviewAverage =
-    reviews.length > 0
-      ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
-      : product.rating;
-  const aggregate = computeAggregateRating(product, reviews.length, reviewAverage);
-
-  const productJsonLd = buildProductJsonLd(product, offers, aggregate);
+  const offers = await getPerfumeOffers(product);
+  const productJsonLd = buildProductJsonLd(product, offers);
   const faqJsonLd = buildFaqJsonLd(product);
   const canonicalUrl = `${SITE_URL}${canonicalPath}`;
   const initialPrices = offers.decantOffers.map((offer) => ({
