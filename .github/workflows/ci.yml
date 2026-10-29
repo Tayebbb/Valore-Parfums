@@ -35,6 +35,8 @@ jobs:
         run: npx tsx scripts/test-packs.ts
       - name: Image upload regression tests (no external writes)
         run: node --import tsx scripts/test-image-uploads.cjs
+      - name: Payment custody regression tests (isolated, no external writes)
+        run: npx tsx scripts/test-payment-custody.ts
       - name: Production build
         run: npm run build
         env:

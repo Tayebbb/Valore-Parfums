@@ -17,6 +17,7 @@ import {
   normalizePaymentType,
 } from "@/types/payment";
 import { CourierSlipModal } from "@/components/admin/CourierSlipModal";
+import { EnidPaymentBalance, OrderPaymentHolder, useOrderPayments } from "@/components/admin/OrderPayments";
 import type { CourierSlipData } from "@/components/admin/CourierSlip";
 import { describeOrderLines, groupOrderItems } from "@/lib/packs-order";
 import type { OrderItemPackFields } from "@/lib/packs-order";
@@ -77,6 +78,8 @@ interface Order {
   total: number;
   profit: number;
   financialsMinor?: {
+    totalMinor?: number;
+    deliveryFeeMinor?: number;
     totalProfitMinor?: number;
   };
   createdAt: string;
@@ -165,6 +168,12 @@ const hasPendingVoucherForFullBottle = (order: Order) => {
 };
 
 const getOrderSource = (): SourceFilter => "standard_order";
+
+const getPaymentAmountMinor = (order: Order) => Math.max(0,
+  Number(order.financialsMinor?.totalMinor ?? Math.round((order.total || 0) * 100))
+  - ((order.paymentType ? order.paymentType === "COD" : !order.paymentMethod || order.paymentMethod === "Cash on Delivery")
+    ? Number(order.financialsMinor?.deliveryFeeMinor ?? Math.round((order.deliveryFee || 0) * 100)) : 0),
+);
 
 const getPaymentLabel = (method?: string) => {
   const value = String(method || "Cash on Delivery");
@@ -264,6 +273,7 @@ const orderToCourierSlipData = (order: Order): CourierSlipData => {
 };
 
 export default function OrdersPage() {
+  const payments = useOrderPayments();
   const [orders, setOrders] = useState<Order[]>([]);
   const [procurementRequests, setProcurementRequests] = useState<StockRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1087,6 +1097,10 @@ export default function OrdersPage() {
       </div>
 
       {activeTab === "orders" && (
+        <EnidPaymentBalance payments={payments} />
+      )}
+
+      {activeTab === "orders" && (
         <div className="flex justify-end">
           <button
             onClick={openManualFullBottleModal}
@@ -1316,6 +1330,11 @@ export default function OrdersPage() {
                     </span>
                   </div>
 
+                  <div className="space-y-2 border-t border-[var(--border)] pt-3">
+                    <p className="text-xs text-[var(--text-secondary)]">Payment held by</p>
+                    <OrderPaymentHolder payments={payments} orderId={o.id} customerName={o.customerName}
+                      cancelled={currentStatus === cancelledStatusLabel} amountMinor={getPaymentAmountMinor(o)} />
+                  </div>
                   <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openOrderDetails(o)}
@@ -1350,6 +1369,7 @@ export default function OrdersPage() {
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Customer</th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Items</th>
                   <th className="text-center py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Payment</th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Payment held by</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Total</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Profit</th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-normal">Order Type</th>
@@ -1392,6 +1412,10 @@ export default function OrdersPage() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <OrderPaymentHolder payments={payments} orderId={o.id} customerName={o.customerName}
+                          cancelled={currentStatus === cancelledStatusLabel} amountMinor={getPaymentAmountMinor(o)} />
                       </td>
                       <td className="py-3 px-4 text-right">
                         <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
@@ -1901,6 +1925,12 @@ export default function OrdersPage() {
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Payment Method</span>
                 <span>{selectedOrder.paymentMethod || "Cash on Delivery"}</span>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[var(--text-secondary)]">Payment held by</p>
+                <OrderPaymentHolder payments={payments} orderId={selectedOrder.id} customerName={selectedOrder.customerName}
+                  cancelled={getAdminStatusLabel(selectedOrder.status, selectedOrder.pickupMethod) === cancelledStatusLabel}
+                  amountMinor={getPaymentAmountMinor(selectedOrder)} />
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Payment Type</span>

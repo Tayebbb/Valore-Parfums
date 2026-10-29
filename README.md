@@ -472,6 +472,35 @@ A stale `expectedUnitPrice` returns `409 { code: "PRICE_CHANGED", packs: [...fre
 | GET      | `/api/dashboard`      | Admin | All KPIs, low stock, charts data          |
 | GET      | `/api/owner-accounts` | Admin | Owner balances and recent transactions    |
 | GET/POST | `/api/withdrawals`    | Admin | Withdrawal records; `?ownerName=X` filter |
+| GET/POST | `/api/payment-custody` | Admin; writes restricted to configured owners | Payment holders, Enid's balance, and recorded transfers to business |
+
+On Orders, choose **Enid** or **Tayeb (business)** only after receiving payment.
+Enid's total includes recorded cash across all orders. Prepaid payments include
+delivery money actually collected; COD remittances exclude courier fees.
+**Transfer to business** records the handover, clears Enid's total, and shows the
+settled orders under Tayeb. It does not initiate a bank transfer or add revenue or
+profit again. Cash custody is independent of profit entitlement: selecting Enid or
+transferring his held cash never changes either owner's profit-share percentage,
+earned profit, profit withdrawals, or profit balance. Existing withdrawal
+accounting continues to apply to business funds.
+This tracking appears only on Orders. The dashboard continues calculating its
+existing business totals regardless of who holds the payments, and never reads
+payment-holder records or transfer history. Reassigning a holder updates the same
+order's tracking record; transferring cash never creates a second business payment.
+Existing orders start unassigned; choose their holder to include money still held
+by Enid. Receipt amounts are saved when assigned; after changing an order price,
+use **Update received amount** once the payment difference has actually been settled.
+Cancelled payments remain held until marked refunded after returning the money.
+
+Storage: `paymentReceipts` (one per order), `paymentTransfers` (handover history),
+`paymentCustodyActions` (audit and request deduplication), and
+`settings/paymentCustody` (transaction sequence and transfer cutoff). Concurrent
+assignments and transfers serialize on that state document; stale edits and
+transfers are rejected, including attempts made against an outdated order amount.
+Receipts use stable owner IDs, so name edits cannot hide cash.
+Isolated regression checks: `cd backend && npx tsx scripts/test-payment-custody.ts`.
+Real transaction and dashboard-isolation checks are in `scripts/e2e-payment-custody.ts`;
+they require a local Firestore emulator at `127.0.0.1:8189` and refuse cloud access.
 
 ### Utilities
 
