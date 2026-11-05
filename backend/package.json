@@ -18,15 +18,17 @@
     "date-fns": "^4.1.0",
     "firebase": "^12.11.0",
     "firebase-admin": "^14.2.0",
+    "htmlparser2": "^12.0.0",
     "jose": "^6.2.7",
     "lucide-react": "^0.577.0",
-    "next": "^16.2.12",
-    "nodemailer": "^9.0.3",
+    "next": "^16.4.5",
+    "nodemailer": "^10.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
     "resend": "^6.12.4",
-    "sharp": "^0.35.3",
+    "sanitize-html": "^2.18.1",
+    "sharp": "^0.35.5",
     "uuid": "^13.0.2",
     "zustand": "^5.0.11"
   },
@@ -36,16 +38,28 @@
     "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.2",
     "@types/uuid": "^10.0.0",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.5",
+    "eslint-config-next": "^16.4.5",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
   },
   "overrides": {
-    "sharp": "^0.35.3",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "@grpc/grpc-js": "^1.14.5",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    },
+    "rimraf": {
+      "glob": "^14.0.2"
+    },
+    "tsx": {
+      "esbuild": "^0.28.1"
+    },
+    "sharp": "$sharp",
     "postcss": "^8.5.18",
     "uuid": "$uuid"
   }

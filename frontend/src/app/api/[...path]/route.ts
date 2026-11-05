@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
+import { readBoundedBody, RequestBodyError } from "@/lib/request-body";
+
+export const maxDuration = 60;
 
 // Storefront pages render from THIS app's unstable_cache/ISR entries (tags
 // "perfumes" / "pricing-config"), which the backend's own revalidateTag can
@@ -79,7 +82,9 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
 
   const pathname = path.join("/");
   // Prevent the caller from escaping the backend's /api namespace (SSRF / traversal).
-  if (path.some((segment) => segment === "." || segment === ".." || segment.includes("\\")) ||
+  // Next has already decoded each route parameter. Do not permit a separator,
+  // query, fragment or another decoding pass to change the upstream route.
+  if (path.some((segment) => segment === "." || segment === ".." || /[\\/?#%\u0000-\u001f\u007f]/.test(segment)) ||
       /^https?:\/\//i.test(pathname)) {
     return NextResponse.json({ error: "Invalid API path." }, { status: 400 });
   }
@@ -109,13 +114,24 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
     headers.delete("authorization");
   }
 
-  const body = method === "GET" || method === "HEAD" ? undefined : await req.arrayBuffer();
+  let body: ArrayBuffer | undefined;
+  try {
+    if (method !== "GET" && method !== "HEAD") {
+      // Keep in sync with the backend customer-request limits. Other APIs,
+      // including image uploads, retain their own body handling.
+      body = path[0] === "customers"
+        ? await readBoundedBody(req, pathname === "customers/unsubscribe" ? 4096 : 512 * 1024)
+        : await req.arrayBuffer();
+    }
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof RequestBodyError ? error.message : "Could not read the request body." }, { status: error instanceof RequestBodyError ? error.status : 400 });
+  }
 
   let upstream: Response;
   try {
     // Add timeout for backend requests - 15s for general, 20s for catalog (may be large)
     // Mobile networks may be slower, so we use longer timeouts than client-side
-    const timeoutMs = isPublicCatalogPath ? 20000 : 15000;
+    const timeoutMs = /^customers\/messages\/[0-9a-f-]+$/i.test(pathname) && method === "POST" ? 55000 : isPublicCatalogPath ? 20000 : 15000;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 

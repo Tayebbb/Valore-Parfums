@@ -1,0 +1,19 @@
+# Customer directory and email messages
+
+Open **Admin → Customers** (`/admin/customers`). The directory reads existing orders automatically, including guest orders and legacy recipient emails. It trims and lowercases email addresses and shows one row per address, with an order count and latest order date. Request records, invalid addresses, and users who have never ordered are excluded.
+
+Search by name or email. Select customers using checkboxes (the header selects the current page), use a row’s **Message** action for one customer, or choose **Message customers** for everyone. Unsubscribed customers remain visible but cannot receive promotions.
+
+Write a subject and message, or choose **HTML** to paste an HTML body with inline styles, HTTPS images, and links. Both formats use the existing order email header/footer. **Preview email** displays the server-generated, sanitized result. **Send** starts immediately and sends separate private messages through the existing Resend/Gmail provider. Keep the page open until complete. Each message supports up to 5,000 recipients, subject to a 512 KiB request limit and a conservative stored-message byte limit. Promotional campaigns share a durable sending lease and cooldown, so competing tabs or server instances cannot burst emails together.
+
+Message history stores the most recent 20 messages and their counts. **Resume** continues an interrupted send without repeating completed recipients. **Results** shows failures, unsubscribed recipients, and uncertain deliveries. “Accepted” means the email provider accepted the message, not guaranteed inbox delivery. A delivery interrupted after claiming is marked uncertain after two minutes; ambiguous provider responses are flagged immediately. Check the provider’s log before sending another message to that customer.
+
+Every promotion includes a signed unsubscribe link at `/unsubscribe`. Customers confirm their preference without signing in. Opt-outs are checked again immediately before each delivery. Order confirmation emails continue as usual.
+
+## Configuration and storage
+
+Use the existing backend `RESEND_API_KEY` / `RESEND_FROM_EMAIL`, or `GMAIL_USER` / `GMAIL_PASS` / `GMAIL_FROM_EMAIL` configuration. Set the backend `NEXT_PUBLIC_SITE_URL` to the public storefront URL (defaults to `https://www.valoreparfums.app`). Unsubscribe links use `EMAIL_UNSUBSCRIBE_SECRET`, falling back to the existing `SESSION_SIGNING_KEY`; the selected secret must be at least 32 characters and remain stable so older links continue working. The directory reports missing email configuration and disables sending.
+
+Firestore collections are `customerMessages` (message snapshots, recipients, creator, counts), `customerMessages/{id}/deliveries` (individual results), `customerEmailPreferences` (opt-outs keyed by SHA-256 of the normalized address), and `customerMessageDispatch/provider` (shared delivery lease and cooldown). Access is through server-side admin-guarded routes; the unsubscribe endpoint accepts only a canonical, valid signed token and limits requests to 4 KiB. Repeating an unsubscribe preserves the first timestamp without rewriting the preference. Message creation uses a validated, lowercase UUID; delivery claims and progress use Firestore transactions. Resend receives a recipient-specific idempotency key as an additional duplicate-send safeguard.
+
+Run `npx tsx scripts/test-customer-messages.ts`, `npx tsx scripts/test-customer-adversarial.ts`, and `npx tsx scripts/test-customer-email-adapters.ts` from `backend`. Run `npx tsx scripts/test-customer-proxy.ts` from `frontend`. These tests use synthetic records, intercepted network calls, and local MIME generation, with no external writes or customer emails. Findings and verification limits are recorded in [SECURITY_STRESS_TEST_REPORT.md](SECURITY_STRESS_TEST_REPORT.md).

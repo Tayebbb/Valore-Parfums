@@ -25,6 +25,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - name: Dependency security audit
+        run: npm audit --audit-level=high
       - name: Type-check
         run: npx tsc --noEmit
       - name: Lint
@@ -37,6 +39,12 @@ jobs:
         run: node --import tsx scripts/test-image-uploads.cjs
       - name: Payment custody regression tests (isolated, no external writes)
         run: npx tsx scripts/test-payment-custody.ts
+      - name: Customer directory and messaging tests (isolated, no external writes)
+        run: npx tsx scripts/test-customer-messages.ts
+      - name: Customer security and stress tests (isolated, no external writes)
+        run: npx tsx scripts/test-customer-adversarial.ts
+      - name: Email adapter tests (no network or external writes)
+        run: npx tsx scripts/test-customer-email-adapters.ts
       - name: Production build
         run: npm run build
         env:
@@ -58,12 +66,16 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Dependency security audit
+        run: npm audit --audit-level=high
       - name: Type-check
         run: npx tsc --noEmit
       - name: Lint
         run: npm run lint
       - name: Content Security Policy regression test
         run: npx tsx scripts/test-security-headers.ts
+      - name: Customer proxy security tests (no network)
+        run: npx tsx scripts/test-customer-proxy.ts
       - name: Production build
         run: npm run build
         env:

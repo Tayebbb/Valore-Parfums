@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Menu,
   X,
+  Users,
 } from "lucide-react";
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/admin/decant-sizes", label: "Decant Sizes", icon: FlaskConical },
   { href: "/admin/bottles", label: "Bottles", icon: Wine },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/requests", label: "Requests", icon: Inbox },
   { href: "/admin/vouchers", label: "Vouchers", icon: Tag },
   { href: "/admin/investments", label: "Investments", icon: TrendingUp },

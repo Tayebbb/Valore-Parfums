@@ -6,10 +6,19 @@ export interface EmailNotification {
   subject: string;
   html: string;
   text?: string;
+  idempotencyKey?: string;
+}
+
+export interface EmailSendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  /** The provider may have accepted the email before the connection failed. */
+  uncertain?: boolean;
 }
 
 export interface EmailProvider {
-  send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }>;
+  send(email: EmailNotification): Promise<EmailSendResult>;
 }
 
 /** Pack metadata carried by order item docs that belong to a Perfume Pack. */
@@ -149,7 +158,7 @@ class ResendEmailProvider implements EmailProvider {
     this.fromAddress = fromAddress;
   }
 
-  async send(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async send(email: EmailNotification): Promise<EmailSendResult> {
     try {
       const { data, error } = await this.client.emails.send({
         from: this.fromAddress,
@@ -157,15 +166,18 @@ class ResendEmailProvider implements EmailProvider {
         subject: email.subject,
         html: email.html,
         text: email.text,
-      });
+      }, email.idempotencyKey ? { idempotencyKey: email.idempotencyKey } : undefined);
 
       if (error) {
-        return { success: false, error: error.message };
+        const status = "statusCode" in error ? error.statusCode : undefined;
+        const rejected = typeof status === "number" && status >= 400 && status < 500;
+        return { success: false, error: error.message, ...(!rejected ? { uncertain: true } : {}) };
       }
 
-      return { success: true, messageId: data?.id };
+      if (typeof data?.id !== "string" || !data.id) return { success: false, uncertain: true, error: "Email provider returned no message ID. Check delivery before sending again." };
+      return { success: true, messageId: data.id };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+      return { success: false, uncertain: true, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 }
@@ -176,7 +188,11 @@ export function initializeEmailProvider(provider: EmailProvider): void {
   emailProvider = provider;
 }
 
-export async function sendEmail(email: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+export function isEmailConfigured(): boolean {
+  return emailProvider !== null;
+}
+
+export async function sendEmail(email: EmailNotification): Promise<EmailSendResult> {
   if (!emailProvider) {
     console.warn("Email provider not initialized. Email not sent:", email.subject);
     return { success: false, error: "Email provider not initialized" };
@@ -203,7 +219,7 @@ function makeHtmlDarkModeSafe(html: string): string {
   );
 }
 
-function createEmailShell(content: string): string {
+export function createEmailShell(content: string): string {
   const rawHtml = `
     <!doctype html>
     <html lang="en">
@@ -869,6 +885,9 @@ if (process.env.RESEND_API_KEY) {
 } else if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 30000,
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_PASS,
@@ -887,7 +906,9 @@ if (process.env.RESEND_API_KEY) {
         });
         return { success: true, messageId: info.messageId };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+        const details = error && typeof error === "object" ? error as { responseCode?: unknown; code?: unknown } : {};
+        const rejected = (typeof details.responseCode === "number" && details.responseCode >= 400 && details.responseCode < 600) || ["EAUTH", "EENVELOPE", "EMESSAGE"].includes(String(details.code));
+        return { success: false, error: error instanceof Error ? error.message : "Unknown error", ...(!rejected ? { uncertain: true } : {}) };
       }
     },
   });
