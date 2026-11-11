@@ -10,7 +10,8 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-10-18 (upload dependency loading/fallbacks, native file tracing,
+- **Last updated:** 2026-11-11 (personal-collection decant price now uses market price only)
+- **Prev:** 2026-10-18 (upload dependency loading/fallbacks, native file tracing,
   and Vercel Toolbar CSP compatibility)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
@@ -372,7 +373,8 @@ Store items split profit `owner1Share` / `100 − owner1Share` (default 60/40) b
 ### 7.4 Pricing source of truth
 
 `backend/src/app/api/pricing/route.ts` defines:
-`effectiveMarketPricePerMl = isPersonalCollection ? purchasePricePerMl : marketPricePerMl`.
+`effectiveMarketPricePerMl = marketPricePerMl` for ALL perfumes, including personal
+collection. The purchase price NEVER affects the selling price (it only drives cost/profit).
 
 `getPerfumeOffers` in **both** `frontend/src/lib/seo-catalog.ts` and
 `backend/src/lib/seo-catalog.ts` follow the same rule (used for storefront pages,
@@ -696,6 +698,12 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-11-11** — Fixed personal-collection price jumping when the buying price
+  changed: pricing used `purchasePricePerMl` as the market price for personal-collection
+  perfumes. Removed that override in `pricing-engine.ts`, `/api/pricing`, `orders/route.ts`,
+  `export/route.ts`, both `seo-catalog.ts`; price now derives from market price only
+  (`test-packs.ts` updated; §7.4 rewritten).
 
 - **2026-10-18** — Fixed upload startup failure paths: defer Sharp and Cloudinary
   imports until authenticated requests, retain original images when optimization

@@ -83,8 +83,7 @@ export async function GET(req: Request) {
   const { sizes, bottles, packagingCost, margins, bulkRules } = config;
 
   const owner = (perfume.owner || "Store") as OwnerType;
-  // Personal collection: market price = purchase price
-  const tier = getBrandTier((perfume.isPersonalCollection ? perfume.purchasePricePerMl : perfume.marketPricePerMl) * 100);
+  const tier = getBrandTier(perfume.marketPricePerMl * 100);
 
   const prices = sizes.map((size) => {
     const bottle = bottles.find((b) => b.ml === size.ml);

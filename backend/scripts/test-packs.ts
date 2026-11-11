@@ -67,14 +67,19 @@ console.log("1. computeDecantPrice golden values");
   assertEqual(luxury.tier, "Luxury", "luxury tier");
   assertEqual(luxury.sellingPrice, 1389, "luxury 10ml price");
 
-  // Personal collection prices off the purchase price.
+  // Personal collection prices off the market price; the purchase price never affects it.
   const personal = computeDecantPrice(
     { marketPricePerMl: 100, purchasePricePerMl: 20, isPersonalCollection: true },
     10,
     ctx,
   );
-  assertEqual(personal.effectiveMarketPricePerMl, 20, "personal collection uses purchase price");
-  assertEqual(personal.sellingPrice, 289, "personal collection 10ml price");
+  const personalOtherCost = computeDecantPrice(
+    { marketPricePerMl: 100, purchasePricePerMl: 100, isPersonalCollection: true },
+    10,
+    ctx,
+  );
+  assertEqual(personal.effectiveMarketPricePerMl, 100, "personal collection uses market price");
+  assertEqual(personal.sellingPrice, personalOtherCost.sellingPrice, "personal price independent of purchase price");
 
   // Partial deal: flat price regardless of size.
   const partial = computeDecantPrice(

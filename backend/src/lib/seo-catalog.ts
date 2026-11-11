@@ -461,13 +461,8 @@ export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ deca
 
   const { sizes, bottles, packagingCost, margins } = await getPricingConfig();
   const marketPricePerMl = Number(perfume.marketPricePerMl || 0);
-  const purchasePricePerMl = Number(perfume.purchasePricePerMl || marketPricePerMl || 0);
-  // Match /api/pricing: personal-collection perfumes price off purchasePricePerMl so that
-  // the storefront and admin manual order form show the same price.
-  const isPersonalCollection = Boolean(perfume.isPersonalCollection);
-  const effectiveMarketPricePerMl = isPersonalCollection
-    ? purchasePricePerMl
-    : (marketPricePerMl || purchasePricePerMl);
+  // Selling price derives from the market price only, for every owner type.
+  const effectiveMarketPricePerMl = marketPricePerMl;
   const totalStockMl = Number(perfume.totalStockMl || 0);
   const tier = getBrandTier(Math.max(1, effectiveMarketPricePerMl) * 100);
 

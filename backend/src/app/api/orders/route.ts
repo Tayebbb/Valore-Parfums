@@ -484,11 +484,8 @@ export async function POST(req: Request) {
     const bottle = bottleSnap && !bottleSnap.empty ? { id: bottleSnap.docs[0].id, ...bottleSnap.docs[0].data() } as any : null;
     const bottleCost = isFullBottleItem ? 0 : (bottle?.costPerBottle ?? 0);
 
-    // Personal collection: market price = purchase price
     const isPersonalCollection = Boolean(perfume?.isPersonalCollection);
-    const effectiveMarketPricePerMl = isPersonalCollection
-      ? Number(perfume?.purchasePricePerMl || 0)
-      : Number(perfume?.marketPricePerMl || 0);
+    const effectiveMarketPricePerMl = Number(perfume?.marketPricePerMl || 0);
 
     const fullBottlePrice = Number(effectiveMarketPricePerMl || 0) * 100;
     const tier = getBrandTier(fullBottlePrice);
