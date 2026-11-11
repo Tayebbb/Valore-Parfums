@@ -378,7 +378,7 @@ export async function GET(req: Request) {
         const mlHeaders = sizes.map((s: { ml: number }) => `${s.ml}ml (BDT)`);
         const headers = ["Name", "Brand", "Category", "Inspired By", ...mlHeaders];
         const rows = perfumes.map((p) => {
-          const effectiveMarketPricePerMl = p.isPersonalCollection ? p.purchasePricePerMl : p.marketPricePerMl;
+          const effectiveMarketPricePerMl = p.marketPricePerMl;
           const fullBottlePrice = effectiveMarketPricePerMl * 100;
           const tier = getBrandTier(fullBottlePrice);
           const prices = sizes.map((size: { ml: number }) => {
@@ -414,7 +414,7 @@ export async function GET(req: Request) {
       const pdfSizes = PDF_ML_SIZES.filter((ml) => sizes.some((s: { ml: number }) => s.ml === ml));
 
       const tableRows = perfumes.map((p, idx: number) => {
-        const effectiveMarketPricePerMl = p.isPersonalCollection ? p.purchasePricePerMl : p.marketPricePerMl;
+        const effectiveMarketPricePerMl = p.marketPricePerMl;
         const fullBottlePrice = effectiveMarketPricePerMl * 100;
         const tier = getBrandTier(fullBottlePrice);
         const priceCells = pdfSizes.map((ml: number) => {

@@ -42,10 +42,8 @@ export function computeDecantPrice(
   ml: number,
   ctx: DecantPriceContext,
 ): DecantPrice {
-  // Personal collection: market price = purchase price
-  const effectiveMarketPricePerMl = perfume.isPersonalCollection
-    ? perfume.purchasePricePerMl
-    : perfume.marketPricePerMl;
+  // Selling price is driven by the market price only; buying price never affects it.
+  const effectiveMarketPricePerMl = perfume.marketPricePerMl;
 
   const tier = getBrandTier(effectiveMarketPricePerMl * 100);
   const profitMargin = getTierProfitMargin(tier, ml, ctx.margins);
