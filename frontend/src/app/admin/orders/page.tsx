@@ -105,6 +105,7 @@ interface ManualFullBottleItemDraft {
   perfumeId: string;
   customPerfumeName: string;
   fullBottleCondition: "new" | "partial";
+  purchasedBy: string;
   sizeMl: string;
   quantity: string;
   buyingPrice: string;
@@ -202,6 +203,7 @@ const createManualFullBottleItemDraft = (): ManualFullBottleItemDraft => ({
   perfumeId: "",
   customPerfumeName: "",
   fullBottleCondition: "new",
+  purchasedBy: "Store",
   sizeMl: "100",
   quantity: "1",
   buyingPrice: "",
@@ -316,6 +318,16 @@ export default function OrdersPage() {
   const [itemsMarkedForRemoval, setItemsMarkedForRemoval] = useState<Set<string>>(new Set());
   const [newItemDrafts, setNewItemDrafts] = useState<{ perfumeName: string; perfumeId?: string; ml: string; quantity: string; unitPrice: string; costPrice: string; isFullBottle: boolean; fullBottleCondition: "new" | "partial" }[]>([]);
   const [savingOrderEdit, setSavingOrderEdit] = useState(false);
+  const [ownerNames, setOwnerNames] = useState<string[]>(["Tayeb", "Enid"]);
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => {
+        const names = [s?.owner1Name, s?.owner2Name].map((n) => String(n || "").trim()).filter((n) => n && n !== "Store");
+        if (names.length) setOwnerNames(names);
+      })
+      .catch(() => {});
+  }, []);
   // Catalog browser
   const [showCatalog, setShowCatalog] = useState(false);
   const [catalogPerfumes, setCatalogPerfumes] = useState<{ id: string; name: string; brand?: string; totalStockMl?: number }[]>([]);
@@ -551,6 +563,25 @@ export default function OrdersPage() {
     toast("Voucher removed for this order", "success");
   };
 
+  const deleteOrderPermanently = async () => {
+    if (!selectedOrder) return;
+    const completed = ["Dispatched", "Delivered", "Completed"].includes(selectedOrder.status);
+    const msg = completed
+      ? "Permanently delete this order? Its revenue, profit and owner earnings will be erased. This cannot be undone."
+      : "Permanently delete this order? This cannot be undone.";
+    if (!window.confirm(msg)) return;
+    const res = await fetch(`/api/orders/${selectedOrder.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      toast(err?.error || "Failed to delete order", "error");
+      return;
+    }
+    setSelectedOrder(null);
+    setIsEditingOrder(false);
+    await load();
+    toast("Order deleted and its history erased", "success");
+  };
+
   const openEditOrder = () => {
     if (!selectedOrder) return;
     setEditName(selectedOrder.customerName);
@@ -726,6 +757,7 @@ export default function OrdersPage() {
         perfume,
         customPerfumeName,
         fullBottleCondition: draft.fullBottleCondition,
+        purchasedBy: draft.purchasedBy || "Store",
         sizeMl,
         quantity,
         buyingPrice,
@@ -779,7 +811,7 @@ export default function OrdersPage() {
             ml: item.sizeMl,
             isFullBottle,
             ...(isFullBottle
-              ? { fullBottleSize: `${item.sizeMl}ml`, fullBottleCondition: item.fullBottleCondition }
+              ? { fullBottleSize: `${item.sizeMl}ml`, fullBottleCondition: item.fullBottleCondition, purchasedBy: item.purchasedBy }
               : {}),
             quantity: item.quantity,
             unitPrice: item.sellingPrice,
@@ -1485,6 +1517,14 @@ export default function OrdersPage() {
                     className="px-3 py-1 text-[10px] uppercase tracking-wider border border-[var(--gold)] text-[var(--gold)] rounded hover:bg-[var(--gold-tint)] transition-colors"
                   >
                     Generate Courier Slip
+                  </button>
+                )}
+                {!isEditingOrder && (
+                  <button
+                    onClick={deleteOrderPermanently}
+                    className="px-3 py-1 text-[10px] uppercase tracking-wider border border-red-500 text-red-500 rounded hover:bg-red-500/10 transition-colors"
+                  >
+                    Delete Order
                   </button>
                 )}
                 {!isEditingOrder && !["Dispatched", "Delivered", "Cancelled"].includes(selectedOrder.status) && (
@@ -2440,6 +2480,24 @@ export default function OrdersPage() {
                                 >
                                   <option value="new">New</option>
                                   <option value="partial">Partial</option>
+                                </select>
+                              </div>
+                            )}
+                            {item.itemType === "full-bottle" && (
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Bought By</label>
+                                <select
+                                  value={item.purchasedBy}
+                                  onChange={(e) => setManualFullBottleDraft((prev) => ({
+                                    ...prev,
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, purchasedBy: e.target.value } : draft),
+                                  }))}
+                                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-sm focus:border-[var(--gold)] outline-none"
+                                >
+                                  <option value="Store">Store (cost stays in Store revenue)</option>
+                                  {ownerNames.map((name) => (
+                                    <option key={name} value={name}>{name} (repaid manually)</option>
+                                  ))}
                                 </select>
                               </div>
                             )}

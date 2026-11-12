@@ -10,8 +10,9 @@
 > new state, and rewrite any invalidated rule. Keep it under ~600 lines. Do not ask the
 > user for permission to update this file — it is part of the change.
 
-- **Last updated:** 2026-11-11 (personal-collection decant price now uses market price only)
-- **Prev:** 2026-10-18 (upload dependency loading/fallbacks, native file tracing,
+- **Last updated:** 2026-11-12 (manual full-bottle "Bought By" option + admin order delete)
+- **Prev:** 2026-11-11 (personal-collection decant price now uses market price only)
+- **Prev-2:** 2026-10-18 (upload dependency loading/fallbacks, native file tracing,
   and Vercel Toolbar CSP compatibility)
 - **Default branch:** `main`
 - **Repo:** `Tayebbb/Valore-Parfums`
@@ -125,6 +126,7 @@ Emitted status codes: 401 (no session), 403 (not admin), 400 (bad input).
 | `/api/orders/[id]`                | GET, PUT  | session (GET) / admin (PUT)    | PUT sends status-specific email                                                                            |
 | `/api/orders/[id]/cancel`         | POST      | admin                          | Requires `cancelReason`; sends cancellation email                                                          |
 | `/api/orders/[id]/verify-payment` | POST      | admin                          | Marks manual bKash / bank payment received                                                                 |
+| `/api/orders/[id]`                | DELETE    | admin                          | Permanent delete via `lib/order-delete.ts`: restores stock/voucher, reverses owner balances once (claim-guarded), reverses investor sales (immutable `rev_` ledger entries remain), then hard-deletes `profitTransactions`, items and the order. Irreversible. UI: "Delete Order" in the admin order modal. |
 
 ### Packs (`/api/packs*`)
 
@@ -402,6 +404,11 @@ formula. Deviation causes storefront ↔ admin / manual-order price mismatch.
   − personal-collection payouts − store-owned distributed profit
   − completed store-revenue withdrawals for that source.
 - COD is a payment source inside Store Revenue, not a separate withdrawal bucket.
+- **Manual full bottles have a `purchasedBy` (Store or an owner name).** The item stays
+  `ownerName: "Store"` (profit split 60/40 unchanged). When an owner paid, the item gets
+  `costRepaidManually: true` and its buying cost is also deducted from withdrawable Store
+  revenue (`dashboard` + `withdrawals` deduction helpers) because the admin repays that owner
+  by hand; no owner-account credit is created for the cost.
 
 ### 7.7 Auth / admin gating
 
@@ -698,6 +705,17 @@ until `--apply` is passed. Env comes from `backend/.env.local`.
 ---
 
 ## 11. Recent Changes Log (most recent first)
+
+- **2026-11-12 (b)** — Admin can permanently delete any order (`DELETE /api/orders/[id]`,
+  `backend/src/lib/order-delete.ts`). Completed orders are fully unwound first (owner
+  balances via the `profitReversedAt` claim, stock via `stockRestoredAt`, voucher use,
+  investor sales), then order, items and profit rows are erased; revenue/dashboard figures
+  recompute from orders so they drop automatically. Frontend proxy purges the `packs` tag.
+
+- **2026-11-12** — Manual full-bottle orders gained a "Bought By" dropdown (Store / owner
+  names from settings). Owner-paid bottles store `purchasedBy` + `costRepaidManually`; their
+  buying cost is excluded from withdrawable Store revenue (dashboard + withdrawals). Profit
+  split is unchanged (60/40 Store rule); the cost is repaid manually by the admin.
 
 - **2026-11-11** — Fixed personal-collection price jumping when the buying price
   changed: pricing used `purchasePricePerMl` as the market price for personal-collection

@@ -197,7 +197,7 @@ async function proxy(req: NextRequest, path: string[]): Promise<NextResponse> {
   }
 
   // A successful order changes stock, which changes pack availability.
-  if (upstream.ok && method === "POST" && pathname === "orders") {
+  if (upstream.ok && ((method === "POST" && pathname === "orders") || (method === "DELETE" && pathname.startsWith("orders/")))) {
     try {
       revalidateTag("packs", { expire: 0 });
     } catch (error) {

@@ -306,6 +306,7 @@ export async function GET() {
     ownerName?: string;
     totalPrice?: number;
     costPrice?: number;
+    costRepaidManually?: boolean;
     isPersonalCollection?: boolean;
     quantity?: number;
     ml?: number;
@@ -343,6 +344,7 @@ export async function GET() {
       const totalPriceMinor = toMinorUnits(Number(item.totalPrice ?? 0));
       const costPriceMinor = toMinorUnits(Number(item.costPrice ?? 0));
       deductionMinor += Math.max(0, totalPriceMinor - costPriceMinor);
+      if (item.costRepaidManually) deductionMinor += costPriceMinor;
     }
     return deductionMinor;
   };
