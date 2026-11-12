@@ -37,10 +37,18 @@ export async function deleteOrderCompletely(id: string, adminId: string): Promis
         const bottleSnap = await tx.get(db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1));
         if (!bottleSnap.empty) bottleRefs.push({ ref: bottleSnap.docs[0].ref, quantity: Number(item.quantity || 0) });
       }
+      const perfumeSnaps = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+      for (const itemDoc of itemsSnap.docs) {
+        const item = itemDoc.data();
+        if (item.isFullBottle || !item.perfumeId || perfumeSnaps.has(item.perfumeId)) continue;
+        perfumeSnaps.set(item.perfumeId, await tx.get(db.collection(Collections.perfumes).doc(item.perfumeId)));
+      }
       for (const itemDoc of itemsSnap.docs) {
         const item = itemDoc.data();
         if (item.isFullBottle || !item.perfumeId) continue;
-        tx.update(db.collection(Collections.perfumes).doc(item.perfumeId), {
+        const pSnap = perfumeSnaps.get(item.perfumeId);
+        if (!pSnap?.exists) continue;
+        tx.update(pSnap.ref, {
           totalStockMl: FieldValue.increment(Number(item.ml || 0) * Number(item.quantity || 0)),
         });
       }
