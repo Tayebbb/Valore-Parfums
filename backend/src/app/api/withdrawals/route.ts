@@ -118,6 +118,7 @@ export async function POST(req: Request) {
     ownerName?: string;
     totalPrice?: number;
     costPrice?: number;
+    costRepaidManually?: boolean;
     isPersonalCollection?: boolean;
     quantity?: number;
     ml?: number;
@@ -156,6 +157,7 @@ export async function POST(req: Request) {
       const costPriceMinor = toMinorUnits(Number(item.costPrice ?? 0));
       const storeProfitMinor = Math.max(0, totalPriceMinor - costPriceMinor);
       deductionMinor += storeProfitMinor;
+      if (item.costRepaidManually) deductionMinor += costPriceMinor;
     }
     return deductionMinor;
   };

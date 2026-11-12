@@ -557,6 +557,15 @@ export async function POST(req: Request) {
     const costPrice = fromMinorUnits(itemBreakdown.totalCostMinor);
     const itemProfitMinor = itemBreakdown.computedProfitMinor;
     const owner = (manualAdminOrder && isFullBottleItem ? "Store" : (perfume?.owner || "Store")) as OwnerType;
+    // A person who paid for the bottle is repaid by hand, so the cost is kept out of Store revenue.
+    const requestedPurchaserRaw = String(item.purchasedBy || "Store").trim() || "Store";
+    if (requestedPurchaserRaw !== "Store" && requestedPurchaserRaw !== owner1Name && requestedPurchaserRaw !== owner2Name) {
+      return NextResponse.json({ error: `Invalid purchaser "${requestedPurchaserRaw}"` }, { status: 400 });
+    }
+    const requestedPurchaser = requestedPurchaserRaw;
+    const purchaserFields = requestedPurchaser !== "Store"
+      ? { purchasedBy: requestedPurchaser, costRepaidManually: true }
+      : { purchasedBy: "Store", costRepaidManually: false };
     const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
     const { ownerProfitMinor, otherOwnerProfitMinor } = splitProfitMinor(itemProfitMinor, ownerProfitPercent);
     let ownerProfit: number;
@@ -616,6 +625,7 @@ export async function POST(req: Request) {
         isFullBottle: isFullBottleItem,
         ...(isFullBottleItem ? { fullBottleSize: requestedFullBottleSize } : {}),
         ...(isFullBottleItem ? { fullBottleCondition: inferredFullBottleCondition } : {}),
+        ...(isFullBottleItem && manualAdminOrder ? purchaserFields : {}),
         quantity,
         unitPrice,
         totalPrice,

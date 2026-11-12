@@ -25,6 +25,7 @@ import {
   reverseInvestmentSalesForOrder,
 } from "@/lib/investments/orderIntegration";
 import { ownerRecognizedItemProfitMajor } from "@/lib/investments/finance";
+import { deleteOrderCompletely } from "@/lib/order-delete";
 import {
   STATUS_CONFIG,
   getDbValueForStatusKey,
@@ -129,6 +130,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 // PUT update order — admin only (handles status changes including profit crediting & cancellation)
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  try {
+    const result = await deleteOrderCompletely(id, admin.id);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+    return NextResponse.json({ success: true, id, reversedProfit: result.reversedProfit, restoredStock: result.restoredStock });
+  } catch (error) {
+    console.error("Order delete error:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to delete order" }, { status: 500 });
+  }
+}
+
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
