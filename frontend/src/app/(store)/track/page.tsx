@@ -33,6 +33,7 @@ interface OrderResult {
   totalAmount: number;
   discount: number;
   voucherCode?: string | null;
+  manualDiscountPercent?: number;
   finalAmount: number;
   pickupMethod: string;
   pickupContactNumber?: string;
@@ -293,8 +294,8 @@ export default function TrackOrderPage() {
           <div className="col-span-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2.5">
             <span className="text-[var(--text-muted)]">Total</span>
             <p className="font-serif text-[var(--gold)]">{(order.finalAmount ?? 0).toLocaleString("en-BD")} BDT</p>
-            {Boolean(order.voucherCode) && (order.discount ?? 0) > 0 && (
-              <p className="text-[10px] text-[var(--success)]">-{(order.discount ?? 0).toLocaleString("en-BD")} via {order.voucherCode}</p>
+            {(order.discount ?? 0) > 0 && (
+              <p className="text-[10px] text-[var(--success)]">Discount {order.voucherCode || (order.manualDiscountPercent ? `(${order.manualDiscountPercent}%)` : "")} −{order.discount.toLocaleString("en-BD")} BDT</p>
             )}
             {Boolean(order.voucherCode) && (order.discount ?? 0) <= 0 && (
               <p className="text-[10px] text-[var(--text-muted)]">Voucher {order.voucherCode} will apply after pricing confirmation</p>

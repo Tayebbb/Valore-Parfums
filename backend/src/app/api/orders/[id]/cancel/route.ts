@@ -135,7 +135,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const bottleRefs: Array<{ ref: FirebaseFirestore.DocumentReference; quantity: number }> = [];
       for (const itemDoc of itemsSnap.docs) {
         const item = itemDoc.data();
-        if (item.isFullBottle) continue;
+        if (item.isFullBottle || !item.perfumeId || (item.addedByAdmin && !item.inventoryReserved)) continue;
         const bottleSnap = await tx.get(
           db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1),
         );
@@ -145,7 +145,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
       for (const itemDoc of itemsSnap.docs) {
         const item = itemDoc.data();
-        if (item.isFullBottle) continue;
+        if (item.isFullBottle || !item.perfumeId || (item.addedByAdmin && !item.inventoryReserved)) continue;
         tx.update(db.collection(Collections.perfumes).doc(item.perfumeId), {
           totalStockMl: FieldValue.increment(item.ml * item.quantity),
         });

@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins, normalizeOrderImagePath } from "@/lib/utils";
-import type { OwnerType } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { validateBatch, validateEmail, validatePhone, validateString } from "@/lib/validation";
 import { generateOrderConfirmationEmail, generatePickupConfirmationEmail, generateAdminNewOrderAlertEmail, pickPackEmailFields, sendEmail } from "@/lib/email";
-import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, splitProfitMinor, toMinorUnits } from "@/lib/finance";
-import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
+import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, orderDiscountMinor, toMinorUnits } from "@/lib/finance";
+import { calculateDiscountedPayouts, calculateItemOwnerShares } from "@/lib/ownerEarnings";
 import { invalidatePackCaches } from "@/lib/api-cache";
 import { parsePackRequests, preparePackOrderLines } from "@/lib/packs/order";
 import type { PackComponentMeta, PackOrderLine } from "@/lib/packs/order";
@@ -183,7 +182,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     // `packs` is pulled out of the body so client input can never reach the order doc via ...orderData.
-    const { items: rawItems, packs: rawPacks, voucherCode: rawVoucherCode, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
+    const { items: rawItems, packs: rawPacks, voucherCode: rawVoucherCode, manualDiscountPercent, paymentMethod, bkashPayment, bankPayment, ...orderData } = body;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = Array.isArray(rawItems) ? rawItems : [];
     const sessionUser = await getSessionUser();
@@ -206,6 +205,15 @@ export async function POST(req: Request) {
     if (manualAdminOrder) {
       const admin = await requireAdmin();
       if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (manualDiscountPercent !== undefined) {
+      if (!manualAdminOrder || typeof manualDiscountPercent !== "number" || !Number.isFinite(manualDiscountPercent)
+        || manualDiscountPercent < 0 || manualDiscountPercent > 100) {
+        return NextResponse.json({ error: "Manual order discounts must be a percentage between 0 and 100" }, { status: 400 });
+      }
+      if (manualDiscountPercent > 0 && voucherCode) {
+        return NextResponse.json({ error: "Choose either a voucher or a manual discount" }, { status: 400 });
+      }
     }
 
     const pickupMethod = String(orderData.pickupMethod || "Pickup");
@@ -409,7 +417,6 @@ export async function POST(req: Request) {
       }
       packLines = preparedPacks.lines;
     }
-    const hasPacks = packLines.length > 0;
     // Server-created component items → pack metadata. WeakMap keyed by object identity so a
     // client-supplied cart item can never claim pack pricing.
     const packMetaByItem = new WeakMap<object, PackComponentMeta>();
@@ -423,6 +430,21 @@ export async function POST(req: Request) {
     // are collected here instead of being applied mid-loop.
     const perfumeStockNeeds = new Map<string, number>();
     const bottleStockNeeds = new Map<string, number>();
+
+    // Resolve manual catalog selections before any of the item writes. Custom bottles have no catalog ID.
+    const manualPerfumes = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+    if (manualAdminOrder) {
+      const ids = [...new Set(items.map(item => String(item.perfumeId || "").trim()).filter(Boolean))];
+      if (ids.length) {
+        const docs = await db.getAll(...ids.map(id => db.collection(Collections.perfumes).doc(id)));
+        for (const doc of docs) {
+          if (!doc.exists) {
+            return NextResponse.json({ error: "The selected perfume is no longer in the catalog. Please select it again." }, { status: 409 });
+          }
+          manualPerfumes.set(doc.id, doc);
+        }
+      }
+    }
 
     // Load bulk pricing rules — fetch all, filter/sort in memory to avoid composite index
     const bulkSnap = await db.collection(Collections.bulkPricingRules).get();
@@ -453,14 +475,16 @@ export async function POST(req: Request) {
 
       // Fetch perfume (replaces prisma.perfume.findUnique)
       const perfumeId = String(item.perfumeId || "").trim();
-      const quantity = Math.floor(Number(item.quantity));
-      if (!Number.isFinite(quantity) || quantity <= 0) continue;
+      const quantity = Number(item.quantity);
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+        return NextResponse.json({ error: "Quantity must be a positive whole number" }, { status: 400 });
+      }
       let perfume: ({ id: string } & Record<string, unknown>) | null = null;
       let perfumeImage = "";
       if (perfumeId) {
-        const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
+        const perfumeDoc = manualPerfumes.get(perfumeId) ?? await db.collection(Collections.perfumes).doc(perfumeId).get();
         if (!perfumeDoc.exists) {
-          if (!manualAdminOrder || !isFullBottleItem) continue;
+          return NextResponse.json({ error: "A selected perfume is no longer in the catalog. Refresh your order." }, { status: 409 });
         } else {
           perfume = { id: perfumeDoc.id, ...perfumeDoc.data() };
           const perfumeImages: string[] = (() => {
@@ -473,7 +497,7 @@ export async function POST(req: Request) {
           perfumeImage = normalizeOrderImagePath(perfumeImages[0]);
         }
       } else if (!manualAdminOrder || !isFullBottleItem) {
-        continue;
+        return NextResponse.json({ error: "Select a catalog perfume for each item" }, { status: 400 });
       }
 
     // Fetch bottle (replaces prisma.bottleInventory.findUnique by ml)
@@ -503,9 +527,9 @@ export async function POST(req: Request) {
     const hasAdminUnitCost = manualAdminOrder && Number.isFinite(adminProvidedUnitCost);
 
     let unitPrice = isFullBottleItem
-      ? Math.max(0, Math.round(Number(item.unitPrice ?? item.sellingPrice ?? 0)))
+      ? (hasAdminUnitPrice ? Math.max(0, fromMinorUnits(toMinorUnits(adminProvidedUnitPrice))) : 0)
       : hasAdminUnitPrice
-        ? Math.max(0, Math.round(adminProvidedUnitPrice))
+        ? Math.max(0, fromMinorUnits(toMinorUnits(adminProvidedUnitPrice)))
         : isPartialDeal
           ? Math.ceil(Math.max(0, partialSellingPrice))
           : calculateSellingPrice(
@@ -531,16 +555,16 @@ export async function POST(req: Request) {
     }
 
     const unitCost = isFullBottleItem
-      ? Math.max(0, Math.round(Number(item.costPrice ?? item.buyingPrice ?? 0)))
+      ? (hasAdminUnitCost ? Math.max(0, fromMinorUnits(toMinorUnits(adminProvidedUnitCost))) : 0)
       : hasAdminUnitCost
-        ? Math.max(0, Math.round(adminProvidedUnitCost))
+        ? Math.max(0, fromMinorUnits(toMinorUnits(adminProvidedUnitCost)))
         : ((Number(perfume?.purchasePricePerMl || 0)) * requestedFullBottleMl + packagingCost + bottleCost);
 
     // Owner voucher override: sell at cost price (no profit).
     // Applied after bulk discount and cost calculation, but skipped for full-bottle
     // orders where the admin still needs to manually confirm final pricing later.
     if (isOwnerVoucher && !isFullBottleItem) {
-      unitPrice = Math.max(0, Math.round(unitCost));
+      unitPrice = Math.max(0, fromMinorUnits(toMinorUnits(unitCost)));
     }
 
     if (isFullBottleItem && manualAdminOrder) {
@@ -555,8 +579,6 @@ export async function POST(req: Request) {
     });
     const totalPrice = fromMinorUnits(itemBreakdown.totalRevenueMinor);
     const costPrice = fromMinorUnits(itemBreakdown.totalCostMinor);
-    const itemProfitMinor = itemBreakdown.computedProfitMinor;
-    const owner = (manualAdminOrder && isFullBottleItem ? "Store" : (perfume?.owner || "Store")) as OwnerType;
     // A person who paid for the bottle is repaid by hand, so the cost is kept out of Store revenue.
     const requestedPurchaserRaw = String(item.purchasedBy || "Store").trim() || "Store";
     if (requestedPurchaserRaw !== "Store" && requestedPurchaserRaw !== owner1Name && requestedPurchaserRaw !== owner2Name) {
@@ -566,55 +588,16 @@ export async function POST(req: Request) {
     const purchaserFields = requestedPurchaser !== "Store"
       ? { purchasedBy: requestedPurchaser, costRepaidManually: true }
       : { purchasedBy: "Store", costRepaidManually: false };
-    const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
-    const { ownerProfitMinor, otherOwnerProfitMinor } = splitProfitMinor(itemProfitMinor, ownerProfitPercent);
-    let ownerProfit: number;
-    let otherOwnerProfit: number;
-    if (owner !== "Store" && isPersonalCollection) {
-      // Derive the liquid/product cost from the actual unit cost minus packaging + bottle.
-      // For auto-priced decants, unitCost = purchasePricePerMl*ml + packaging + bottle, so this
-      // recovers purchasePricePerMl*ml. For manual admin orders (where perfume.purchasePricePerMl
-      // may be 0), this correctly credits the whole liquid portion of the admin-provided cost
-      // to the bottle owner instead of leaving them with only 85% of the profit.
-      const perUnitPackaging = packagingCost + bottleCost;
-      const perUnitProductCost = Math.max(0, unitCost - perUnitPackaging);
-      const earningsResult = calculatePersonalBottleEarnings({
-        sellingPrice: totalPrice,
-        packagingCost: perUnitPackaging * quantity,
-        productCost: perUnitProductCost * quantity,
-      });
-      ownerProfit = earningsResult.bottleOwnerEarnings;
-      otherOwnerProfit = earningsResult.otherOwnerEarnings;
-    } else if (owner === "Store") {
-      // Store-owned: split profit 60/40 between owner1 (Tayeb) and owner2 (Enid)
-      const { ownerProfitMinor: o1Minor, otherOwnerProfitMinor: o2Minor } = splitProfitMinor(itemProfitMinor, owner1Share);
-      ownerProfit = fromMinorUnits(o1Minor);     // owner1 (Tayeb) 60%
-      otherOwnerProfit = fromMinorUnits(o2Minor); // owner2 (Enid) 40%
-    } else {
-      ownerProfit = fromMinorUnits(ownerProfitMinor);
-      otherOwnerProfit = fromMinorUnits(otherOwnerProfitMinor);
-    }
+    const owner = String(perfume?.owner || "Store");
+    const { ownerProfit, otherOwnerProfit } = calculateItemOwnerShares({
+      ownerName: owner, isPersonalCollection, breakdown: itemBreakdown, unitCost,
+      packagingCostPerUnit: Number(packagingCost) + Number(bottleCost),
+      owner1Share, ownerProfitPercent: Number(settings?.ownerProfitPercent ?? 85),
+    });
 
-    if (hasPacks) {
-      // Deferred: validated + applied atomically with the order write (transaction below).
-      if (!isFullBottleItem) {
-        perfumeStockNeeds.set(perfumeId, (perfumeStockNeeds.get(perfumeId) || 0) + requestedFullBottleMl * quantity);
-        if (bottle) bottleStockNeeds.set(bottle.id, (bottleStockNeeds.get(bottle.id) || 0) + quantity);
-      }
-    } else {
-    // Deduct stock (replaces prisma.perfume.update with decrement)
     if (!isFullBottleItem) {
-      await db.collection(Collections.perfumes).doc(perfumeId).update({
-        totalStockMl: FieldValue.increment(-(requestedFullBottleMl * quantity)),
-      });
-    }
-
-    // Deduct bottle (replaces prisma.bottleInventory.update with decrement)
-    if (!isFullBottleItem && bottle && bottle.availableCount > 0) {
-      await db.collection(Collections.bottles).doc(bottle.id).update({
-        availableCount: FieldValue.increment(-quantity),
-      });
-    }
+      perfumeStockNeeds.set(perfumeId, (perfumeStockNeeds.get(perfumeId) || 0) + requestedFullBottleMl * quantity);
+      if (bottle) bottleStockNeeds.set(bottle.id, (bottleStockNeeds.get(bottle.id) || 0) + quantity);
     }
 
       orderItems.push({
@@ -658,35 +641,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No valid items found in cart" }, { status: 400 });
     }
 
-    // Apply voucher (replaces prisma.voucher.findUnique + update)
-    let discountMinor = 0;
-    let voucherIdToIncrement: string | null = null;
     const subtotalMinor = orderItems.reduce((sum, item) => sum + item.financialBreakdown.totalRevenueMinor, 0);
+    let discountMinor = orderDiscountMinor(subtotalMinor, "percentage", manualDiscountPercent ?? 0);
+    let voucherVersion: FirebaseFirestore.Timestamp | undefined;
+    let redeemedVoucherRef: FirebaseFirestore.DocumentReference | undefined;
     if (voucherCode && !isOwnerVoucher) {
-    const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
-    if (!voucherSnap.empty) {
+      const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
       const voucherDoc = voucherSnap.docs[0];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const voucher = voucherDoc.data() as any;
-      if (voucher.isActive) {
-        if (voucher.discountType === "percentage") {
-          discountMinor = Math.round(subtotalMinor * (Number(voucher.discountValue || 0) / 100));
-        } else {
-          discountMinor = toMinorUnits(Number(voucher.discountValue || 0));
-        }
-        // Increment usage count (with packs: after the order transaction succeeds)
-        if (hasPacks) {
-          voucherIdToIncrement = voucherDoc.id;
-        } else {
-          await db.collection(Collections.vouchers).doc(voucherDoc.id).update({
-            usedCount: FieldValue.increment(1),
-          });
-        }
+      const voucher = voucherDoc?.data();
+      if (!voucher?.isActive || (voucher.expiresAt && (voucher.expiresAt.toMillis?.() ?? new Date(voucher.expiresAt).getTime()) < Date.now())
+        || (voucher.usageLimit != null && Number(voucher.usedCount || 0) >= Number(voucher.usageLimit))) {
+        return NextResponse.json({error: "Voucher unavailable"}, {status: 409});
       }
+      const meetsMinimum = subtotalMinor >= toMinorUnits(Number(voucher.minOrderValue ?? 0));
+      if (!meetsMinimum && !hasFullBottle) return NextResponse.json({error: "Voucher minimum order value not reached"}, {status: 400});
+      voucherVersion = voucherDoc.updateTime;
+      discountMinor = meetsMinimum ? orderDiscountMinor(subtotalMinor, voucher.discountType, Number(voucher.discountValue)) : 0;
+      redeemedVoucherRef = voucherDoc.ref;
     }
-  }
 
-    discountMinor = Math.max(0, Math.min(discountMinor, subtotalMinor));
     const deliveryFeeMinor = toMinorUnits(isDelivery ? deliveryFee : 0);
     const totalCostMinor = orderItems.reduce((sum, item) => sum + item.financialBreakdown.totalCostMinor, 0);
     const pricingSnapshot = buildOrderPricingSnapshot({
@@ -699,13 +672,13 @@ export async function POST(req: Request) {
     const discount = fromMinorUnits(pricingSnapshot.discountMinor);
     const total = fromMinorUnits(pricingSnapshot.totalMinor);
     const profit = fromMinorUnits(pricingSnapshot.totalProfitMinor);
+    const payouts = calculateDiscountedPayouts(orderItems, pricingSnapshot.discountMinor, owner1Share, Number(settings?.ownerProfitPercent ?? 85));
+    payouts.forEach((payout, index) => Object.assign(orderItems[index], {
+      payoutIndex: index, payoutRevenue: payout.payoutRevenue, payoutOwner1Share: payout.payoutOwner1Share,
+      ownerProfit: payout.ownerProfit, otherOwnerProfit: payout.otherOwnerProfit,
+    }));
     const profitDistribution = distributeOrderProfit({
-      items: orderItems.map((item) => ({
-        ownerName: item.ownerName,
-        computedProfitMinor: item.financialBreakdown.computedProfitMinor,
-        ownerProfitMinor: item.ownerName === "Store" ? 0 : toMinorUnits(item.ownerProfit),
-        otherOwnerProfitMinor: item.ownerName === "Store" ? 0 : toMinorUnits(item.otherOwnerProfit),
-      })),
+      items: payouts.map(payout => payout.distribution),
       owner1Name,
       owner2Name,
       owner1Share,
@@ -767,6 +740,11 @@ export async function POST(req: Request) {
       }
       : null,
     voucherCode: voucherCode || null,
+    voucherAppliedAt: redeemedVoucherRef ? now : null,
+    recalculateDiscountOnEdit: true,
+    useCatalogOwnershipOnEdit: true,
+    payoutOwner1Share: owner1Share,
+    ...(manualDiscountPercent > 0 ? { manualDiscountPercent } : {}),
     discount,
     subtotal,
     total,
@@ -787,13 +765,13 @@ export async function POST(req: Request) {
     financialsLocked: false,
     // Immutable pack snapshot (names, components, discount, prices at purchase time). Written after
     // the ...orderData spread; contains no cost/profit data. Historical views read THIS, never the live pack.
-    ...(hasPacks ? { packs: packLines.map((line) => line.snapshot) } : {}),
+    ...(packLines.length > 0 ? { packs: packLines.map((line) => line.snapshot) } : {}),
     createdAt: now,
     updatedAt: now,
     };
     const itemIds = orderItems.map(() => uuid());
 
-    if (hasPacks) {
+    {
       // Atomic: validate stock for EVERY affected perfume/atomiser, then write the order, all item
       // docs, the stock decrements and the totalOrders counters in one transaction. A shortage (or
       // any failure) leaves inventory and orders exactly as they were.
@@ -806,6 +784,16 @@ export async function POST(req: Request) {
             bottleEntries.length ? tx.getAll(...bottleEntries.map((e) => e.ref)) : Promise.resolve([]),
           ]);
 
+          if (redeemedVoucherRef) {
+            const current = await tx.get(redeemedVoucherRef);
+            if (!current.exists || (voucherVersion && !voucherVersion.isEqual(current.updateTime!))) {
+              throw new OrderStockError("Voucher availability changed. Please refresh your order.");
+            }
+            if (current.data()?.firstOrderOnly) {
+              const previous = await tx.get(db.collection(Collections.orders).where("customerEmail", "==", recipientEmail).limit(1));
+              if (!previous.empty) throw new OrderStockError("Voucher is for first orders only");
+            }
+          }
           perfumeSnaps.forEach((snap, i) => {
             const stock = Number(snap.data()?.totalStockMl ?? 0);
             if (!snap.exists || stock < perfumeEntries[i].need) {
@@ -829,6 +817,7 @@ export async function POST(req: Request) {
             );
           });
           tx.set(db.collection(Collections.orders).doc(orderId), orderDoc);
+          if (redeemedVoucherRef) tx.update(redeemedVoucherRef, { usedCount: FieldValue.increment(1) });
           orderItems.forEach((oi, index) => {
             tx.set(db.collection(Collections.orders).doc(orderId).collection("items").doc(itemIds[index]), { ...oi, orderId });
           });
@@ -840,13 +829,8 @@ export async function POST(req: Request) {
         }
         throw error;
       }
-      if (voucherIdToIncrement) {
-        await db.collection(Collections.vouchers).doc(voucherIdToIncrement).update({ usedCount: FieldValue.increment(1) });
-      }
       // Stock changed → pack availability changed.
       invalidatePackCaches();
-    } else {
-      await db.collection(Collections.orders).doc(orderId).set(orderDoc);
     }
 
     if (isBankManualPayment) {
@@ -877,30 +861,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (!hasPacks && orderCountByPerfume.size > 0) {
-      await Promise.all(
-        Array.from(orderCountByPerfume.entries()).map(([perfumeId, count]) =>
-          db.collection(Collections.perfumes).doc(perfumeId).set(
-            {
-              totalOrders: FieldValue.increment(count),
-              lastOrderedAt: now,
-              updatedAt: now,
-            },
-            { merge: true },
-          ),
-        ),
-      );
-    }
-
-    // Create items as subcollection (replaces Prisma nested create)
-    const createdItems = [];
-    for (const [index, oi] of orderItems.entries()) {
-      const itemId = itemIds[index];
-      if (!hasPacks) {
-        await db.collection(Collections.orders).doc(orderId).collection("items").doc(itemId).set({ ...oi, orderId });
-      }
-      createdItems.push({ id: itemId, ...oi });
-    }
+    const createdItems = orderItems.map((item, index) => ({ ...item, id: itemIds[index] }));
 
     // Send confirmation email (awaited to prevent function termination in serverless environment)
     const customerEmail = String(orderDoc.customerEmail || "").trim();

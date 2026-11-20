@@ -21,7 +21,24 @@ import { EnidPaymentBalance, OrderPaymentHolder, useOrderPayments } from "@/comp
 import type { CourierSlipData } from "@/components/admin/CourierSlip";
 import { describeOrderLines, groupOrderItems } from "@/lib/packs-order";
 import type { OrderItemPackFields } from "@/lib/packs-order";
+import { fromMinorUnits, orderDiscountMinor, toMinorUnits } from "@/lib/finance";
 import type { PackOrderSnapshot } from "@/types/pack";
+
+function roundMoney(amount: number) {
+  return fromMinorUnits(toMinorUnits(amount));
+}
+
+async function fetchCatalogPrice(perfumeId: string, ml: number) {
+  const res = await fetch(`/api/pricing?perfumeId=${encodeURIComponent(perfumeId)}`);
+  if (!res.ok) throw new Error("Catalog price unavailable");
+  const data = await res.json();
+  const prices = Array.isArray(data) ? data : data.prices;
+  const price = prices?.find((row: { ml: number }) => Number(row.ml) === ml);
+  if (!price || !Number.isFinite(price.sellingPrice) || !Number.isFinite(price.totalCost)) {
+    throw new Error("No price for the selected size");
+  }
+  return { sellingPrice: String(roundMoney(price.sellingPrice)), buyingPrice: String(roundMoney(price.totalCost)) };
+}
 
 interface OrderItem extends OrderItemPackFields {
   id: string;
@@ -73,6 +90,7 @@ interface Order {
   pickupContactNumber?: string;
   status: string;
   voucherCode: string | null;
+  manualDiscountPercent?: number;
   discount: number;
   subtotal: number;
   total: number;
@@ -218,6 +236,7 @@ const createManualFullBottleOrderDraft = () => ({
   deliveryZone: "Inside Dhaka",
   deliveryAddress: "",
   deliveryFee: "",
+  discountPercent: "",
   paymentType: DEFAULT_PAYMENT_TYPE as PaymentType,
   items: [createManualFullBottleItemDraft()],
 });
@@ -367,6 +386,13 @@ export default function OrdersPage() {
   }, []);
 
   const fmt = (n: number) => n.toLocaleString("en-BD");
+  const manualSubtotal = manualFullBottleDraft.items.reduce((sum, item) =>
+    sum + Math.max(0, roundMoney(Number(item.sellingPrice) || 0)) * Math.max(1, Math.floor(Number(item.quantity) || 1)), 0);
+  const manualCost = manualFullBottleDraft.items.reduce((sum, item) =>
+    sum + Math.max(0, Number(item.buyingPrice) || 0) * Math.max(1, Math.floor(Number(item.quantity) || 1)), 0);
+  const manualRate = Number(manualFullBottleDraft.discountPercent);
+  const validManualRate = Number.isFinite(manualRate) && manualRate >= 0 && manualRate <= 100;
+  const manualDiscount = validManualRate ? fromMinorUnits(orderDiscountMinor(toMinorUnits(manualSubtotal), "percentage", manualRate)) : 0;
   const getOrderProfit = (order: Order) => {
     const minorProfit = Number(order.financialsMinor?.totalProfitMinor);
     if (Number.isFinite(minorProfit)) {
@@ -493,8 +519,8 @@ export default function OrdersPage() {
         if (sellingDraft === undefined && buyingDraft === undefined) return null;
 
         const quantity = Math.max(1, Number(item.quantity ?? 1));
-        const currentSelling = Math.round(Number(item.unitPrice ?? 0));
-        const currentBuying = Math.round(Number(item.costPrice ?? 0) / quantity);
+        const currentSelling = roundMoney(Number(item.unitPrice ?? 0));
+        const currentBuying = roundMoney(Number(item.costPrice ?? 0) / quantity);
 
         const parsedSelling = sellingDraft === undefined ? currentSelling : Number(sellingDraft);
         const parsedBuying = buyingDraft === undefined ? currentBuying : Number(buyingDraft);
@@ -503,8 +529,8 @@ export default function OrdersPage() {
           return { invalid: true };
         }
 
-        const roundedSelling = Math.round(parsedSelling);
-        const roundedBuying = Math.round(parsedBuying);
+        const roundedSelling = roundMoney(parsedSelling);
+        const roundedBuying = roundMoney(parsedBuying);
         if (roundedSelling === currentSelling && roundedBuying === currentBuying) return null;
 
         return { itemId: item.id, unitPrice: roundedSelling, buyingPrice: roundedBuying };
@@ -681,28 +707,16 @@ export default function OrdersPage() {
   const fetchDecantPricingForItem = async (itemIndex: number, perfumeId: string, ml: number) => {
     if (!perfumeId || !(ml > 0)) return;
     setManualPricingLoading((prev) => ({ ...prev, [itemIndex]: true }));
-    let unitPrice = 0;
-    let costPrice = 0;
     try {
-      const res = await fetch(`/api/pricing?perfumeId=${encodeURIComponent(perfumeId)}`);
-      if (res.ok) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = await res.json() as any;
-        const prices = Array.isArray(data.prices) ? data.prices : (Array.isArray(data) ? data : []);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const match = prices.find((p: any) => Number(p.ml) === Number(ml));
-        if (match) {
-          unitPrice = Math.round(Number(match.sellingPrice) || 0);
-          costPrice = Math.round(Number(match.totalCost) || 0);
-        }
-      }
-    } catch { /* ignore */ }
-    setManualFullBottleDraft((prev) => ({
-      ...prev,
-      items: prev.items.map((draft, idx) => idx === itemIndex && draft.itemType === "decant"
-        ? { ...draft, sellingPrice: String(unitPrice), buyingPrice: String(costPrice) }
-        : draft),
-    }));
+      const price = await fetchCatalogPrice(perfumeId, ml);
+      setManualFullBottleDraft((prev) => ({
+        ...prev,
+        items: prev.items.map((draft, idx) => idx === itemIndex && draft.itemType === "decant" &&
+          draft.perfumeId === perfumeId && Number(draft.sizeMl) === ml ? { ...draft, ...price } : draft),
+      }));
+    } catch {
+      toast("Could not load the decant price. Select the perfume or size again.", "error");
+    }
     setManualPricingLoading((prev) => {
       const next = { ...prev };
       delete next[itemIndex];
@@ -717,13 +731,17 @@ export default function OrdersPage() {
   };
 
   const submitManualFullBottleOrder = async () => {
+    if (!validManualRate) {
+      toast("Enter a discount between 0% and 100%", "error");
+      return;
+    }
     const customerName = manualFullBottleDraft.customerName.trim();
     const customerPhone = manualFullBottleDraft.customerPhone.trim();
     const customerEmail = manualFullBottleDraft.customerEmail.trim();
     const pickupMethod = manualFullBottleDraft.pickupMethod;
     const deliveryZone = manualFullBottleDraft.deliveryZone;
     const deliveryAddress = manualFullBottleDraft.deliveryAddress.trim();
-    const deliveryFee = Math.max(0, Math.round(Number(manualFullBottleDraft.deliveryFee) || 0));
+    const deliveryFee = Math.max(0, roundMoney(Number(manualFullBottleDraft.deliveryFee) || 0));
 
     if (!customerName) {
       toast("Customer name is required", "error");
@@ -742,13 +760,17 @@ export default function OrdersPage() {
       return;
     }
 
+    if (manualFullBottleDraft.items.some(item => item.itemType === "decant" && (!item.buyingPrice.trim() || !item.sellingPrice.trim()))) {
+      toast("Load a catalog price for each decant before creating the order.", "error");
+      return;
+    }
     const normalizedItems = manualFullBottleDraft.items.map((draft, index) => {
       const perfume = manualFullBottlePerfumes.find((entry) => entry.id === draft.perfumeId);
       const customPerfumeName = draft.customPerfumeName.trim();
       const sizeMl = Math.max(0, Math.round(Number(draft.sizeMl) || 0));
       const quantity = Math.max(1, Math.floor(Number(draft.quantity) || 1));
-      const buyingPrice = Math.max(0, Math.round(Number(draft.buyingPrice) || 0));
-      const sellingPrice = Math.max(0, Math.round(Number(draft.sellingPrice) || 0));
+      const buyingPrice = Math.max(0, Number(draft.buyingPrice) || 0);
+      const sellingPrice = Math.max(0, roundMoney(Number(draft.sellingPrice) || 0));
 
       return {
         index,
@@ -794,6 +816,7 @@ export default function OrdersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         manualAdminOrder: true,
+        ...(manualRate > 0 ? { manualDiscountPercent: manualRate } : {}),
         customerName,
         customerPhone,
         customerEmail,
@@ -867,24 +890,16 @@ export default function OrdersPage() {
   const addSizeFromCatalog = async (perfumeId: string, perfumeName: string, ml: number) => {
     const key = `${perfumeId}-${ml}`;
     setAddingCatalogKey(key);
-    let unitPrice = 0;
-    let costPrice = 0;
     try {
-      const res = await fetch(`/api/pricing?perfumeId=${encodeURIComponent(perfumeId)}`);
-      if (res.ok) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = await res.json() as any;
-        const prices = Array.isArray(data.prices) ? data.prices : (Array.isArray(data) ? data : []);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const match = prices.find((p: any) => p.ml === ml);
-        if (match) {
-          unitPrice = Math.round(match.sellingPrice || 0);
-          costPrice = Math.round(match.totalCost || 0);
-        }
-      }
-    } catch { /* ignore */ }
-    setAddingCatalogKey(null);
-    setNewItemDrafts((prev) => [...prev, { perfumeName, perfumeId, ml: String(ml), quantity: "1", unitPrice: String(unitPrice), costPrice: String(costPrice), isFullBottle: false, fullBottleCondition: "new" }]);
+      const price = await fetchCatalogPrice(perfumeId, ml);
+      setNewItemDrafts((prev) => [...prev, { perfumeName, perfumeId, ml: String(ml), quantity: "1",
+        unitPrice: price.sellingPrice, costPrice: price.buyingPrice, isFullBottle: false, fullBottleCondition: "new" }]);
+    } catch {
+      toast("Could not load the catalog price. Try selecting the size again.", "error");
+      return;
+    } finally {
+      setAddingCatalogKey(null);
+    }
     setShowCatalog(false);
     setExpandedCatalogId(null);
   };
@@ -905,8 +920,8 @@ export default function OrdersPage() {
           ...(d.perfumeId ? { perfumeId: d.perfumeId } : {}),
           ml,
           quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
-          unitPrice: Math.max(0, Math.round(Number(d.unitPrice) || 0)),
-          costPrice: Math.max(0, Math.round(Number(d.costPrice) || 0)),
+          unitPrice: Math.max(0, roundMoney(Number(d.unitPrice) || 0)),
+          costPrice: Math.max(0, Number(d.costPrice) || 0),
           isFullBottle,
           ...(isFullBottle
             ? { fullBottleSize: `${ml}ml`, fullBottleCondition: d.fullBottleCondition }
@@ -1083,7 +1098,7 @@ export default function OrdersPage() {
     const initialBuyingDrafts = (order.items || []).reduce<Record<string, string>>((acc, item) => {
       if (item.isFullBottle) {
         const quantity = Math.max(1, Number(item.quantity ?? 1));
-        acc[item.id] = String(Math.round(Number(item.costPrice ?? 0) / quantity));
+        acc[item.id] = String(roundMoney(Number(item.costPrice ?? 0) / quantity));
       }
       return acc;
     }, {});
@@ -1316,7 +1331,7 @@ export default function OrdersPage() {
                     <div className="text-right">
                       <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
                       <p className="text-[10px] text-[var(--success)] mt-1">Profit: {fmt(getOrderProfit(o))}</p>
-                      {o.voucherCode && (o.discount ?? 0) > 0 && (
+                      {(o.discount ?? 0) > 0 && (
                         <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)}</p>
                       )}
                     </div>
@@ -1451,8 +1466,8 @@ export default function OrdersPage() {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <p className="font-serif text-[var(--gold)]">{fmt(o.total ?? 0)}</p>
-                        {o.voucherCode && (o.discount ?? 0) > 0 && (
-                          <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount ?? 0)} via {o.voucherCode}</p>
+                        {(o.discount ?? 0) > 0 && (
+                          <p className="text-[10px] text-[var(--success)]">-{fmt(o.discount)} {o.voucherCode ? `via ${o.voucherCode}` : o.manualDiscountPercent ? `(${o.manualDiscountPercent}%)` : ""}</p>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -2161,9 +2176,9 @@ export default function OrdersPage() {
                         <div className="text-xs text-[var(--text-secondary)]">
                           {item.perfumeName} ({item.fullBottleSize || "Custom"}) x {item.quantity}
                           <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                            Profit: {fmt(Math.round((
+                            Profit: {fmt(roundMoney((
                               (Number(manualPrices[item.id] ?? String(item.unitPrice ?? 0)) || 0)
-                              - (Number(manualBuyingPrices[item.id] ?? String(Math.round(Number(item.costPrice ?? 0) / Math.max(1, Number(item.quantity ?? 1))))) || 0)
+                              - (Number(manualBuyingPrices[item.id] ?? String(roundMoney(Number(item.costPrice ?? 0) / Math.max(1, Number(item.quantity ?? 1))))) || 0)
                             ) * Math.max(1, Number(item.quantity ?? 1))))} BDT
                           </p>
                         </div>
@@ -2172,7 +2187,8 @@ export default function OrdersPage() {
                           <input
                             type="number"
                             min={0}
-                            value={manualBuyingPrices[item.id] ?? String(Math.round(Number(item.costPrice ?? 0) / Math.max(1, Number(item.quantity ?? 1))))}
+                            step="0.01"
+                            value={manualBuyingPrices[item.id] ?? String(roundMoney(Number(item.costPrice ?? 0) / Math.max(1, Number(item.quantity ?? 1))))}
                             onChange={(e) => setManualBuyingPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
                             className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
                           />
@@ -2182,6 +2198,7 @@ export default function OrdersPage() {
                           <input
                             type="number"
                             min={0}
+                            step="0.01"
                             value={manualPrices[item.id] ?? String(item.unitPrice ?? 0)}
                             onChange={(e) => setManualPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
                             className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-2 py-1 text-xs text-right focus:border-[var(--gold)] outline-none"
@@ -2218,7 +2235,7 @@ export default function OrdersPage() {
                     <span>{fmt(selectedOrder.subtotal ?? 0)} BDT</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[var(--text-muted)]">Discount ({selectedOrder.voucherCode})</span>
+                    <span className="text-[var(--text-muted)]">Discount {selectedOrder.voucherCode ? `(${selectedOrder.voucherCode})` : selectedOrder.manualDiscountPercent ? `(${selectedOrder.manualDiscountPercent}%)` : ""}</span>
                     <span className="text-[var(--success)]">-{fmt(selectedOrder.discount ?? 0)} BDT</span>
                   </div>
                 </>
@@ -2445,7 +2462,7 @@ export default function OrdersPage() {
                                   const nextPerfumeId = e.target.value;
                                   setManualFullBottleDraft((prev) => ({
                                     ...prev,
-                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, perfumeId: nextPerfumeId } : draft),
+                                    items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, perfumeId: nextPerfumeId, ...(draft.itemType === "decant" ? { buyingPrice: "", sellingPrice: "" } : {}) } : draft),
                                   }));
                                   if (item.itemType === "decant" && nextPerfumeId && Number(item.sizeMl) > 0) {
                                     void fetchDecantPricingForItem(index, nextPerfumeId, Number(item.sizeMl));
@@ -2512,7 +2529,7 @@ export default function OrdersPage() {
                                     const nextSize = e.target.value;
                                     setManualFullBottleDraft((prev) => ({
                                       ...prev,
-                                      items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, sizeMl: nextSize } : draft),
+                                      items: prev.items.map((draft, itemIndex) => itemIndex === index ? { ...draft, sizeMl: nextSize, buyingPrice: "", sellingPrice: "" } : draft),
                                     }));
                                     if (item.perfumeId && Number(nextSize) > 0) {
                                       void fetchDecantPricingForItem(index, item.perfumeId, Number(nextSize));
@@ -2558,6 +2575,7 @@ export default function OrdersPage() {
                               <input
                                 type="number"
                                 min={0}
+                                step="0.01"
                                 value={item.buyingPrice}
                                 readOnly={item.itemType === "decant"}
                                 placeholder={item.itemType === "decant" && manualPricingLoading[index] ? "Loading…" : undefined}
@@ -2575,6 +2593,7 @@ export default function OrdersPage() {
                               <input
                                 type="number"
                                 min={0}
+                                step="0.01"
                                 value={item.sellingPrice}
                                 readOnly={item.itemType === "decant"}
                                 placeholder={item.itemType === "decant" && manualPricingLoading[index] ? "Loading…" : undefined}
@@ -2588,7 +2607,7 @@ export default function OrdersPage() {
                           </div>
 
                           <p className="text-xs text-[var(--text-muted)]">
-                            Item Profit: {fmt((Math.max(0, Math.round(Number(item.sellingPrice) || 0)) - Math.max(0, Math.round(Number(item.buyingPrice) || 0))) * Math.max(1, Math.floor(Number(item.quantity) || 1)))} BDT
+                            Item Profit: {fmt((Math.max(0, roundMoney(Number(item.sellingPrice) || 0)) - Math.max(0, Number(item.buyingPrice) || 0)) * Math.max(1, Math.floor(Number(item.quantity) || 1)))} BDT
                           </p>
                         </div>
                       ))}
@@ -2596,28 +2615,28 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div className="border border-[var(--border)] rounded p-4 bg-[var(--bg-surface)] flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Auto Calculated Profit</p>
-                    <p className="font-serif text-2xl text-[var(--success)] mt-1">
-                      {fmt(manualFullBottleDraft.items.reduce((sum, item) => {
-                        const sellingPrice = Math.max(0, Math.round(Number(item.sellingPrice) || 0));
-                        const buyingPrice = Math.max(0, Math.round(Number(item.buyingPrice) || 0));
-                        const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
-                        return sum + ((sellingPrice - buyingPrice) * quantity);
-                      }, 0))} BDT
-                    </p>
-                  </div>
-                  <div className="text-right text-xs text-[var(--text-muted)]">
-                    <p>Profit = Selling - Buying</p>
-                    <p>Summed across all order items</p>
-                  </div>
+                <div className="border border-[var(--border)] rounded p-4 bg-[var(--bg-surface)] space-y-3">
+                  <label className="flex items-center justify-between gap-4 text-sm">
+                    Order discount (%)
+                    <input type="number" min="0" max="100" step="any" placeholder="0"
+                      value={manualFullBottleDraft.discountPercent}
+                      onChange={(e) => setManualFullBottleDraft(prev => ({ ...prev, discountPercent: e.target.value }))}
+                      aria-invalid={!validManualRate}
+                      className="w-24 bg-[var(--bg-input)] border border-[var(--border)] rounded px-3 py-2 text-right focus:border-[var(--gold)] outline-none" />
+                  </label>
+                  {validManualRate ? (
+                    <dl className="space-y-1 text-sm">
+                      {manualDiscount > 0 && <div className="flex justify-between"><dt>Discount</dt><dd>−{fmt(manualDiscount)} BDT</dd></div>}
+                      <div className="flex justify-between"><dt>Items total before delivery</dt><dd>{fmt(manualSubtotal - manualDiscount)} BDT</dd></div>
+                      <div className="flex justify-between"><dt>Order profit</dt><dd>{fmt(manualSubtotal - manualDiscount - manualCost)} BDT</dd></div>
+                    </dl>
+                  ) : <p className="text-xs" role="alert">Enter a discount between 0% and 100%.</p>}
                 </div>
 
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={submitManualFullBottleOrder}
-                    disabled={manualFullBottleSubmitting}
+                    disabled={manualFullBottleSubmitting || !validManualRate}
                     className="flex-1 py-2 text-[10px] uppercase tracking-wider bg-[var(--gold)] text-black rounded hover:bg-[var(--gold-light)] transition-colors disabled:opacity-50"
                   >
                     {manualFullBottleSubmitting ? "Creating..." : "Create Order"}

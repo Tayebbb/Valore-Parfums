@@ -42,6 +42,11 @@ export function clampMinor(value: MoneyMinor, min = 0): MoneyMinor {
   return Math.max(min, Math.round(value));
 }
 
+export function orderDiscountMinor(subtotalMinor: MoneyMinor, type: "percentage" | "fixed", value: number): MoneyMinor {
+  const amount = type === "percentage" ? Math.round(subtotalMinor * value / 100) : toMinorUnits(value);
+  return clampMinor(Math.min(subtotalMinor, amount));
+}
+
 export function splitProfitMinor(profitMinor: MoneyMinor, ownerPercent: number): {
   ownerProfitMinor: MoneyMinor;
   otherOwnerProfitMinor: MoneyMinor;

@@ -28,14 +28,6 @@ type PricingPerfume = {
   totalStockMl: number;
 };
 
-function calcPartialDealCost(
-  purchasePricePerMl: number,
-  ml: number,
-): number {
-  const baseBuying = purchasePricePerMl * ml;
-  return Math.ceil(baseBuying * (ml / 100));
-}
-
 async function getPerfumesByIds(ids: string[]): Promise<PricingPerfume[]> {
   const chunkSize = 10;
   const chunks: string[][] = [];
@@ -91,9 +83,7 @@ export async function GET(req: Request) {
     const decant = computeDecantPrice(perfume, size.ml, { packagingCost, margins, bottleCost });
     const { sellingPrice, profitMargin, isPartialDeal } = decant;
     const partialType = decant.partialDealType ?? "";
-    const totalCost = isPartialDeal
-      ? calcPartialDealCost(perfume.purchasePricePerMl, size.ml)
-      : Math.ceil(perfume.purchasePricePerMl * size.ml + packagingCost);
+    const totalCost = Math.round((Number(perfume.purchasePricePerMl || 0) * size.ml + packagingCost + bottleCost) * 100) / 100;
     const profit = sellingPrice - totalCost;
     const ownerProfitPercent = config.ownerProfitPercent;
     const { ownerProfit, otherOwnerProfit } = splitProfit(profit, owner, ownerProfitPercent);

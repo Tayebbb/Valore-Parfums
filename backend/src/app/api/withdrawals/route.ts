@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     : "Owner's Profit";
   const paymentSource = paymentSourceInput === "Bkash" || paymentSourceInput === "Bank" || paymentSourceInput === "COD" ? paymentSourceInput : "";
 
-  if (!Number.isFinite(amount) || amount <= 0) {
+  if (!Number.isFinite(amount) || amount <= 0 || fromMinorUnits(toMinorUnits(amount)) !== amount) {
     return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
   }
   if (!ownerName || typeof ownerName !== "string") {
@@ -116,6 +116,7 @@ export async function POST(req: Request) {
   // and store-owned item profit (already distributed to owners).
   type RevenueDeductionItem = {
     ownerName?: string;
+    payoutRevenue?: number;
     totalPrice?: number;
     costPrice?: number;
     costRepaidManually?: boolean;
@@ -140,7 +141,7 @@ export async function POST(req: Request) {
       const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
       const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
       const result = calculatePersonalBottleEarnings({
-        sellingPrice: Number(item.totalPrice ?? 0),
+        sellingPrice: Number(item.payoutRevenue ?? item.totalPrice ?? 0),
         packagingCost: packagingTotal,
         productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
       });
@@ -153,7 +154,7 @@ export async function POST(req: Request) {
     let deductionMinor = 0;
     for (const item of items) {
       if ((item.ownerName || "Store") !== "Store") continue;
-      const totalPriceMinor = toMinorUnits(Number(item.totalPrice ?? 0));
+      const totalPriceMinor = toMinorUnits(Number(item.payoutRevenue ?? item.totalPrice ?? 0));
       const costPriceMinor = toMinorUnits(Number(item.costPrice ?? 0));
       const storeProfitMinor = Math.max(0, totalPriceMinor - costPriceMinor);
       deductionMinor += storeProfitMinor;
@@ -250,52 +251,39 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You can only withdraw from your own account" }, { status: 403 });
   }
 
-  const accountDoc = await db.collection(Collections.ownerAccounts).doc(ownerName).get();
-  const account = accountDoc.exists ? (accountDoc.data() as { totalEarned?: number }) : { totalEarned: 0 };
-  const wSnap = await db.collection(Collections.withdrawals).where("ownerName", "==", ownerName).get();
-  const totalWithdrawn = wSnap.docs.reduce((sum, doc) => {
-    const withdrawal = doc.data() as { withdrawFrom?: string; amount?: number };
-    if ((withdrawal.withdrawFrom ?? "Owner's Profit") !== "Owner's Profit") return sum;
-    return sum + Number(withdrawal.amount || 0);
-  }, 0);
-  const available = Number(account.totalEarned || 0) - totalWithdrawn;
-  if (amount > available) {
-    return NextResponse.json({ error: `Insufficient balance. Available: ${Math.round(available)} BDT` }, { status: 400 });
-  }
+  const accountRef = db.collection(Collections.ownerAccounts).doc(ownerName);
+  const withdrawalRef = db.collection(Collections.withdrawals).doc(uuid());
+  const ledgerRef = db.collection(Collections.profitTransactions).doc(uuid());
+  const result = await db.runTransaction(async tx => {
+    const [account, withdrawals] = await Promise.all([
+      tx.get(accountRef),
+      tx.get(db.collection(Collections.withdrawals).where("ownerName", "==", ownerName)),
+    ]);
+    const withdrawnMinor = withdrawals.docs.reduce((sum, doc) => {
+      const row = doc.data();
+      if ((row.status ?? "Completed") !== "Completed" || (row.withdrawFrom ?? "Owner's Profit") !== "Owner's Profit" ||
+          (row.withdrawalType ?? "profit") !== "profit") return sum;
+      return sum + toMinorUnits(Number(row.amount ?? 0));
+    }, 0);
+    const availableMinor = toMinorUnits(Number(account.get("totalEarned") ?? 0)) +
+      toMinorUnits(Number(account.get("storeShareEarned") ?? 0)) - withdrawnMinor;
+    if (toMinorUnits(amount) > availableMinor) return { error: `Insufficient balance. Available: ${fromMinorUnits(availableMinor)} BDT` };
 
-  const id = uuid();
-  const now = Timestamp.now();
-  const balanceAfter = Math.max(0, available - amount);
-  const data = {
-    amount,
-    ownerName,
-    withdrawFrom: "Owner's Profit",
-    paymentSource,
-    note,
-    withdrawnBy: admin.name,
-    approvals: [{ name: admin.name, email: admin.email, approvedAt: now }],
-    approvedBy: [admin.name],
-    status: "Completed",
-    balanceBefore: available,
-    balanceAfter,
-    createdAt: now,
-    updatedAt: now,
-    completedAt: now,
-  };
-
-  await db.collection(Collections.withdrawals).doc(id).set(data);
-
-  const txId = uuid();
-  await db.collection(Collections.profitTransactions).doc(txId).set({
-    orderId: null,
-    ownerName,
-    type: "withdrawal-profit",
-    amount: -amount,
-    paymentSource,
-    withdrawFrom: "Owner's Profit",
-    description: `Withdrawal by ${admin.name}${note ? `: ${note.slice(0, 200)}` : ""}`,
-    createdAt: now,
+    const now = Timestamp.now();
+    const data = {
+      amount, ownerName, withdrawFrom: "Owner's Profit", paymentSource, note,
+      withdrawnBy: admin.name, approvals: [{ name: admin.name, email: admin.email, approvedAt: now }],
+      approvedBy: [admin.name], status: "Completed", balanceBefore: fromMinorUnits(availableMinor),
+      balanceAfter: fromMinorUnits(availableMinor - toMinorUnits(amount)), createdAt: now, updatedAt: now, completedAt: now,
+    };
+    tx.set(accountRef, { lastWithdrawalAt: now }, { merge: true });
+    tx.create(withdrawalRef, data);
+    tx.create(ledgerRef, {
+      orderId: null, withdrawalId: withdrawalRef.id, ownerName, type: "withdrawal-profit", amount: -amount, paymentSource,
+      withdrawFrom: "Owner's Profit", description: `Withdrawal by ${admin.name}${note ? `: ${note.slice(0, 200)}` : ""}`, createdAt: now,
+    });
+    return { data };
   });
-
-  return NextResponse.json(serializeDoc({ id, ...data }), { status: 201 });
+  if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });
+  return NextResponse.json(serializeDoc({ id: withdrawalRef.id, ...result.data }), { status: 201 });
 }

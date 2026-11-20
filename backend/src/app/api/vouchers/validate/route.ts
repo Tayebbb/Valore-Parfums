@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, Collections } from "@/lib/prisma";
+import { orderDiscountMinor, toMinorUnits, fromMinorUnits } from "@/lib/finance";
 import { requireAdmin } from "@/lib/auth";
 
 type CartItem = {
@@ -13,18 +14,18 @@ type CartItem = {
 async function computeOwnerVoucherDiscount(items: CartItem[]): Promise<number> {
   if (!Array.isArray(items) || items.length === 0) return 0;
 
-  const settingsDoc = await db.collection(Collections.settings).doc("main").get();
+  const settingsDoc = await db.collection(Collections.settings).doc("default").get();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
   const packagingCost = Number(settings?.packagingCost ?? 20);
 
-  let totalDiscount = 0;
+  let totalDiscountMinor = 0;
   for (const item of items) {
     if (item.isFullBottle) continue; // owner voucher skips full-bottle lines
     const perfumeId = String(item.perfumeId || "").trim();
     const ml = Number(item.ml || 0);
     const quantity = Math.floor(Number(item.quantity || 0));
-    const unitPrice = Math.max(0, Math.round(Number(item.unitPrice || 0)));
+    const unitPriceMinor = Math.max(0, toMinorUnits(Number(item.unitPrice || 0)));
     if (!perfumeId || !(ml > 0) || !(quantity > 0)) continue;
 
     const perfumeDoc = await db.collection(Collections.perfumes).doc(perfumeId).get();
@@ -36,11 +37,10 @@ async function computeOwnerVoucherDiscount(items: CartItem[]): Promise<number> {
     const bottleCost = bottleSnap.empty ? 0 : Number(bottleSnap.docs[0].data()?.costPerBottle || 0);
 
     const purchasePricePerMl = Number(perfume?.purchasePricePerMl || 0);
-    const unitCost = Math.max(0, Math.round(purchasePricePerMl * ml + packagingCost + bottleCost));
-    const perLineDiscount = Math.max(0, (unitPrice - unitCost) * quantity);
-    totalDiscount += perLineDiscount;
+    const unitCostMinor = Math.max(0, toMinorUnits(purchasePricePerMl * ml + packagingCost + bottleCost));
+    totalDiscountMinor += Math.max(0, unitPriceMinor - unitCostMinor) * quantity;
   }
-  return totalDiscount;
+  return fromMinorUnits(totalDiscountMinor);
 }
 
 // POST validate voucher code (replaces prisma.voucher.findUnique)
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   }
 
   // Firestore: query vouchers by code (replaces prisma.voucher.findUnique({ where: { code } }))
-  const snap = await db.collection(Collections.vouchers).where("code", "==", code).limit(1).get();
+  const snap = await db.collection(Collections.vouchers).where("code", "==", String(code || "").trim()).limit(1).get();
   if (snap.empty) return NextResponse.json({ error: "Invalid voucher code" }, { status: 400 });
 
   const voucherDoc = snap.docs[0];
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     const expires = voucher.expiresAt.toDate ? voucher.expiresAt.toDate() : new Date(voucher.expiresAt);
     if (expires < new Date()) return NextResponse.json({ error: "Voucher expired" }, { status: 400 });
   }
-  if (voucher.usedCount >= voucher.usageLimit)
+  if (voucher.usageLimit != null && Number(voucher.usedCount || 0) >= Number(voucher.usageLimit))
     return NextResponse.json({ error: "Voucher usage limit reached" }, { status: 400 });
   // Full Bottle requests are manually priced later, so allow voucher application even when current cart total is low.
   if (!hasFullBottle && orderTotal < voucher.minOrderValue)
@@ -99,12 +99,8 @@ export async function POST(req: Request) {
     }
   }
 
-  let discount = 0;
-  if (voucher.discountType === "percentage") {
-    discount = Math.round((orderTotal * voucher.discountValue) / 100);
-  } else {
-    discount = voucher.discountValue;
-  }
+  const discount = Number(orderTotal) < Number(voucher.minOrderValue || 0) ? 0 :
+    fromMinorUnits(orderDiscountMinor(toMinorUnits(Number(orderTotal)), voucher.discountType, Number(voucher.discountValue)));
 
   return NextResponse.json({
     valid: true,

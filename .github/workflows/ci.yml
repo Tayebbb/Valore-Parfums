@@ -33,6 +33,8 @@ jobs:
         run: npm run lint
       - name: Investment engine tests (pure, no Firestore)
         run: npx tsx scripts/test-investments.ts
+      - name: Order pricing and payout regressions
+        run: npx tsx scripts/test-order-discounts.ts
       - name: Pack pricing tests (pure, no Firestore)
         run: npx tsx scripts/test-packs.ts
       - name: Image upload regression tests (no external writes)

@@ -206,7 +206,7 @@ export async function GET() {
       const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
       const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
       const earningsResult = calculatePersonalBottleEarnings({
-        sellingPrice: Number(item.totalPrice ?? 0),
+        sellingPrice: Number(item.payoutRevenue ?? item.totalPrice ?? 0),
         packagingCost: packagingTotal,
         productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
       });
@@ -219,7 +219,7 @@ export async function GET() {
       // profit; scale it down to the owner-recognised portion (net − investor
       // share) so the dashboard matches the profitTransactions ledger.
       const investorProfitMinor = Number(item.investmentRecognition?.investorProfitMinor ?? 0);
-      const itemNet = Number(item.totalPrice ?? 0) - Number(item.costPrice ?? 0);
+      const itemNet = Number(item.payoutRevenue ?? item.totalPrice ?? 0) - Number(item.costPrice ?? 0);
       if (investorProfitMinor > 0 && itemNet > 0) {
         const recognized = Math.max(0, ownerRecognizedItemProfitMajor(itemNet, investorProfitMinor));
         const factor = recognized / itemNet;
@@ -304,6 +304,7 @@ export async function GET() {
   // and minus store-owned item profit (already distributed to owners via owner accounts).
   type RevenueDeductionItem = {
     ownerName?: string;
+    payoutRevenue?: number;
     totalPrice?: number;
     costPrice?: number;
     costRepaidManually?: boolean;
@@ -328,7 +329,7 @@ export async function GET() {
       const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
       const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
       const result = calculatePersonalBottleEarnings({
-        sellingPrice: Number(item.totalPrice ?? 0),
+        sellingPrice: Number(item.payoutRevenue ?? item.totalPrice ?? 0),
         packagingCost: packagingTotal,
         productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
       });
@@ -341,7 +342,7 @@ export async function GET() {
     let deductionMinor = 0;
     for (const item of items) {
       if ((item.ownerName || "Store") !== "Store") continue;
-      const totalPriceMinor = toMinorUnits(Number(item.totalPrice ?? 0));
+      const totalPriceMinor = toMinorUnits(Number(item.payoutRevenue ?? item.totalPrice ?? 0));
       const costPriceMinor = toMinorUnits(Number(item.costPrice ?? 0));
       deductionMinor += Math.max(0, totalPriceMinor - costPriceMinor);
       if (item.costRepaidManually) deductionMinor += costPriceMinor;
@@ -528,18 +529,7 @@ export async function GET() {
       for (const doc of ownerAccountsSnap.docs) {
         accountsMap[doc.id] = doc.data() as OwnerAccountDoc;
       }
-      const profitTotalsByOwner: Record<string, { totalEarned: number; storeShareEarned: number }> = {};
-      for (const tx of profitTransactions) {
-        const ownerName = tx.ownerName || "Unknown";
-        if (!profitTotalsByOwner[ownerName]) profitTotalsByOwner[ownerName] = { totalEarned: 0, storeShareEarned: 0 };
-        const amount = Number(tx.amount || 0);
-        if (tx.type === "sale" || tx.type === "owner-revenue-base") {
-          profitTotalsByOwner[ownerName].totalEarned += amount;
-        } else if (tx.type === "cross-owner-share" || tx.type === "store-share") {
-          profitTotalsByOwner[ownerName].storeShareEarned += amount;
-        }
-      }
-        const withdrawalsByOwner: Record<string, number> = {};
+      const withdrawalsByOwner: Record<string, number> = {};
       for (const doc of withdrawalsSnap.docs) {
           const w = doc.data() as { ownerName?: string; amount?: number; withdrawalType?: string; withdrawFrom?: string; status?: string };
         const owner = w.ownerName || "Unknown";
@@ -550,11 +540,11 @@ export async function GET() {
       }
       const buildBalance = (name: string, email: string) => {
         // Use item-based recalculation (correct for personal_collection)
-        const totalEarned = Math.round(ownershipBreakdown[name]?.total ?? 0);
-        const storeShareEarned = Math.round(crossOwnerEarningsByOwner[name]?.total ?? 0);
+        const totalEarned = fromMinorUnits(toMinorUnits(Number(accountsMap[name]?.totalEarned ?? 0)));
+        const storeShareEarned = fromMinorUnits(toMinorUnits(Number(accountsMap[name]?.storeShareEarned ?? 0)));
         const withdrawn = withdrawalsByOwner[name] || 0;
         // Available = own bottle earnings + cross-owner earnings received - withdrawn
-        const profitAvailable = Math.max(0, Math.round(totalEarned + storeShareEarned - withdrawn));
+        const profitAvailable = Math.max(0, fromMinorUnits(toMinorUnits(totalEarned + storeShareEarned - withdrawn)));
         return {
           name,
           email,

@@ -86,7 +86,7 @@ export async function processInvestmentSalesForOrder(
         const result = await investmentAccounting.processInvestmentSale({
           perfumeId,
           ml: ml * quantity,
-          sellingPriceMinor: toMinorUnits(Number(item.totalPrice || 0)),
+          sellingPriceMinor: toMinorUnits(Number(item.payoutRevenue ?? item.totalPrice ?? 0)),
           sellingCostsMinor: toMinorUnits((packagingCost + bottleCost) * quantity),
           orderId,
           orderItemId: itemDoc.id,

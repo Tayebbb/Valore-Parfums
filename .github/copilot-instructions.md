@@ -358,8 +358,7 @@ When `ownerName !== "Store"` and `isPersonalCollection === true` on an order ite
     `productCost = item.costPrice − (packaging + bottle) × qty`; fallback to
     `snap.costPricePerMl × item.ml × qty` when derived value is 0.
 - Source: `backend/src/lib/ownerEarnings.ts::calculatePersonalBottleEarnings`.
-- Manual admin full-bottle orders are always attributed to `owner: "Store"`
-  regardless of the perfume's owner.
+- Catalog-linked manual orders use the catalog owner. Custom bottles use Store. Owner payouts use the line’s revenue after its allocated invoice discount.
 
 ### 7.2 Store-owned items split
 

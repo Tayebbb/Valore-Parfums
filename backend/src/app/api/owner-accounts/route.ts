@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
-import { normalizeOrderStatus } from "@/lib/orderStatusConfig";
+import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
 
 // GET owner accounts with balances and recent transactions
 export async function GET() {
@@ -10,13 +9,11 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Fetch settings, owner accounts, withdrawals, recent profit transactions, and all order items in parallel
-  const [settingsDoc, accountsSnap, withdrawalsSnap, transactionsSnap, allItemsSnap, ordersSnap] = await Promise.all([
+  const [settingsDoc, accountsSnap, withdrawalsSnap, transactionsSnap] = await Promise.all([
     db.collection(Collections.settings).doc("default").get(),
     db.collection(Collections.ownerAccounts).get(),
     db.collection(Collections.withdrawals).orderBy("createdAt", "desc").get(),
     db.collection(Collections.profitTransactions).orderBy("createdAt", "desc").limit(100).get(),
-    db.collectionGroup("items").get(),
-    db.collection(Collections.orders).get(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,89 +30,22 @@ export async function GET() {
     accountsMap[doc.id] = { id: doc.id, ...doc.data() };
   }
 
-  // Build order status map to filter dispatched orders only
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const orderStatusMap = new Map<string, any>();
-  for (const doc of ordersSnap.docs) orderStatusMap.set(doc.id, doc.data());
-
-  // Accumulate per-owner earnings from completed order items using calculatePersonalBottleEarnings
-  // for personal_collection items and stored ownerProfit for store-owned items.
-  const itemEarningsByOwner: Record<string, { totalEarned: number; storeShareByOwner: Record<string, number> }> = {};
-  for (const doc of allItemsSnap.docs) {
-    const orderId = doc.ref.parent.parent?.id;
-    if (!orderId) continue;
-    const order = orderStatusMap.get(orderId);
-    if (!order) continue;
-    if (normalizeOrderStatus(order.status, order.pickupMethod) !== "Dispatched") continue;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const item = doc.data() as any;
-    const name: string = item.ownerName || "Store";
-    if (name === "Store") continue;
-    if (!itemEarningsByOwner[name]) itemEarningsByOwner[name] = { totalEarned: 0, storeShareByOwner: {} };
-
-    let ownerEarnings: number;
-    let otherOwnerEarnings: number;
-    if (item.isPersonalCollection && item.pricingSnapshot) {
-      const snap = item.pricingSnapshot;
-      const qty = Number(item.quantity ?? 1);
-      const packagingTotal = (Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0)) * qty;
-      const derivedProductCost = Math.max(0, Number(item.costPrice ?? 0) - packagingTotal);
-      const fallbackProductCost = Number(snap.costPricePerMl ?? 0) * Number(item.ml ?? 0) * qty;
-      const result = calculatePersonalBottleEarnings({
-        sellingPrice: Number(item.totalPrice ?? 0),
-        packagingCost: packagingTotal,
-        productCost: derivedProductCost > 0 ? derivedProductCost : fallbackProductCost,
-      });
-      ownerEarnings = result.bottleOwnerEarnings;
-      otherOwnerEarnings = result.otherOwnerEarnings;
-    } else {
-      ownerEarnings = Number(item.ownerProfit ?? 0);
-      otherOwnerEarnings = Number(item.otherOwnerProfit ?? 0);
-    }
-
-    itemEarningsByOwner[name].totalEarned += ownerEarnings;
-    // Track how much this owner's sales generate for the other owner
-    if (otherOwnerEarnings > 0) {
-      itemEarningsByOwner[name].storeShareByOwner[name] =
-        (itemEarningsByOwner[name].storeShareByOwner[name] ?? 0) + otherOwnerEarnings;
-    }
-  }
-
   // Build per-owner withdrawal totals
   const withdrawalsByOwner: Record<string, number> = {};
   const withdrawalsList = withdrawalsSnap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
   for (const w of withdrawalsList) {
+    if ((w.status ?? "Completed") !== "Completed" || (w.withdrawFrom ?? "Owner's Profit") !== "Owner's Profit" || (w.withdrawalType ?? "profit") !== "profit") continue;
     const owner = w.ownerName || "Unknown";
     withdrawalsByOwner[owner] = (withdrawalsByOwner[owner] || 0) + (w.amount || 0);
   }
 
   // Build owner summaries
-  const buildOwnerSummary = (name: string, otherName: string) => {
+  const buildOwnerSummary = (name: string) => {
     const account = accountsMap[name] || { totalEarned: 0, storeShareEarned: 0 };
-    type LedgerTx = { ownerName?: string; amount?: number; type?: string };
-    const ledger = transactionsSnap.docs.reduce(
-      (acc, doc) => {
-        const tx = doc.data() as LedgerTx;
-        if ((tx.ownerName || "") !== name) return acc;
-        const amount = Number(tx.amount || 0);
-        if (tx.type === "sale" || tx.type === "owner-revenue-base") acc.totalEarned += amount;
-        if (tx.type === "cross-owner-share" || tx.type === "store-share") acc.storeShareEarned += amount;
-        return acc;
-      },
-      { totalEarned: 0, storeShareEarned: 0 },
-    );
-    // Prefer item-based recalculation (uses calculatePersonalBottleEarnings for personal_collection sales)
-    const itemBased = itemEarningsByOwner[name];
-    const totalEarned = itemBased
-      ? Math.round(itemBased.totalEarned)
-      : Math.round(ledger.totalEarned || account.totalEarned || 0);
-    // storeShareEarned = what came to this owner FROM the other owner's personal_collection sales
-    const otherItemBased = itemEarningsByOwner[otherName];
-    const storeShareEarned = otherItemBased
-      ? Math.round(otherItemBased.storeShareByOwner[otherName] ?? 0)
-      : Math.round(ledger.storeShareEarned || account.storeShareEarned || 0);
+    const totalEarned = fromMinorUnits(toMinorUnits(Number(account.totalEarned ?? 0)));
+    const storeShareEarned = fromMinorUnits(toMinorUnits(Number(account.storeShareEarned ?? 0)));
     const ownerWithdrawals = withdrawalsByOwner[name] || 0;
-    const ownerBalance = Math.round(totalEarned + storeShareEarned - ownerWithdrawals);
+    const ownerBalance = fromMinorUnits(toMinorUnits(totalEarned + storeShareEarned - ownerWithdrawals));
     return {
       name,
       totalEarned,
@@ -128,7 +58,7 @@ export async function GET() {
   const transactions = transactionsSnap.docs.map((d) => serializeDoc({ id: d.id, ...d.data() }));
 
   return NextResponse.json({
-    owners: [buildOwnerSummary(owner1Name, owner2Name), buildOwnerSummary(owner2Name, owner1Name)],
+    owners: [buildOwnerSummary(owner1Name), buildOwnerSummary(owner2Name)],
     storeProfitSplit: { owner1Name, owner2Name, owner1Share, owner2Share },
     withdrawals: withdrawalsList,
     transactions,

@@ -3,10 +3,8 @@ import { db, Collections, serializeDoc } from "@/lib/prisma";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
-import { splitProfit } from "@/lib/utils";
-import type { OwnerType } from "@/lib/utils";
-import { buildOrderPricingSnapshot, computeItemBreakdown, distributeOrderProfit, fromMinorUnits, toMinorUnits } from "@/lib/finance";
-import { calculatePersonalBottleEarnings } from "@/lib/ownerEarnings";
+import { applyOrderPricingEdit, lockedOrderStatuses, OrderEditError, type OrderPricingEdit } from "@/lib/order-edit-pricing";
+import { fromMinorUnits, toMinorUnits } from "@/lib/finance";
 import {
   generateOrderCancelledEmail,
   generateOrderConfirmationEmail,
@@ -149,21 +147,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const body = await req.json();
-  const { itemPriceUpdates, removeVoucher, addItems, removeItemIds, ...orderPatch } = body as {
-    itemPriceUpdates?: { itemId: string; unitPrice: number; buyingPrice?: number }[];
-    removeVoucher?: boolean;
-    addItems?: {
-      perfumeName: string;
-      perfumeId?: string;
-      ml: number;
-      quantity: number;
-      unitPrice: number;
-      costPrice: number;
-      isFullBottle?: boolean;
-      fullBottleSize?: string;
-      fullBottleCondition?: "new" | "partial";
-    }[];
-    removeItemIds?: string[];
+  const { itemPriceUpdates, removeVoucher, addItems, removeItemIds, ...orderPatch } = body as OrderPricingEdit & {
     status?: string;
     [key: string]: unknown;
   };
@@ -242,485 +226,38 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const settings = settingsDoc.exists ? (settingsDoc.data() as any) : null;
   const owner1Name = settings?.owner1Name ?? "Tayeb";
   const owner2Name = settings?.owner2Name ?? "Enid";
-  const owner1Share = settings?.owner1Share ?? 60;
-  const owner2Share = settings?.owner2Share ?? 40;
+  const owner1Share = Number(order.payoutOwner1Share ?? settings?.owner1Share ?? 60);
+  const owner2Share = 100 - owner1Share;
   const ownerProfitPercent = settings?.ownerProfitPercent ?? 85;
-  const immutableFinancialStatuses = new Set(["Dispatched", "Delivered", "Cancelled"]);
-
-  if (immutableFinancialStatuses.has(previousStatusDb) && (Boolean(removeVoucher) || (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0) || (Array.isArray(removeItemIds) && removeItemIds.length > 0) || (Array.isArray(addItems) && addItems.length > 0))) {
-    return NextResponse.json({ error: `Financial fields are locked for ${previousStatusDb} orders` }, { status: 409 });
-  }
   const now = Timestamp.now();
-
-  // Helper: recompute order-level subtotal/total/profit from all item rows
-  const recomputeOrderTotals = async () => {
-    const itemsRef2 = db.collection(Collections.orders).doc(id).collection("items");
-    const snap2 = await itemsRef2.get();
-    let subtotalMinor2 = 0;
-    let totalCostMinor2 = 0;
-    for (const d of snap2.docs) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const itm = d.data() as any;
-      const bd = itm.financialBreakdown;
-      if (bd && Number.isFinite(bd.totalRevenueMinor) && Number.isFinite(bd.totalCostMinor)) {
-        subtotalMinor2 += Number(bd.totalRevenueMinor || 0);
-        totalCostMinor2 += Number(bd.totalCostMinor || 0);
-      } else {
-        subtotalMinor2 += toMinorUnits(Number(itm.totalPrice ?? 0));
-        totalCostMinor2 += toMinorUnits(Number(itm.costPrice ?? 0));
-      }
-    }
-    const keepVoucher = !Boolean(removeVoucher) && Boolean(order.voucherCode);
-    const discountMinor2 = keepVoucher ? toMinorUnits(Number(order.discount ?? 0)) : 0;
-    const newDeliveryFee = typeof orderPatch.deliveryFee === "number" ? Number(orderPatch.deliveryFee) : Number(order.deliveryFee ?? 0);
-    const snap2r = buildOrderPricingSnapshot({ subtotalMinor: subtotalMinor2, discountMinor: discountMinor2, deliveryFeeMinor: toMinorUnits(newDeliveryFee), totalCostMinor: totalCostMinor2 });
-    const dist2 = distributeOrderProfit({
-      items: snap2.docs.map((d) => {
-        const itm = d.data() as Record<string, unknown>;
-        const bd = (itm.financialBreakdown || {}) as { computedProfitMinor?: number };
-        return {
-          ownerName: String(itm.ownerName || "Store"),
-          computedProfitMinor: Number(bd.computedProfitMinor ?? toMinorUnits(Number(itm.totalPrice || 0) - Number(itm.costPrice || 0))),
-          ownerProfitMinor: toMinorUnits(Number(itm.ownerProfit || 0)),
-          otherOwnerProfitMinor: toMinorUnits(Number(itm.otherOwnerProfit || 0)),
-        };
-      }),
-      owner1Name,
-      owner2Name,
-      owner1Share,
-    });
-    await db.collection(Collections.orders).doc(id).update({
-      subtotal: fromMinorUnits(snap2r.subtotalMinor),
-      total: fromMinorUnits(snap2r.totalMinor),
-      profit: fromMinorUnits(snap2r.totalProfitMinor),
-      discount: fromMinorUnits(snap2r.discountMinor),
-      pricingSnapshot: { ...snap2r, generatedAt: now },
-      financialsMinor: {
-        subtotalMinor: snap2r.subtotalMinor,
-        discountMinor: snap2r.discountMinor,
-        deliveryFeeMinor: snap2r.deliveryFeeMinor,
-        totalMinor: snap2r.totalMinor,
-        totalCostMinor: snap2r.totalCostMinor,
-        totalProfitMinor: snap2r.totalProfitMinor,
-      },
-      profitDistribution: dist2,
-      updatedAt: now,
-    });
-  };
-
-  // Handle item removals requested by admin
-  if (Array.isArray(removeItemIds) && removeItemIds.length > 0) {
-    const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
-
-    // Pack components are priced as a set (the pack discount is spread across them), so a pack may only
-    // be removed whole — removing one component would leave the rest with a meaningless discounted price.
-    const removeSet = new Set(removeItemIds.map((rawId: unknown) => String(rawId || "").trim()).filter(Boolean));
-    const allItemsSnap = await itemsRef.get();
-    const packGroupMembers = new Map<string, string[]>();
-    for (const d of allItemsSnap.docs) {
-      const groupId = String((d.data() as { packGroupId?: unknown }).packGroupId || "");
-      if (groupId) packGroupMembers.set(groupId, [...(packGroupMembers.get(groupId) || []), d.id]);
-    }
-    const removedPackGroupIds = new Set<string>();
-    for (const [groupId, members] of packGroupMembers) {
-      const removedCount = members.filter((memberId) => removeSet.has(memberId)).length;
-      if (removedCount > 0 && removedCount < members.length) {
-        return NextResponse.json(
-          { error: "A pack must be removed as a whole — remove every item of the pack together." },
-          { status: 409 },
-        );
-      }
-      if (removedCount === members.length) removedPackGroupIds.add(groupId);
-    }
-
-    for (const rawId of removeItemIds) {
-      const itemId = String(rawId || "").trim();
-      if (!itemId) continue;
-      const itemDoc = await itemsRef.doc(itemId).get();
-      if (!itemDoc.exists) continue;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const itm = itemDoc.data() as any;
-      // Restore stock for decant items
-      if (!itm.isFullBottle && itm.perfumeId && Number(itm.ml) > 0 && Number(itm.quantity) > 0) {
-        await db.collection(Collections.perfumes).doc(String(itm.perfumeId)).update({
-          totalStockMl: FieldValue.increment(Number(itm.ml) * Number(itm.quantity)),
-        });
-        const bottleSnap = await db.collection(Collections.bottles).where("ml", "==", itm.ml).limit(1).get();
-        if (!bottleSnap.empty) {
-          await db.collection(Collections.bottles).doc(bottleSnap.docs[0].id).update({
-            availableCount: FieldValue.increment(Number(itm.quantity)),
-          });
-        }
-      }
-      await itemsRef.doc(itemId).delete();
-    }
-    await recomputeOrderTotals();
-    if (removedPackGroupIds.size > 0 && Array.isArray(order.packs)) {
-      // Keep the order's pack snapshot in step with the remaining items.
-      await db.collection(Collections.orders).doc(id).update({
-        packs: order.packs.filter((p: { packGroupId?: string }) => !removedPackGroupIds.has(String(p?.packGroupId || ""))),
-        updatedAt: now,
+  const deliveryFee = typeof orderPatch.deliveryFee === "number" ? orderPatch.deliveryFee : undefined;
+  if ([itemPriceUpdates, addItems, removeItemIds].some(value => value != null && !Array.isArray(value))) {
+    return NextResponse.json({ error: "Item changes must be supplied as lists" }, { status: 400 });
+  }
+  if (deliveryFee !== undefined && (!Number.isFinite(deliveryFee) || deliveryFee < 0)) {
+    return NextResponse.json({ error: "Invalid delivery fee" }, { status: 400 });
+  }
+  const edit = { removeVoucher, itemPriceUpdates, addItems, removeItemIds };
+  const hasItemChanges = Boolean(itemPriceUpdates?.length || addItems?.length || removeItemIds?.length);
+  const editPricing = hasItemChanges || removeVoucher ||
+    (deliveryFee !== undefined && deliveryFee !== Number(order.deliveryFee ?? 0));
+  if (editPricing) {
+    try {
+      await applyOrderPricingEdit(id, edit, deliveryFee, {
+        owner1Name, owner2Name, owner1Share, ownerProfitPercent, packagingCost: Number(settings?.packagingCost ?? 20),
       });
+    } catch (error) {
+      if (error instanceof OrderEditError) return NextResponse.json({ error: error.message }, { status: error.status });
+      throw error;
     }
   }
-
-  // Handle admin-added items
-  if (Array.isArray(addItems) && addItems.length > 0) {
-    const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
-    for (const newItm of addItems) {
-      const perfumeName = String(newItm.perfumeName || "").trim();
-      if (!perfumeName) continue;
-      const addedPerfumeId = String(newItm.perfumeId || "").trim() || undefined;
-      const isFullBottleItem = Boolean(newItm.isFullBottle);
-      const requestedFullBottleSize = String(newItm.fullBottleSize || "").trim();
-      const requestedFullBottleConditionRaw = String(newItm.fullBottleCondition || "").trim().toLowerCase();
-      const fullBottleCondition: "new" | "partial" = requestedFullBottleConditionRaw === "partial" ? "partial" : "new";
-      const ml = isFullBottleItem
-        ? (Number.parseFloat(requestedFullBottleSize.replace(/[^0-9.]/g, "")) || Number(newItm.ml) || 0)
-        : Number(newItm.ml);
-      const quantity = Math.max(1, Math.floor(Number(newItm.quantity) || 1));
-      const unitPrice = Math.max(0, Math.round(Number(newItm.unitPrice) || 0));
-      const costPricePerUnit = Math.max(0, Math.round(Number(newItm.costPrice) || 0));
-      if (isFullBottleItem) {
-        if (!requestedFullBottleSize) {
-          return NextResponse.json({ error: "Full bottle size is required for full bottle items" }, { status: 400 });
-        }
-      } else {
-        if (!Number.isFinite(ml) || ml <= 0) continue;
-      }
-      const breakdown = computeItemBreakdown({
-        unitCostMinor: toMinorUnits(costPricePerUnit),
-        unitSellingPriceMinor: toMinorUnits(unitPrice),
-        quantity,
-      });
-      const totalPrice = fromMinorUnits(breakdown.totalRevenueMinor);
-      const costPrice = fromMinorUnits(breakdown.totalCostMinor);
-      const itemProfit = totalPrice - costPrice;
-      const split = splitProfit(itemProfit, "Store" as OwnerType, ownerProfitPercent, owner1Share);
-      await itemsRef.doc(uuid()).set({
-        perfumeName,
-        ...(addedPerfumeId ? { perfumeId: addedPerfumeId } : {}),
-        ml,
-        quantity,
-        unitPrice,
-        totalPrice,
-        costPrice,
-        isFullBottle: isFullBottleItem,
-        ...(isFullBottleItem ? { fullBottleSize: requestedFullBottleSize } : {}),
-        ...(isFullBottleItem ? { fullBottleCondition } : {}),
-        ownerName: "Store",
-        ownerProfit: split.ownerProfit,
-        otherOwnerProfit: split.otherOwnerProfit,
-        financialBreakdown: breakdown,
-        addedByAdmin: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-    await recomputeOrderTotals();
-  }
-
-  // Recalculate totals when only delivery fee changes (no item add/remove)
-  const deliveryFeeInPatch = typeof orderPatch.deliveryFee === "number";
-  const deliveryFeeChanged = deliveryFeeInPatch && Number(orderPatch.deliveryFee) !== Number(order.deliveryFee ?? 0);
-  const noItemChanges = !(Array.isArray(removeItemIds) && removeItemIds.length > 0) && !(Array.isArray(addItems) && addItems.length > 0);
-  if (deliveryFeeChanged && noItemChanges && !immutableFinancialStatuses.has(previousStatusDb)) {
-    await recomputeOrderTotals();
-  }
-
-  // Apply admin manual unit price updates for Full Bottle items, then recompute order totals/profit.
-  if (Array.isArray(itemPriceUpdates) && itemPriceUpdates.length > 0) {
-    const updatesMap = new Map<string, { unitPrice: number; buyingPrice?: number }>();
-    for (const update of itemPriceUpdates) {
-      const itemId = String(update.itemId || "").trim();
-      const unitPrice = Number(update.unitPrice);
-      const hasBuyingPrice = update.buyingPrice !== undefined && update.buyingPrice !== null;
-      const buyingPrice = hasBuyingPrice ? Number(update.buyingPrice) : undefined;
-      if (!itemId) continue;
-      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-        return NextResponse.json({ error: "Invalid full bottle price input" }, { status: 400 });
-      }
-      if (hasBuyingPrice && (!Number.isFinite(buyingPrice) || (buyingPrice as number) < 0)) {
-        return NextResponse.json({ error: "Invalid full bottle buying price input" }, { status: 400 });
-      }
-      updatesMap.set(itemId, {
-        unitPrice: Math.round(unitPrice),
-        ...(hasBuyingPrice ? { buyingPrice: Math.round(buyingPrice as number) } : {}),
-      });
-    }
-
-    if (updatesMap.size > 0) {
-      const itemsRef = db.collection(Collections.orders).doc(id).collection("items");
-      const itemsSnap = await itemsRef.get();
-
-      // Owner voucher: manual full-bottle prices are forced to cost (zero profit).
-      const OWNER_VOUCHER_CODE = (process.env.OWNER_VOUCHER_CODE || "VALORE1290").trim().toUpperCase();
-      const isOwnerVoucherOrder = Boolean(
-        order.voucherCode && String(order.voucherCode).trim().toUpperCase() === OWNER_VOUCHER_CODE
-      );
-
-      for (const itemDoc of itemsSnap.docs) {
-        const itemUpdate = updatesMap.get(itemDoc.id);
-        if (!itemUpdate) continue;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const item = itemDoc.data() as any;
-        if (!item.isFullBottle) {
-          return NextResponse.json({ error: "Manual pricing updates are allowed only for Full Bottle items" }, { status: 400 });
-        }
-
-        const quantity = Number(item.quantity ?? 0);
-        const unitCost = itemUpdate.buyingPrice !== undefined
-          ? itemUpdate.buyingPrice
-          : Number(
-              item?.pricingSnapshot?.unitCost
-                ?? (
-                  item?.financialBreakdown?.unitCostMinor !== undefined
-                    ? fromMinorUnits(Number(item.financialBreakdown.unitCostMinor || 0))
-                    : (quantity > 0 ? Number(item.costPrice ?? 0) / quantity : 0)
-                ),
-            );
-        const nextUnitPrice = isOwnerVoucherOrder
-          ? Math.max(0, Math.round(unitCost))
-          : itemUpdate.unitPrice;
-        const breakdown = computeItemBreakdown({
-          unitCostMinor: toMinorUnits(unitCost),
-          unitSellingPriceMinor: toMinorUnits(nextUnitPrice),
-          quantity,
-        });
-        const nextTotalPrice = fromMinorUnits(breakdown.totalRevenueMinor);
-        const costPrice = fromMinorUnits(breakdown.totalCostMinor);
-        const itemProfit = nextTotalPrice - costPrice;
-        const ownerName = (item.ownerName || "Store") as OwnerType;
-        let ownerProfit: number;
-        let otherOwnerProfit: number;
-        if (item.isPersonalCollection && ownerName !== "Store" && item.pricingSnapshot) {
-          const snap = item.pricingSnapshot;
-          const qty = Number(item.quantity ?? 1);
-          // Derive liquid/product cost from the actual unit cost minus packaging + bottle,
-          // so manual admin orders (where costPricePerMl may be 0) still credit the whole
-          // liquid portion to the bottle owner, not just 85% of the profit.
-          const perUnitPackaging = Number(snap.packagingCost ?? 0) + Number(snap.bottleCost ?? 0);
-          const perUnitProductCost = Math.max(0, Number(unitCost) - perUnitPackaging);
-          const earningsResult = calculatePersonalBottleEarnings({
-            sellingPrice: nextTotalPrice,
-            packagingCost: perUnitPackaging * qty,
-            productCost: perUnitProductCost * qty,
-          });
-          ownerProfit = earningsResult.bottleOwnerEarnings;
-          otherOwnerProfit = earningsResult.otherOwnerEarnings;
-        } else {
-          const storeOwner1Share = Number(settings?.owner1Share ?? 60);
-          const split = splitProfit(itemProfit, ownerName, ownerProfitPercent, storeOwner1Share);
-          ownerProfit = split.ownerProfit;
-          otherOwnerProfit = split.otherOwnerProfit;
-        }
-
-        await itemDoc.ref.update({
-          unitPrice: nextUnitPrice,
-          totalPrice: nextTotalPrice,
-          costPrice,
-          ownerProfit,
-          otherOwnerProfit,
-          financialBreakdown: breakdown,
-          pricingSnapshot: {
-            ...(item.pricingSnapshot || {}),
-            unitCost,
-            unitSellingPrice: nextUnitPrice,
-          },
-          updatedAt: now,
-        });
-      }
-
-      // Recompute order-level totals from all item rows after updates.
-      const refreshedItemsSnap = await itemsRef.get();
-      let subtotalMinor = 0;
-      let totalCostMinor = 0;
-      for (const itemDoc of refreshedItemsSnap.docs) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const item = itemDoc.data() as any;
-        const itemBreakdown = item.financialBreakdown;
-        if (itemBreakdown && Number.isFinite(itemBreakdown.totalRevenueMinor) && Number.isFinite(itemBreakdown.totalCostMinor)) {
-          subtotalMinor += Number(itemBreakdown.totalRevenueMinor || 0);
-          totalCostMinor += Number(itemBreakdown.totalCostMinor || 0);
-        } else {
-          subtotalMinor += toMinorUnits(Number(item.totalPrice ?? 0));
-          totalCostMinor += toMinorUnits(Number(item.costPrice ?? 0));
-        }
-      }
-
-      let discountMinor = Boolean(removeVoucher) ? 0 : toMinorUnits(Number(order.discount ?? 0));
-      let voucherAppliedAt = Boolean(removeVoucher) ? null : (order.voucherAppliedAt ?? null);
-
-      const voucherCode = Boolean(removeVoucher) ? "" : String(order.voucherCode || "").trim();
-      if (voucherCode) {
-        const voucherSnap = await db.collection(Collections.vouchers).where("code", "==", voucherCode).limit(1).get();
-        if (!voucherSnap.empty) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const voucher = voucherSnap.docs[0].data() as any;
-          if (voucher.isActive) {
-            // Enforce the same rules as /api/vouchers/validate: expiry, usage limit, minOrderValue.
-            const voucherExpiry = voucher.expiresAt || voucher.expiryDate || null;
-            let isExpired = false;
-            if (voucherExpiry) {
-              // Prefer Firestore Timestamp semantics if available, otherwise fall back to Date.
-              if (typeof voucherExpiry.toMillis === "function" && typeof now.toMillis === "function") {
-                isExpired = voucherExpiry.toMillis() < now.toMillis();
-              } else {
-                const expiryDate = new Date(voucherExpiry);
-                const nowDate = new Date();
-                if (!isNaN(expiryDate.getTime())) {
-                  isExpired = expiryDate.getTime() < nowDate.getTime();
-                }
-              }
-            }
-
-            const usageLimit = Number(voucher.usageLimit ?? 0);
-            const currentUsedCount = Number(voucher.usedCount ?? 0);
-            const overUsageLimit = usageLimit > 0 && currentUsedCount >= usageLimit;
-
-            const minOrderValue = Number(voucher.minOrderValue ?? 0);
-            const belowMinOrderValue = minOrderValue > 0 && subtotalMinor < toMinorUnits(minOrderValue);
-
-            if (!isExpired && !overUsageLimit && !belowMinOrderValue) {
-              discountMinor = voucher.discountType === "percentage"
-                ? Math.round(subtotalMinor * (Number(voucher.discountValue || 0) / 100))
-                : toMinorUnits(Number(voucher.discountValue || 0));
-              discountMinor = Math.max(0, Math.min(discountMinor, subtotalMinor));
-
-              if (!voucherAppliedAt && discountMinor > 0) {
-                await db.collection(Collections.vouchers).doc(voucherSnap.docs[0].id).update({
-                  usedCount: FieldValue.increment(1),
-                });
-                voucherAppliedAt = now;
-              }
-            } else {
-              discountMinor = 0;
-            }
-          } else {
-            discountMinor = 0;
-          }
-        } else {
-          discountMinor = 0;
-        }
-      }
-
-      const snapshot = buildOrderPricingSnapshot({
-        subtotalMinor,
-        discountMinor,
-        deliveryFeeMinor: toMinorUnits(Number(order.deliveryFee ?? 0)),
-        totalCostMinor,
-      });
-      const subtotal = fromMinorUnits(snapshot.subtotalMinor);
-      const discount = fromMinorUnits(snapshot.discountMinor);
-      const total = fromMinorUnits(snapshot.totalMinor);
-      const profit = fromMinorUnits(snapshot.totalProfitMinor);
-      const distribution = distributeOrderProfit({
-        items: refreshedItemsSnap.docs.map((itemDoc) => {
-          const item = itemDoc.data() as Record<string, unknown>;
-          const breakdown = (item.financialBreakdown || {}) as { computedProfitMinor?: number };
-          return {
-            ownerName: String(item.ownerName || "Store"),
-            computedProfitMinor: Number(breakdown.computedProfitMinor ?? toMinorUnits(Number(item.totalPrice || 0) - Number(item.costPrice || 0))),
-            ownerProfitMinor: toMinorUnits(Number(item.ownerProfit || 0)),
-            otherOwnerProfitMinor: toMinorUnits(Number(item.otherOwnerProfit || 0)),
-          };
-        }),
-        owner1Name,
-        owner2Name,
-        owner1Share,
-      });
-
-      await db.collection(Collections.orders).doc(id).update({
-        subtotal,
-        total,
-        profit,
-        voucherCode: Boolean(removeVoucher) ? null : order.voucherCode || null,
-        discount,
-        voucherAppliedAt,
-        pricingSnapshot: { ...snapshot, generatedAt: now },
-        financialsMinor: {
-          subtotalMinor: snapshot.subtotalMinor,
-          discountMinor: snapshot.discountMinor,
-          deliveryFeeMinor: snapshot.deliveryFeeMinor,
-          totalMinor: snapshot.totalMinor,
-          totalCostMinor: snapshot.totalCostMinor,
-          totalProfitMinor: snapshot.totalProfitMinor,
-        },
-        profitDistribution: distribution,
-        updatedAt: now,
-      });
-    }
-  }
-
-  // Explicit voucher cancellation by admin for this order.
-  if (Boolean(removeVoucher)) {
-    const orderRef = db.collection(Collections.orders).doc(id);
-    const itemsSnap = await orderRef.collection("items").get();
-    let subtotalMinor = 0;
-    let totalCostMinor = 0;
-    for (const itemDoc of itemsSnap.docs) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const item = itemDoc.data() as any;
-      const itemBreakdown = item.financialBreakdown;
-      if (itemBreakdown && Number.isFinite(itemBreakdown.totalRevenueMinor) && Number.isFinite(itemBreakdown.totalCostMinor)) {
-        subtotalMinor += Number(itemBreakdown.totalRevenueMinor || 0);
-        totalCostMinor += Number(itemBreakdown.totalCostMinor || 0);
-      } else {
-        subtotalMinor += toMinorUnits(Number(item.totalPrice ?? 0));
-        totalCostMinor += toMinorUnits(Number(item.costPrice ?? 0));
-      }
-    }
-    const snapshot = buildOrderPricingSnapshot({
-      subtotalMinor,
-      discountMinor: 0,
-      deliveryFeeMinor: toMinorUnits(Number(order.deliveryFee ?? 0)),
-      totalCostMinor,
-    });
-    const subtotal = fromMinorUnits(snapshot.subtotalMinor);
-    const total = fromMinorUnits(snapshot.totalMinor);
-    const profit = fromMinorUnits(snapshot.totalProfitMinor);
-
-    // If a voucher was previously applied and counted, decrement its usedCount (but not below zero).
-    if (order.voucherCode && order.voucherAppliedAt) {
-      const voucherRef = db.collection(Collections.vouchers).doc(order.voucherCode as string);
-      const voucherSnap = await voucherRef.get();
-      if (voucherSnap.exists) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const voucher = voucherSnap.data() as any;
-        const currentUsedCount = typeof voucher.usedCount === "number" ? voucher.usedCount : 0;
-        if (currentUsedCount > 0) {
-          await voucherRef.update({
-            usedCount: FieldValue.increment(-1),
-            updatedAt: now,
-          });
-        }
-      }
-    }
-
-    await orderRef.update({
-      voucherCode: null,
-      discount: 0,
-      voucherAppliedAt: null,
-      subtotal,
-      total,
-      profit,
-      pricingSnapshot: { ...snapshot, generatedAt: now },
-      financialsMinor: {
-        subtotalMinor: snapshot.subtotalMinor,
-        discountMinor: snapshot.discountMinor,
-        deliveryFeeMinor: snapshot.deliveryFeeMinor,
-        totalMinor: snapshot.totalMinor,
-        totalCostMinor: snapshot.totalCostMinor,
-        totalProfitMinor: snapshot.totalProfitMinor,
-      },
-      updatedAt: now,
-    });
-  }
+  // Delivery and its financial snapshot are committed together by the pricing edit.
+  delete orderPatch.deliveryFee;
 
   // ── Credit profit when status changes to "Dispatched" (only if not already dispatched) ──
   if (newStatusDb === "Dispatched" && previousStatusDb !== "Dispatched") {
     const orderRef = db.collection(Collections.orders).doc(id);
+    const dispatchVersion = (await orderRef.get()).updateTime;
     const itemsSnap = await orderRef.collection("items").get();
 
     // ── Investor-funded stock FIRST: recognise capital recovery + investor
@@ -761,8 +298,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       profitByOwner[name].ownerProfit += item.ownerProfit ?? 0;
       profitByOwner[name].otherOwnerProfit += item.otherOwnerProfit ?? 0;
 
-      if (name !== "Store" && item.isPersonalCollection) {
-        const totalPriceMinor = toMinorUnits(Number(item.totalPrice || 0));
+      if (name !== "Store" && item.isPersonalCollection && item.payoutRevenue == null) {
+        const totalPriceMinor = toMinorUnits(Number(item.payoutRevenue ?? item.totalPrice ?? 0));
         const ownerProfitMinor = toMinorUnits(Number(item.ownerProfit || 0));
         const otherOwnerProfitMinor = toMinorUnits(Number(item.otherOwnerProfit || 0));
         const quantity = Math.max(0, Number(item.quantity || 0));
@@ -824,15 +361,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // recognised (see ownerRecognizedItemProfitMajor) — the investor share was
     // already credited to the investment ledger above.
     let totalStoreProfit = 0;
+      let totalStoreProfitOwner1Minor = 0;
     let totalInvestorDeduction = 0;
     for (const itemDoc of itemsSnap.docs) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const item = itemDoc.data() as any;
       if ((item.ownerName || "Store") === "Store") {
-        const itemNetProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
+        const itemNetProfit = (item.payoutRevenue ?? item.totalPrice ?? 0) - (item.costPrice ?? 0);
         const investorProfitMinor = investorProfitForItem(itemDoc.id, item);
         const recognized = ownerRecognizedItemProfitMajor(itemNetProfit, investorProfitMinor);
-        if (recognized > 0) totalStoreProfit += recognized;
+        if (recognized > 0) {
+          totalStoreProfit += recognized;
+          totalStoreProfitOwner1Minor += Math.round(toMinorUnits(recognized) * owner1Share / 100);
+        }
         if (investorProfitMinor > 0 && itemNetProfit > 0) {
           totalInvestorDeduction += Math.min(itemNetProfit, investorProfitMinor / 100);
         }
@@ -840,7 +381,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     if (totalStoreProfit > 0) {
-      const owner1StoreShare = Math.round(totalStoreProfit * (owner1Share / 100));
+      const owner1StoreShare = fromMinorUnits(totalStoreProfitOwner1Minor);
       const owner2StoreShare = totalStoreProfit - owner1StoreShare;
       const deductionNote =
         totalInvestorDeduction > 0
@@ -882,6 +423,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const credited = await db.runTransaction(async (tx) => {
       const snap = await tx.get(orderRef);
       if (!snap.exists || snap.data()?.profitCreditedAt) return false;
+      if (snap.data()?.stockRestoredAt || (dispatchVersion && !dispatchVersion.isEqual(snap.updateTime!))) return "conflict";
       // Persist what was recognised per item: the cancellation path reverses
       // the exact same deduction (symmetric by construction), and reports audit it.
       for (const r of investmentSummary.items) {
@@ -915,6 +457,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       tx.update(orderRef, { profitCreditedAt: now });
       return true;
     });
+    if (credited === "conflict") return NextResponse.json({ error: "The order changed during dispatch. Reload the order before dispatching." }, { status: 409 });
     if (!credited) {
       console.log(`[ORDER] ${id} profit already credited — skipping duplicate crediting`);
     }
@@ -935,7 +478,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
-        if (item.isFullBottle) continue;
+        if (item.isFullBottle || !item.perfumeId || (item.addedByAdmin && !item.inventoryReserved)) continue;
         const bottleSnap = await tx.get(
           db.collection(Collections.bottles).where("ml", "==", item.ml).limit(1),
         );
@@ -946,7 +489,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
-        if (item.isFullBottle) continue;
+        if (item.isFullBottle || !item.perfumeId || (item.addedByAdmin && !item.inventoryReserved)) continue;
         tx.update(db.collection(Collections.perfumes).doc(item.perfumeId), {
           totalStockMl: FieldValue.increment(item.ml * item.quantity),
         });
@@ -970,8 +513,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         profitByOwner[name].ownerProfit += item.ownerProfit ?? 0;
         profitByOwner[name].otherOwnerProfit += item.otherOwnerProfit ?? 0;
 
-        if (name !== "Store" && item.isPersonalCollection) {
-          const totalPriceMinor = toMinorUnits(Number(item.totalPrice || 0));
+        if (name !== "Store" && item.isPersonalCollection && item.payoutRevenue == null) {
+          const totalPriceMinor = toMinorUnits(Number(item.payoutRevenue ?? item.totalPrice ?? 0));
           const ownerProfitMinor = toMinorUnits(Number(item.ownerProfit || 0));
           const otherOwnerProfitMinor = toMinorUnits(Number(item.otherOwnerProfit || 0));
           const quantity = Math.max(0, Number(item.quantity || 0));
@@ -1033,19 +576,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       // investmentRecognition field persisted at credit time), so credit and
       // reversal are symmetric by construction.
       let totalStoreProfitToReverse = 0;
+      let totalStoreProfitToReverseOwner1Minor = 0;
       for (const itemDoc of itemsSnap.docs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const item = itemDoc.data() as any;
         if ((item.ownerName || "Store") === "Store") {
-          const itemNetProfit = (item.totalPrice ?? 0) - (item.costPrice ?? 0);
+          const itemNetProfit = (item.payoutRevenue ?? item.totalPrice ?? 0) - (item.costPrice ?? 0);
           const investorProfitMinor = Number(item.investmentRecognition?.investorProfitMinor ?? 0);
           const recognized = ownerRecognizedItemProfitMajor(itemNetProfit, investorProfitMinor);
-          if (recognized > 0) totalStoreProfitToReverse += recognized;
+          if (recognized > 0) {
+          totalStoreProfitToReverse += recognized;
+          totalStoreProfitToReverseOwner1Minor += Math.round(toMinorUnits(recognized) * owner1Share / 100);
+        }
         }
       }
 
       if (totalStoreProfitToReverse > 0) {
-        const owner1StoreReverse = Math.round(totalStoreProfitToReverse * (owner1Share / 100));
+        const owner1StoreReverse = fromMinorUnits(totalStoreProfitToReverseOwner1Minor);
         const owner2StoreReverse = totalStoreProfitToReverse - owner1StoreReverse;
 
         if (owner1StoreReverse > 0) {
@@ -1122,9 +669,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const orderPatchWithoutComputed = { ...orderPatch } as Record<string, unknown>;
   delete orderPatchWithoutComputed.itemPriceUpdates;
   delete orderPatchWithoutComputed.removeVoucher;
+  delete orderPatchWithoutComputed.payoutOwner1Share;
+  delete orderPatchWithoutComputed.manualDiscountPercent;
+  delete orderPatchWithoutComputed.recalculateDiscountOnEdit;
+  delete orderPatchWithoutComputed.useCatalogOwnershipOnEdit;
+  delete orderPatchWithoutComputed.voucherAppliedAt;
 
   if (Object.keys(orderPatchWithoutComputed).length > 0) {
-    if (immutableFinancialStatuses.has(previousStatusDb)) {
+    if (editPricing || lockedOrderStatuses.has(previousStatusDb)) {
+      delete orderPatchWithoutComputed.voucherCode;
+      delete orderPatchWithoutComputed.totalAmount;
+      delete orderPatchWithoutComputed.finalAmount;
       delete orderPatchWithoutComputed.discount;
       delete orderPatchWithoutComputed.subtotal;
       delete orderPatchWithoutComputed.total;
@@ -1135,7 +690,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     await db.collection(Collections.orders).doc(id).update({
       ...orderPatchWithoutComputed,
-      financialsLocked: immutableFinancialStatuses.has(String(orderPatchWithoutComputed.status || previousStatusDb)),
+      financialsLocked: lockedOrderStatuses.has(String(orderPatchWithoutComputed.status || previousStatusDb)),
       updatedAt: Timestamp.now(),
     });
   }
