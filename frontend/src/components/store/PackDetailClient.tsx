@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildCanonicalProductPath } from "@/lib/product-path";
 import PackImage from "./PackImage";
 import PackPrice from "./PackPrice";
 import AddPackButton from "./AddPackButton";
@@ -16,7 +18,7 @@ const fmt = (n: number) => `৳${n.toLocaleString("en-BD")}`;
  * Pack detail: composition is read-only (the admin owns it). The server-rendered pack is shown
  * immediately and silently refreshed on mount so price/availability are never staler than the cache window.
  */
-export default function PackDetailClient({ initialPack }: { initialPack: PackPublic }) {
+export default function PackDetailClient({ initialPack, canonicalUrl }: { initialPack: PackPublic; canonicalUrl: string }) {
   const [pack, setPack] = useState<PackPublic>(initialPack);
   const [quantity, setQuantity] = useState(1);
 
@@ -40,12 +42,25 @@ export default function PackDetailClient({ initialPack }: { initialPack: PackPub
 
   return (
     <div className="px-4 sm:px-6 md:px-[5%] py-7 sm:py-8 pb-28 md:pb-8">
-      <Link
-        href="/packs"
-        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-6"
-      >
-        <ArrowLeft size={14} /> All Packs
-      </Link>
+      <JsonLd value={{
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: pack.name,
+        description: pack.description || pack.items.map((item) => `${item.name} (${pack.decantSizeMl} ml)`).join(", "),
+        size: `${pack.items.length} × ${pack.decantSizeMl} ml`,
+        image: images.filter(Boolean).map((src) => new URL(src, canonicalUrl).href),
+        url: canonicalUrl,
+        brand: { "@type": "Brand", name: "Valore Parfums" },
+        ...(pack.finalPrice > 0 && { offers: {
+          "@type": "Offer", url: canonicalUrl, priceCurrency: "BDT", price: pack.finalPrice,
+          availability: pack.available ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        } }),
+      }} />
+      <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-xs text-[var(--text-muted)] mb-6">
+        <Link href="/">Home</Link><span aria-hidden="true">/</span>
+        <Link href="/packs">Packs</Link><span aria-hidden="true">/</span>
+        <span aria-current="page">{pack.name}</span>
+      </nav>
 
       <div className="grid md:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-12">
         {/* Collage */}
@@ -101,7 +116,7 @@ export default function PackDetailClient({ initialPack }: { initialPack: PackPub
               return (
                 <li key={item.perfumeId}>
                   {item.path ? (
-                    <Link href={item.path} className="block hover:bg-[var(--gold-tint)] transition-colors">
+                    <Link href={buildCanonicalProductPath(item)} className="block hover:bg-[var(--gold-tint)] transition-colors">
                       {row}
                     </Link>
                   ) : (

@@ -1,0 +1,43 @@
+{
+  "mixed": {
+    "url": "http://127.0.0.1:4317/products/hawas-ice-edp?size=10ml",
+    "injected10mlBDT": 481,
+    "injected10mlAvailable": false,
+    "schema10ml": {
+      "price": 481,
+      "availability": "https://schema.org/OutOfStock"
+    },
+    "canAdd": false,
+    "stockText": [
+      "481 BDT \u00b7 OUT OF STOCK",
+      "10 ML OUT OF STOCK",
+      "Stock: 10 ml out of stock",
+      "10 ML OUT OF STOCK"
+    ],
+    "selectedButton": [
+      "10ml481 BDT \u00b7 Out of stock"
+    ]
+  },
+  "sold-out": {
+    "url": "http://127.0.0.1:4317/products/hawas-ice-edp?size=10ml",
+    "injected10mlBDT": 481,
+    "injected10mlAvailable": false,
+    "schema10ml": {
+      "price": 481,
+      "availability": "https://schema.org/OutOfStock"
+    },
+    "canAdd": false,
+    "stockText": [
+      "259 BDT \u00b7 OUT OF STOCK",
+      "481 BDT \u00b7 OUT OF STOCK",
+      "689 BDT \u00b7 OUT OF STOCK",
+      "10 ML OUT OF STOCK",
+      "REQUEST STOCK",
+      "Stock: Out of Stock",
+      "10 ML OUT OF STOCK"
+    ],
+    "selectedButton": [
+      "10ml481 BDT \u00b7 Out of stock"
+    ]
+  }
+}

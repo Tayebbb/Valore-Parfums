@@ -8,6 +8,7 @@ export const metadata: Metadata = buildSeoMetadata(
   content?.metaTitle || "Full Bottle Perfume BD",
   content?.metaDescription || "Request full bottle perfume in Bangladesh",
   content?.keywordCluster || ["full bottle perfume bangladesh"],
+  "/full-bottle-perfume-bd",
 );
 
 export default async function FullBottlePerfumeBdPage() {

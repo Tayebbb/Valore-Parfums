@@ -1,0 +1,123 @@
+{
+  "source": "file",
+  "requested_url": "http://127.0.0.1:4317/",
+  "final_url": "http://127.0.0.1:4317/",
+  "lighthouse_version": "13.6.0",
+  "fetch_time": "2026-11-21T20:40:23.147Z",
+  "form_factor": "mobile",
+  "host_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.0.0 Safari/537.36",
+  "fraction": {
+    "available": true,
+    "passed": 2,
+    "counted": 2,
+    "informative": 0,
+    "display": "2/2",
+    "category_score": 1
+  },
+  "error": null,
+  "audits": [
+    {
+      "id": "agent-accessibility-tree",
+      "group": "agent-accessibility",
+      "title": "Accessibility tree is well-formed",
+      "mode": "binary",
+      "score": 1,
+      "status": "pass",
+      "counted": true,
+      "display_value": "All audits passed",
+      "explanation": null,
+      "note": "Binary. Fails when any of 33 axe rules fails (names and labels, ARIA validity, tree structure, tabindex, autocomplete). Fix the listed rules.",
+      "failed_rules": []
+    },
+    {
+      "id": "webmcp-form-coverage",
+      "group": "webmcp",
+      "title": "WebMCP form coverage",
+      "mode": "notApplicable",
+      "score": null,
+      "status": "not-applicable",
+      "counted": false,
+      "display_value": null,
+      "explanation": null,
+      "note": "Informative while any form lacks both toolname and tooldescription; counts as a binary pass once every form has one. N/A with no forms or no WebMCP support in the testing browser.",
+      "forms_missing_annotations": []
+    },
+    {
+      "id": "webmcp-registered-tools",
+      "group": "webmcp",
+      "title": "WebMCP tools registered",
+      "mode": "notApplicable",
+      "score": null,
+      "status": "not-applicable",
+      "counted": false,
+      "display_value": null,
+      "explanation": null,
+      "note": "Always informative. Lists declarative and imperative tools seen during the page load. Never changes the fraction.",
+      "tools": []
+    },
+    {
+      "id": "webmcp-schema-validity",
+      "group": "webmcp",
+      "title": "WebMCP schemas are valid",
+      "mode": "notApplicable",
+      "score": null,
+      "status": "not-applicable",
+      "counted": false,
+      "display_value": null,
+      "explanation": null,
+      "note": "Scores 0 on errors (missing tool name or description, a required parameter without a name) and 0.5 on warnings, so both count as a failure. N/A when no tools and no issues exist.",
+      "issues": []
+    },
+    {
+      "id": "cumulative-layout-shift",
+      "group": null,
+      "title": "Cumulative Layout Shift",
+      "mode": "numeric",
+      "score": 1,
+      "status": "pass",
+      "counted": true,
+      "display_value": "0",
+      "explanation": null,
+      "note": "Numeric lab CLS. Passes at score 0.9 or higher (about CLS 0.1 or less)."
+    },
+    {
+      "id": "llms-txt",
+      "group": "agent-discoverability",
+      "title": "llms.txt follows recommendations",
+      "mode": "notApplicable",
+      "score": null,
+      "status": "not-applicable",
+      "counted": false,
+      "display_value": null,
+      "explanation": null,
+      "note": "Binary. /llms.txt needs an H1, one Markdown link, and 50+ characters. A 4xx makes it N/A; a 5xx or fetch error fails it.",
+      "issues": []
+    },
+    {
+      "id": "ard-schema",
+      "group": "agent-discoverability",
+      "title": "ARD manifest is valid",
+      "mode": "notApplicable",
+      "score": null,
+      "status": "not-applicable",
+      "counted": false,
+      "display_value": null,
+      "explanation": null,
+      "note": "Validates ai-catalog.json (Agentic Resource Discovery). N/A unless a catalog is signalled or /.well-known/ai-catalog.json returns 200.",
+      "issues": []
+    }
+  ],
+  "paths": [
+    {
+      "audit": "ard-schema",
+      "change": "adds one counted audit",
+      "how": "Publish a valid /.well-known/ai-catalog.json only if you have agent resources to list (MCP server, A2A agent, skills). An invalid catalog adds a counted failure instead."
+    },
+    {
+      "audit": "llms-txt",
+      "change": "adds one counted audit",
+      "how": "Serve /llms.txt with an H1, a summary, and Markdown links."
+    }
+  ],
+  "version_note": "Audit notes were verified against Lighthouse 13.5.0; this result is 13.6.0. The fraction is still read from auditRefs."
+}

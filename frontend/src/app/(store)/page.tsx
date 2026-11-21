@@ -1,23 +1,20 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import { buildCanonicalProductPath } from "@/lib/product-path";
-import { getActivePerfumes, getPerfumeOffers, parseImageList, type PerfumeDocument } from "@/lib/seo-catalog";
+import { getActivePerfumes, parseImageList, type PerfumeDocument } from "@/lib/seo-catalog";
+import { getCatalogPrices, type DecantPrice } from "@/lib/catalog-pricing";
 import PackCard from "@/components/store/PackCard";
 import { getPublicPacks } from "@/lib/packs-api";
 
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 export const revalidate = 300;
 
-interface PriceInfo {
-  ml: number;
-  sellingPrice: number;
-  available: boolean;
-}
-
-function PerfumeCard({ perfume, prices, priority }: { perfume: PerfumeDocument; prices?: PriceInfo[]; priority?: boolean }) {
+function PerfumeCard({ perfume, prices, priority }: { perfume: PerfumeDocument; prices?: DecantPrice[]; priority?: boolean }) {
   const images = parseImageList(perfume.images);
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
-  const outOfStock = Number(perfume.totalStockMl || 0) <= 0;
+  const outOfStock = prices ? !lowestPrice : Number(perfume.totalStockMl || 0) <= 0;
   const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0;
 
   return (
@@ -50,14 +47,15 @@ function PerfumeCard({ perfume, prices, priority }: { perfume: PerfumeDocument; 
         {/* Lean card spacing keeps the listing easy to scan. */}
         <div className="p-3.5">
           <h3 className="font-serif text-lg font-light leading-tight line-clamp-2">{perfume.name}</h3>
+          <p className="mt-0.5 text-sm text-text-muted">{perfume.brand}</p>
           <div className="mt-2.5">
             {lowestPrice ? (
               <p className="font-serif text-base md:text-xl leading-snug font-medium text-[var(--gold-light)]">
-                From {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
+                {lowestPrice.ml} ml from {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
               <p className="text-base md:text-lg leading-snug font-medium text-[var(--text-secondary)]">
-                {prices ? "Unavailable" : "..."}
+                {outOfStock ? "Unavailable" : "See sizes and prices"}
               </p>
             )}
           </div>
@@ -76,24 +74,11 @@ export default async function HomePage() {
     .slice(0, 4);
   const newArrivals = perfumes.slice(0, 8);
 
-  // Deduplicated top-12 for pricing — bestSellers first, then fill from newArrivals.
-  // getPricingConfig is now cached (unstable_cache + React cache) so these parallel
-  // calls hit Firestore only once per 300 s instead of N×3 reads.
-  const top12 = [...new Map([...bestSellers, ...newArrivals].map((p) => [p.id, p])).values()].slice(0, 12);
-  const pricingEntries = await Promise.all(
-    top12.map(async (perfume) => {
-      const offers = await getPerfumeOffers(perfume);
-      const prices: PriceInfo[] = offers.decantOffers.map((o) => ({
-        ml: o.ml,
-        sellingPrice: o.price,
-        available: o.available,
-      }));
-      return [perfume.id, prices] as const;
-    }),
-  );
-  const priceMap = Object.fromEntries(pricingEntries);
-  // Featured packs come from the backend pack API (canonical pricing) — empty array if unavailable.
-  const featuredPacks = (await getPublicPacks()).slice(0, 3);
+  const [priceMap, packs] = await Promise.all([
+    getCatalogPrices([...bestSellers, ...newArrivals].map((p) => p.id)),
+    getPublicPacks(),
+  ]);
+  const featuredPacks = packs.slice(0, 3);
 
   return (
     <div>
@@ -148,7 +133,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {bestSellers.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} priority={i === 0} />
+                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]?.prices} priority={i === 0} />
               </div>
             ))}
           </div>
@@ -203,7 +188,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {newArrivals.map((perfume, i) => (
               <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} priority={i === 0 && bestSellers.length === 0} />
+                <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]?.prices} priority={i === 0 && bestSellers.length === 0} />
               </div>
             ))}
           </div>

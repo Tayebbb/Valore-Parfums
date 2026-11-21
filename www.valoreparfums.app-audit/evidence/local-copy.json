@@ -1,0 +1,63 @@
+{
+  "/decants-bangladesh": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 2,
+    "occurrences": 2,
+    "heading": "Perfume Decants Bangladesh",
+    "mainWords": 95,
+    "productLinks": [],
+    "mainTextHash": "fb0cc64bf5eb065c5482af04ccd10d609f95aa978b0d669e48f3c136eb0fbc45"
+  },
+  "/affordable-perfume-decants": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 2,
+    "occurrences": 2,
+    "heading": "Affordable Perfume Decants",
+    "mainWords": 90,
+    "productLinks": [],
+    "mainTextHash": "fa94dcef855db49e1b2520784c5ec258c478bbe0fb70f2b15d6184e9c8588839"
+  },
+  "/blog/top-lattafa-perfumes-that-smell-expensive": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 2,
+    "occurrences": 2,
+    "heading": "Lattafa Perfume Decants by Scent Profile",
+    "mainWords": 125,
+    "productLinks": [
+      "/products/dynasty-edp",
+      "/products/rave-now-women-edp",
+      "/products/khamrah-qahwa-edp",
+      "/products/hayaati-edp",
+      "/products/yara-edp",
+      "/products/angham-edp",
+      "/products/fakhar-black-edp"
+    ],
+    "mainTextHash": "477d2e0f529839d5b9f2e07144cd0c9c514953ed82958c8f3a3dca5116c98a6e"
+  },
+  "/guides/decant-vs-full-bottle": {
+    "status": 200,
+    "redirects": [
+      308
+    ],
+    "distinctParagraphsOver80Chars": 2,
+    "occurrences": 2,
+    "heading": "Decant vs Full Bottle - Which Should You Buy?",
+    "mainWords": 101,
+    "productLinks": [],
+    "mainTextHash": "a2d1907d77c830dbc02b17c58b2a0b8515f11abb6bdfed7e5f660bc636383b44"
+  },
+  "/blog/decant-vs-full-bottle-which-should-you-buy": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 2,
+    "occurrences": 2,
+    "heading": "Decant vs Full Bottle - Which Should You Buy?",
+    "mainWords": 101,
+    "productLinks": [],
+    "mainTextHash": "a2d1907d77c830dbc02b17c58b2a0b8515f11abb6bdfed7e5f660bc636383b44"
+  },
+  "identicalLongParagraphsAcrossFirstThreePages": 0
+}

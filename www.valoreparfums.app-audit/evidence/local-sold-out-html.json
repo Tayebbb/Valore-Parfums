@@ -1,0 +1,39 @@
+{
+  "fixture": "Only the server-side pricing service was replaced. All three catalog sizes unavailable.",
+  "status": 200,
+  "path": "/products/hawas-ice-edp?size=10ml",
+  "selected": "10 ml 479 BDT \u00b7 Out of stock",
+  "offers": [
+    {
+      "@type": "Offer",
+      "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+      "priceCurrency": "BDT",
+      "price": 259,
+      "availability": "https://schema.org/OutOfStock"
+    },
+    {
+      "@type": "Offer",
+      "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+      "priceCurrency": "BDT",
+      "price": 479,
+      "availability": "https://schema.org/OutOfStock"
+    },
+    {
+      "@type": "Offer",
+      "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+      "priceCurrency": "BDT",
+      "price": 689,
+      "availability": "https://schema.org/OutOfStock"
+    }
+  ],
+  "buttons": [
+    "",
+    "Fragrance Notes",
+    "Full Bottle (Soon)",
+    "Decant",
+    "5 ml 259 BDT \u00b7 Out of stock",
+    "10 ml 479 BDT \u00b7 Out of stock",
+    "15 ml 689 BDT \u00b7 Out of stock",
+    "Request Stock"
+  ]
+}

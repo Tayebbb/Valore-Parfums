@@ -1,0 +1,523 @@
+{
+  "shopBefore": [
+    {
+      "url": "/products/supremacy-collectors-edition-edp",
+      "text": "MEN\nBEST SELLER\nSupremacy Collector's Edition EDP\n\nAfnan\n\n5 ml from 459 BDT"
+    },
+    {
+      "url": "/products/dynasty-edp",
+      "text": "UNISEX\nDynasty EDP\n\nLattafa\n\n5 ml from 259 BDT"
+    },
+    {
+      "url": "/products/rave-now-women-edp",
+      "text": "WOMEN\nBEST SELLER\nRave Now Women EDP\n\nLattafa\n\n5 ml from 189 BDT"
+    },
+    {
+      "url": "/products/amber-oud-gold-edition-edp",
+      "text": "UNISEX\nAmber Oud Gold Edition EDP\n\nAl Haramain\n\n5 ml from 399 BDT"
+    },
+    {
+      "url": "/products/club-de-nuit-intense-man-edp",
+      "text": "MEN\nBEST SELLER\nClub De Nuit Intense Man EDP\n\nArmaf\n\n5 ml from 269 BDT"
+    },
+    {
+      "url": "/products/terra-edp",
+      "text": "MEN\nBEST SELLER\nTerra EDP\n\nRayhaan\n\n5 ml from 199 BDT"
+    },
+    {
+      "url": "/products/aquatica-edp",
+      "text": "MEN\nBEST SELLER\nAquatica EDP\n\nRayhaan\n\n5 ml from 199 BDT"
+    },
+    {
+      "url": "/products/khamrah-qahwa-edp",
+      "text": "UNISEX\nBEST SELLER\nKhamrah Qahwa EDP\n\nLattafa\n\n5 ml from 249 BDT"
+    },
+    {
+      "url": "/products/hawas-diva-edp",
+      "text": "WOMEN\nBEST SELLER\nHawas Diva EDP\n\nRasasi\n\n5 ml from 239 BDT"
+    },
+    {
+      "url": "/products/hayaati-edp",
+      "text": "UNISEX\nHayaati EDP\n\nLattafa\n\n5 ml from 169 BDT"
+    },
+    {
+      "url": "/products/212-men-nyc-edt",
+      "text": "MEN\nBEST SELLER\n212 Men NYC EDT\n\nCarolina Herrera\n\n5 ml from 489 BDT"
+    },
+    {
+      "url": "/products/bois-blanc-edp",
+      "text": "UNISEX\nBEST SELLER\nBois Blanc EDP\n\nArabiyat Prestige\n\n5 ml from 269 BDT"
+    },
+    {
+      "url": "/products/yara-edp",
+      "text": "WOMEN\nBEST SELLER\nYara EDP\n\nLattafa\n\n5 ml from 209 BDT"
+    },
+    {
+      "url": "/products/touch-edp",
+      "text": "MEN\nTouch EDP\n\nBurberry\n\n5 ml from 409 BDT"
+    },
+    {
+      "url": "/products/angham-edp",
+      "text": "WOMEN\nBEST SELLER\nAngham EDP\n\nLattafa\n\n5 ml from 249 BDT"
+    },
+    {
+      "url": "/products/9pm-edp",
+      "text": "MEN\nBEST SELLER\n9PM EDP\n\nAfnan\n\n5 ml from 269 BDT"
+    },
+    {
+      "url": "/products/exquisite-prive-edp",
+      "text": "UNISEX\nBEST SELLER\nExquisite Prive EDP\n\nMaison Alhambra\n\n5 ml from 159 BDT"
+    },
+    {
+      "url": "/products/spicebomb-infrared-edt",
+      "text": "MEN\nSpicebomb Infrared EDT\n\nViktor&Rolf\n\n5 ml from 699 BDT"
+    },
+    {
+      "url": "/products/tobacco-touch-edp",
+      "text": "UNISEX\nBEST SELLER\nTobacco Touch EDP\n\nMaison Alhambra\n\n5 ml from 189 BDT"
+    },
+    {
+      "url": "/products/fakhar-black-edp",
+      "text": "MEN\nFakhar Black EDP\n\nLattafa\n\n5 ml from 229 BDT"
+    },
+    {
+      "url": "/products/hawas-ice-edp",
+      "text": "MEN\nBEST SELLER\nHawas Ice EDP\n\nRasasi\n\n5 ml from 259 BDT"
+    },
+    {
+      "url": "/products/hawas-black-edp",
+      "text": "MEN\nBEST SELLER\nHawas Black EDP\n\nRasasi\n\n5 ml from 249 BDT"
+    },
+    {
+      "url": "/products/amber-oud-aqua-dubai-edp",
+      "text": "MEN\nBEST SELLER\nAmber Oud Aqua Dubai EDP\n\nAl Haramain\n\n5 ml from 409 BDT"
+    },
+    {
+      "url": "/products/uomo-born-in-roma-coral-fantasy-edt",
+      "text": "UNISEX\nBEST SELLER\nUomo Born In Roma Coral Fantasy EDT\n\nValentino\n\n5 ml from 639 BDT"
+    }
+  ],
+  "filtered": {
+    "url": "http://127.0.0.1:4317/shop?category=Women",
+    "cards": [
+      {
+        "url": "/products/yara-edp",
+        "text": "WOMEN\nBEST SELLER\nYara EDP\n\nLattafa\n\n5 ml from 209 BDT"
+      },
+      {
+        "url": "/products/rave-now-women-edp",
+        "text": "WOMEN\nBEST SELLER\nRave Now Women EDP\n\nLattafa\n\n5 ml from 189 BDT"
+      },
+      {
+        "url": "/products/angham-edp",
+        "text": "WOMEN\nBEST SELLER\nAngham EDP\n\nLattafa\n\n5 ml from 249 BDT"
+      },
+      {
+        "url": "/products/hawas-diva-edp",
+        "text": "WOMEN\nBEST SELLER\nHawas Diva EDP\n\nRasasi\n\n5 ml from 239 BDT"
+      }
+    ]
+  },
+  "sorted": {
+    "url": "http://127.0.0.1:4317/shop?category=Women&sort=name-asc",
+    "cards": [
+      {
+        "url": "/products/angham-edp",
+        "text": "WOMEN\nBEST SELLER\nAngham EDP\n\nLattafa\n\n5 ml from 249 BDT"
+      },
+      {
+        "url": "/products/hawas-diva-edp",
+        "text": "WOMEN\nBEST SELLER\nHawas Diva EDP\n\nRasasi\n\n5 ml from 239 BDT"
+      },
+      {
+        "url": "/products/rave-now-women-edp",
+        "text": "WOMEN\nBEST SELLER\nRave Now Women EDP\n\nLattafa\n\n5 ml from 189 BDT"
+      },
+      {
+        "url": "/products/yara-edp",
+        "text": "WOMEN\nBEST SELLER\nYara EDP\n\nLattafa\n\n5 ml from 209 BDT"
+      }
+    ]
+  },
+  "filterAndSortEventTiming": [
+    {
+      "type": "pointerdown",
+      "ms": 24
+    },
+    {
+      "type": "pointerup",
+      "ms": 24
+    },
+    {
+      "type": "click",
+      "ms": 24
+    },
+    {
+      "type": "pointerdown",
+      "ms": 16
+    },
+    {
+      "type": "pointerup",
+      "ms": 16
+    },
+    {
+      "type": "click",
+      "ms": 16
+    }
+  ],
+  "ordinaryBefore": {
+    "main": "Home\n/\nShop\n/\nRasasi\n/\nHawas Ice EDP\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML\n259 BDT\n10ML\n479 BDT\n15ML\n689 BDT\nAsk about a full bottle\nQUANTITY\n1\n\n259 BDT\n\nStock: 5 ml in stock\n\n5 ml · 259 BDT\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "ProductGroup",
+        "productGroupID": "1780c3b1-a750-4b08-8265-735df844fcff",
+        "name": "Rasasi Hawas Ice EDP decant",
+        "description": "Shop Rasasi Hawas Ice EDP decants in Bangladesh. Available sizes: 5 ml, 10 ml, 15 ml. From 259 BDT.",
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "variesBy": "https://schema.org/size",
+        "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+        "hasVariant": [
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-5ml",
+            "name": "Rasasi Hawas Ice EDP 5 ml decant",
+            "size": "5 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+              "priceCurrency": "BDT",
+              "price": 259,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-10ml",
+            "name": "Rasasi Hawas Ice EDP 10 ml decant",
+            "size": "10 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+              "priceCurrency": "BDT",
+              "price": 479,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-15ml",
+            "name": "Rasasi Hawas Ice EDP 15 ml decant",
+            "size": "15 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+              "priceCurrency": "BDT",
+              "price": 689,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "ordinaryAfter": {
+    "url": "http://127.0.0.1:4317/products/hawas-ice-edp?size=10ml",
+    "main": "Home\n/\nShop\n/\nRasasi\n/\nHawas Ice EDP\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML\n259 BDT\n10ML\n479 BDT\n15ML\n689 BDT\nAsk about a full bottle\nQUANTITY\n1\n\n479 BDT\n\nStock: 10 ml in stock\n\n10 ml · 479 BDT\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "ProductGroup",
+        "productGroupID": "1780c3b1-a750-4b08-8265-735df844fcff",
+        "name": "Rasasi Hawas Ice EDP decant",
+        "description": "Shop Rasasi Hawas Ice EDP decants in Bangladesh. Available sizes: 5 ml, 10 ml, 15 ml. From 259 BDT.",
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "variesBy": "https://schema.org/size",
+        "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+        "hasVariant": [
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-5ml",
+            "name": "Rasasi Hawas Ice EDP 5 ml decant",
+            "size": "5 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+              "priceCurrency": "BDT",
+              "price": 259,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-10ml",
+            "name": "Rasasi Hawas Ice EDP 10 ml decant",
+            "size": "10 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+              "priceCurrency": "BDT",
+              "price": 479,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-15ml",
+            "name": "Rasasi Hawas Ice EDP 15 ml decant",
+            "size": "15 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+              "priceCurrency": "BDT",
+              "price": 689,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "variantEventTiming": [
+    {
+      "type": "pointerdown",
+      "ms": 16
+    },
+    {
+      "type": "pointerup",
+      "ms": 16
+    },
+    {
+      "type": "click",
+      "ms": 16
+    }
+  ],
+  "cart": "CONTINUE SHOPPING\nShopping Cart\nHawas Ice EDP\n\n10ml\n\n479 BDT each\n\n1\n\n479 BDT\n\nORDER SUMMARY\nHawas Ice EDP 10ml ×1\n479\nSubtotal\n479 BDT\nPROCEED TO CHECKOUT\n\nSUBTOTAL\n\n479 BDT\n\nCHECKOUT",
+  "checkout": {
+    "url": "http://127.0.0.1:4317/checkout",
+    "h1": [
+      "Checkout"
+    ],
+    "body": "BACK TO CART\nCheckout\n\nFast and compact checkout designed for mobile. Fill details, choose payment, and place order.\n\nCUSTOMER\nADDRESS\nPAYMENT\nSUMMARY\n\nSECTION 1\n\nCustomer Info\nNAME\nPHONE\nRECIPIENT EMAIL\n\nSECTION 2\n\nDelivery Address\nPICKUP\nDELIVERY\n\nDELIVERY ZONE\n\nINSIDE DHAKA\nOUTSIDE DHAKA\nAREA\nCITY\nADDRESS\nDELIVERY NOTE (OPTIONAL)\n\nDelivery Fee: 0 BDT\n\nSECTION 3\n\nPayment Method\nCOD\nBKASH\nBANK\n\nVOUCHER\n\nAPPLY\n\nSECTION 4\n\nOrder Summary\n\nHawas Ice"
+  },
+  "deepLink": {
+    "url": "http://127.0.0.1:4317/products/hawas-ice-edp?size=10ml",
+    "main": "Home\n/\nShop\n/\nRasasi\n/\nHawas Ice EDP\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML\n259 BDT\n10ML\n479 BDT\n15ML\n689 BDT\nAsk about a full bottle\nQUANTITY\n1\n\n479 BDT\n\nStock: 10 ml in stock\n\n10 ml · 479 BDT\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "ProductGroup",
+        "productGroupID": "1780c3b1-a750-4b08-8265-735df844fcff",
+        "name": "Rasasi Hawas Ice EDP decant",
+        "description": "Shop Rasasi Hawas Ice EDP decants in Bangladesh. Available sizes: 5 ml, 10 ml, 15 ml. From 259 BDT.",
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "variesBy": "https://schema.org/size",
+        "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+        "hasVariant": [
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-5ml",
+            "name": "Rasasi Hawas Ice EDP 5 ml decant",
+            "size": "5 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+              "priceCurrency": "BDT",
+              "price": 259,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-10ml",
+            "name": "Rasasi Hawas Ice EDP 10 ml decant",
+            "size": "10 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+              "priceCurrency": "BDT",
+              "price": 479,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-15ml",
+            "name": "Rasasi Hawas Ice EDP 15 ml decant",
+            "size": "15 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+              "priceCurrency": "BDT",
+              "price": 689,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "url": "http://127.0.0.1:4317/products/hawas-ice-edp",
+    "body": "Home\n/\nShop\n/\nRasasi\n/\nHawas Ice EDP\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML\n259 BDT\n10ML\n479 BDT\n15ML\n689 BDT\nAsk about a full bottle\nQUANTITY\n1\n\n259 BDT\n\nStock: 5 ml in stock\n\n5 ml · 259 BDT\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "ProductGroup",
+        "productGroupID": "1780c3b1-a750-4b08-8265-735df844fcff",
+        "name": "Rasasi Hawas Ice EDP decant",
+        "description": "Shop Rasasi Hawas Ice EDP decants in Bangladesh. Available sizes: 5 ml, 10 ml, 15 ml. From 259 BDT.",
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "variesBy": "https://schema.org/size",
+        "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+        "hasVariant": [
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-5ml",
+            "name": "Rasasi Hawas Ice EDP 5 ml decant",
+            "size": "5 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+              "priceCurrency": "BDT",
+              "price": 259,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-10ml",
+            "name": "Rasasi Hawas Ice EDP 10 ml decant",
+            "size": "10 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+              "priceCurrency": "BDT",
+              "price": 479,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "@type": "Product",
+            "sku": "hawas-ice-edp-15ml",
+            "name": "Rasasi Hawas Ice EDP 15 ml decant",
+            "size": "15 ml",
+            "image": [
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+              "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+              "priceCurrency": "BDT",
+              "price": 689,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ],
+    "buttons": [
+      [
+        "",
+        false
+      ],
+      [
+        "Fragrance Notes",
+        false
+      ],
+      [
+        "Full Bottle (Soon)",
+        true
+      ],
+      [
+        "Decant",
+        false
+      ],
+      [
+        "5ML\n259 BDT",
+        false
+      ],
+      [
+        "10ML\n479 BDT",
+        false
+      ],
+      [
+        "15ML\n689 BDT",
+        false
+      ],
+      [
+        "",
+        false
+      ],
+      [
+        "",
+        false
+      ],
+      [
+        "ADD TO CART",
+        false
+      ],
+      [
+        "BUY NOW",
+        false
+      ]
+    ]
+  }
+}

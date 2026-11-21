@@ -1,3 +1,4 @@
+import { resolveBackendBaseUrl } from "./backend-base-url";
 import type { PackPublic } from "@/types/pack";
 
 /**
@@ -6,14 +7,6 @@ import type { PackPublic } from "@/types/pack";
  * under the "packs" tag, which the /api proxy purges whenever an admin changes packs, perfumes,
  * prices, sizes or bottles, or a pack order changes stock.
  */
-function resolveBackendBaseUrl(): string | null {
-  const raw = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_URL || "";
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  return withProtocol.replace(/\/+$/, "");
-}
-
 const REVALIDATE_SECONDS = 300;
 
 async function fetchBackend<T>(path: string): Promise<T | null> {

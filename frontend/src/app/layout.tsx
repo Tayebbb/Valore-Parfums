@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/Toaster";
@@ -26,7 +27,6 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.valoreparfums.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -34,10 +34,9 @@ export const metadata: Metadata = {
     default: "Valore Parfums | Perfume Decants & Samples in Bangladesh",
     template: "%s | Valore Parfums",
   },
-  description: "Buy authentic perfume decants & samples in Bangladesh. Try luxury fragrances in 3ml, 5ml, 10ml, 15ml & 30ml before committing to a full bottle. Fast delivery in Dhaka.",
+  description: "Shop perfume decants in Bangladesh. Choose a fragrance, compare available sizes and prices in BDT, or explore curated perfume packs.",
   keywords: ["perfume decant bangladesh", "buy perfume samples bangladesh", "fragrance decant dhaka", "luxury perfume samples", "try before you buy perfume"],
   authors: [{ name: "Valore Parfums" }],
-  robots: { index: true, follow: true },
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",
@@ -47,7 +46,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Valore Parfums",
     title: "Valore Parfums | Perfume Decants & Samples in Bangladesh",
-    description: "Buy authentic perfume decants & samples in Bangladesh. Try luxury fragrances in 3ml, 5ml, 10ml, 15ml & 30ml before committing to a full bottle.",
+    description: "Explore perfume decants, compare sizes and prices in BDT, and shop curated fragrance packs in Bangladesh.",
     url: SITE_URL,
     images: [{ url: "/valore-logo.png", width: 512, height: 512, alt: "Valore Parfums" }],
   },
@@ -83,32 +82,6 @@ export default function RootLayout({
                 "@type": "PostalAddress",
                 addressCountry: "BD",
                 addressLocality: "Dhaka",
-              },
-              sameAs: [
-                "https://www.facebook.com/ValoreParfums",
-                "https://www.instagram.com/valore_parfums/",
-              ],
-            }),
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": ["LocalBusiness", "Store"],
-              name: "Valore Parfums",
-              url: SITE_URL,
-              logo: `${SITE_URL}/valore-logo.png`,
-              image: `${SITE_URL}/valore-logo.png`,
-              description: "Authentic perfume decants and full bottle requests in Bangladesh. Fast delivery in Dhaka.",
-              priceRange: "৳৳",
-              areaServed: "Bangladesh",
-              address: {
-                "@type": "PostalAddress",
-                addressCountry: "BD",
-                addressLocality: "Dhaka",
-                addressRegion: "Dhaka Division",
               },
               sameAs: [
                 "https://www.facebook.com/ValoreParfums",

@@ -1,0 +1,188 @@
+[
+  {
+    "path": "/login",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/cart",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/checkout",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/wishlist",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/track",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/requests",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/signup",
+    "status": 200,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/admin",
+    "status": 307,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": "/login",
+    "canonical": []
+  },
+  {
+    "path": "/investor",
+    "status": 307,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": "/login?next=/investor",
+    "canonical": []
+  },
+  {
+    "path": "/unsubscribe",
+    "status": 200,
+    "robots": [
+      "noindex, nofollow"
+    ],
+    "xrobots": "noindex, nofollow",
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/no-such-fragrance-audit",
+    "status": 404,
+    "robots": [
+      "noindex"
+    ],
+    "xrobots": null,
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/guides/decant-vs-full-bottle",
+    "status": 308,
+    "robots": [],
+    "xrobots": null,
+    "location": "/blog/decant-vs-full-bottle-which-should-you-buy",
+    "canonical": []
+  },
+  {
+    "path": "/niche-perfume-decants",
+    "status": 200,
+    "robots": [],
+    "xrobots": null,
+    "location": null,
+    "canonical": [
+      "https://www.valoreparfums.app/niche-perfume-decants"
+    ]
+  },
+  {
+    "path": "/blog/decant-vs-full-bottle-which-should-you-buy",
+    "status": 200,
+    "robots": [],
+    "xrobots": null,
+    "location": null,
+    "canonical": [
+      "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+    ]
+  },
+  {
+    "path": "/shop?page=999",
+    "status": 404,
+    "robots": [
+      "noindex"
+    ],
+    "xrobots": null,
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/shop?page=-1",
+    "status": 404,
+    "robots": [
+      "noindex"
+    ],
+    "xrobots": null,
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/category/decants?page=2",
+    "status": 200,
+    "robots": [],
+    "xrobots": null,
+    "location": null,
+    "canonical": [
+      "https://www.valoreparfums.app/category/decants?page=2"
+    ]
+  },
+  {
+    "path": "/brand/audit-missing-house",
+    "status": 404,
+    "robots": [
+      "noindex"
+    ],
+    "xrobots": null,
+    "location": null,
+    "canonical": []
+  },
+  {
+    "path": "/products/hawas-ice-edp?size=10ml",
+    "status": 200,
+    "robots": [],
+    "xrobots": null,
+    "location": null,
+    "canonical": [
+      "https://www.valoreparfums.app/products/hawas-ice-edp"
+    ]
+  },
+  {
+    "path": "/admin/orders",
+    "status": 307,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": "/login",
+    "canonical": []
+  },
+  {
+    "path": "/investor/statement",
+    "status": 307,
+    "robots": [],
+    "xrobots": "noindex, nofollow",
+    "location": "/login?next=/investor",
+    "canonical": []
+  }
+]

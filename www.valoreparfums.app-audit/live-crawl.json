@@ -1,0 +1,4629 @@
+{
+ "origin": "https://www.valoreparfums.app",
+ "robots": "User-Agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /cart\nDisallow: /checkout\nDisallow: /wishlist\nDisallow: /track\nDisallow: /orders\n\nHost: https://www.valoreparfums.app\nSitemap: https://www.valoreparfums.app/sitemap.xml\n",
+ "sitemap_urls": [
+  "/",
+  "/shop",
+  "/packs",
+  "/category/decants",
+  "/category/full-bottles",
+  "/guides/decant-vs-full-bottle",
+  "/decants-bangladesh",
+  "/buy-perfume-samples",
+  "/full-bottle-perfume-bd",
+  "/affordable-perfume-decants",
+  "/niche-perfume-decants",
+  "/blog/best-winter-perfumes-for-men-in-bangladesh",
+  "/blog/top-lattafa-perfumes-that-smell-expensive",
+  "/blog/decant-vs-full-bottle-which-should-you-buy",
+  "/products/yara-edp",
+  "/products/exquisite-prive-edp",
+  "/products/liquid-brun",
+  "/products/hawas-ice-edp",
+  "/products/tobacco-touch-edp",
+  "/products/touch-edp",
+  "/products/rave-now-women-edp",
+  "/products/khamrah-qahwa-edp",
+  "/products/club-de-nuit-intense-man-edp",
+  "/products/bois-blanc-edp",
+  "/products/spicebomb-infrared-edt",
+  "/products/hawas-black-edp",
+  "/products/hayaati-edp",
+  "/products/amber-oud-aqua-dubai-edp",
+  "/products/212-men-nyc-edt",
+  "/products/uomo-born-in-roma-coral-fantasy-edt",
+  "/products/angham-edp",
+  "/products/fakhar-black-edp",
+  "/products/terra-edp",
+  "/products/9pm-edp",
+  "/products/hawas-diva-edp",
+  "/products/dynasty-edp",
+  "/products/aquatica-edp",
+  "/products/nocturno-edp",
+  "/products/amber-oud-gold-edition-edp",
+  "/products/corium",
+  "/products/hawas-fire",
+  "/products/supremacy-collectors-edition-edp",
+  "/packs/winter-pack",
+  "/packs/summer-pack",
+  "/packs/special-occasion-pack",
+  "/packs/hawas-collection",
+  "/packs/rayhaan-collection",
+  "/packs/sweet-escape",
+  "/packs/tobacco-spice",
+  "/packs/velvet-romance"
+ ],
+ "route_templates": [
+  "/",
+  "/admin",
+  "/admin/bottles",
+  "/admin/brand-sections",
+  "/admin/customers",
+  "/admin/decant-sizes",
+  "/admin/export",
+  "/admin/inventory",
+  "/admin/investments",
+  "/admin/investments/[id]",
+  "/admin/notes-library",
+  "/admin/notifications",
+  "/admin/orders",
+  "/admin/packs",
+  "/admin/pickup-locations",
+  "/admin/reports",
+  "/admin/requests",
+  "/admin/settings",
+  "/admin/stock-requests",
+  "/admin/vouchers",
+  "/affordable-perfume-decants",
+  "/blog",
+  "/blog/[postSlug]",
+  "/brand/[brand]",
+  "/brand/[brand]/[perfume]",
+  "/buy-perfume-samples",
+  "/cart",
+  "/category/decants",
+  "/category/full-bottles",
+  "/checkout",
+  "/decants-bangladesh",
+  "/full-bottle-perfume-bd",
+  "/guides/decant-vs-full-bottle",
+  "/investor",
+  "/investor/investments/[id]",
+  "/investor/statement",
+  "/login",
+  "/niche-perfume-decants",
+  "/packs",
+  "/packs/[slug]",
+  "/partials",
+  "/perfume/[id]",
+  "/products/[slug]",
+  "/requests",
+  "/shop",
+  "/signup",
+  "/sterile-decant-process",
+  "/track",
+  "/unsubscribe",
+  "/wishlist"
+ ],
+ "catalog_count": 28,
+ "catalog_not_in_sitemap": [],
+ "catalog_without_inbound": [],
+ "catalog_unreachable_from_home": [
+  "/products/club-de-nuit-intense-man-edp",
+  "/products/bois-blanc-edp",
+  "/products/hayaati-edp",
+  "/products/212-men-nyc-edt",
+  "/products/fakhar-black-edp",
+  "/products/dynasty-edp",
+  "/products/aquatica-edp",
+  "/products/nocturno-edp",
+  "/products/amber-oud-gold-edition-edp"
+ ],
+ "counts": {
+  "home": {
+   "discovered": 1,
+   "crawled": 1,
+   "sitemap": 1,
+   "home_reachable": 1
+  },
+  "staff": {
+   "discovered": 20,
+   "blocked": 18,
+   "crawled": 2
+  },
+  "landing pages": {
+   "discovered": 5,
+   "crawled": 5,
+   "sitemap": 5
+  },
+  "editorial": {
+   "discovered": 6,
+   "crawled": 6,
+   "sitemap": 4
+  },
+  "brand": {
+   "discovered": 14,
+   "crawled": 14
+  },
+  "legacy aliases": {
+   "discovered": 2,
+   "crawled": 2
+  },
+  "utility or redirect": {
+   "discovered": 10,
+   "blocked": 4,
+   "home_reachable": 6,
+   "crawled": 6
+  },
+  "categories": {
+   "discovered": 4,
+   "crawled": 4,
+   "sitemap": 2
+  },
+  "pack index": {
+   "discovered": 1,
+   "crawled": 1,
+   "sitemap": 1,
+   "home_reachable": 1
+  },
+  "packs": {
+   "discovered": 8,
+   "crawled": 8,
+   "sitemap": 8,
+   "home_reachable": 8
+  },
+  "products": {
+   "discovered": 33,
+   "crawled": 33,
+   "error_or_http_4xx_5xx": 5,
+   "home_reachable": 23,
+   "sitemap": 28
+  },
+  "product variants": {
+   "discovered": 1,
+   "crawled": 1
+  },
+  "shop": {
+   "discovered": 1,
+   "crawled": 1,
+   "sitemap": 1,
+   "home_reachable": 1
+  },
+  "shop views": {
+   "discovered": 17,
+   "crawled": 17,
+   "home_reachable": 15
+  }
+ },
+ "urls": {
+  "/": {
+   "sources": [
+    "anchor",
+    "entry",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums",
+    "Discover Your Signature Scent"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/packs/special-occasion-pack",
+    "/packs/summer-pack",
+    "/packs/winter-pack",
+    "/partials",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/angham-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/admin": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/bottles": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/brand-sections": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/customers": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/decant-sizes": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/export": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/inventory": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/investments": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/notes-library": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/notifications": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/orders": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/packs": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/pickup-locations": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/reports": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/requests": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/settings": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/stock-requests": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/vouchers": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/affordable-perfume-decants": {
+   "sources": [
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/affordable-perfume-decants",
+   "title": "Affordable Perfume Decants Bangladesh | Premium Scents, Budget Entry | Valore Parfums",
+   "h1": [
+    "Affordable Perfume Decants"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp",
+    "/shop?sort=price-asc"
+   ]
+  },
+  "/blog": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog",
+   "title": "Perfume Blog Bangladesh | Guides, Comparisons, And Top Lists | Valore Parfums",
+   "h1": [
+    "Perfume Buying Blog"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/blog/best-winter-perfumes-for-men-in-bangladesh",
+    "/blog/decant-vs-full-bottle-which-should-you-buy",
+    "/blog/top-lattafa-perfumes-that-smell-expensive"
+   ]
+  },
+  "/blog/best-winter-perfumes-for-men-in-bangladesh": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog/best-winter-perfumes-for-men-in-bangladesh",
+   "title": "Best Winter Perfumes for Men in Bangladesh | Valore Parfums",
+   "h1": [
+    "Best Winter Perfumes for Men in Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/best-winter-perfumes-for-men-in-bangladesh"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/blog/decant-vs-full-bottle-which-should-you-buy": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog/decant-vs-full-bottle-which-should-you-buy",
+   "title": "Decant vs Full Bottle - Which Should You Buy? | Valore Parfums",
+   "h1": [
+    "Decant vs Full Bottle - Which Should You Buy?"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/blog/top-lattafa-perfumes-that-smell-expensive": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog/top-lattafa-perfumes-that-smell-expensive",
+   "title": "Top Lattafa Perfumes That Smell Expensive | Valore Parfums",
+   "h1": [
+    "Top Lattafa Perfumes That Smell Expensive"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/top-lattafa-perfumes-that-smell-expensive"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/brand/afnan": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/afnan",
+   "title": "afnan Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "afnan Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/afnan"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/9pm-edp",
+    "/products/supremacy-collectors-edition-edp"
+   ]
+  },
+  "/brand/al-haramain": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/al-haramain",
+   "title": "al haramain Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "al haramain Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/al-haramain"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp"
+   ]
+  },
+  "/brand/arabiyat-prestige": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/arabiyat-prestige",
+   "title": "arabiyat prestige Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "arabiyat prestige Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/arabiyat-prestige"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/bois-blanc-edp"
+   ]
+  },
+  "/brand/armaf": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/armaf",
+   "title": "armaf Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "armaf Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/armaf"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/club-de-nuit-intense-man-edp"
+   ]
+  },
+  "/brand/audit-missing-house": {
+   "sources": [
+    "test"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/audit-missing-house",
+   "title": "audit missing house Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "audit missing house Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/audit-missing-house"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/brand/burberry": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/burberry",
+   "title": "burberry Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "burberry Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/burberry"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/touch-edp"
+   ]
+  },
+  "/brand/carolina-herrera": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/carolina-herrera",
+   "title": "carolina herrera Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "carolina herrera Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/carolina-herrera"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/212-men-nyc-edt"
+   ]
+  },
+  "/brand/french-avenue": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/french-avenue",
+   "title": "french avenue Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "french avenue Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/french-avenue"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/liquid-brun"
+   ]
+  },
+  "/brand/lattafa": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/lattafa",
+   "title": "lattafa Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "lattafa Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/lattafa"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/angham-edp",
+    "/products/dynasty-edp",
+    "/products/fakhar-black-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/brand/lattafa/yara-edp": {
+   "sources": [
+    "legacy template sample"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     307,
+     "/products/yara-edp"
+    ]
+   ],
+   "final": "/products/yara-edp",
+   "title": "Yara EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/brand/maison-alhambra": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/maison-alhambra",
+   "title": "maison alhambra Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "maison alhambra Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/maison-alhambra"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/exquisite-prive-edp",
+    "/products/tobacco-touch-edp"
+   ]
+  },
+  "/brand/rasasi": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/rasasi",
+   "title": "rasasi Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "rasasi Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/rasasi"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp"
+   ]
+  },
+  "/brand/rayhaan": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/rayhaan",
+   "title": "rayhaan Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "rayhaan Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/rayhaan"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/aquatica-edp",
+    "/products/corium",
+    "/products/nocturno-edp",
+    "/products/terra-edp"
+   ]
+  },
+  "/brand/valentino": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/valentino",
+   "title": "valentino Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "valentino Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/valentino"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/uomo-born-in-roma-coral-fantasy-edt"
+   ]
+  },
+  "/brand/viktor-rolf": {
+   "sources": [
+    "brand catalog"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/viktor-rolf",
+   "title": "viktor rolf Perfume Decants Bangladesh | Authentic Samples | Valore Parfums",
+   "h1": [
+    "viktor rolf Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/viktor-rolf"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/spicebomb-infrared-edt"
+   ]
+  },
+  "/buy-perfume-samples": {
+   "sources": [
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/buy-perfume-samples",
+   "title": "Buy Perfume Samples In Bangladesh | Try Before You Buy | Valore Parfums",
+   "h1": [
+    "Buy Perfume Samples In Bangladesh"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/cart": {
+   "sources": [
+    "anchor",
+    "route"
+   ],
+   "home_reachable": true,
+   "blocked": true
+  },
+  "/category/decants": {
+   "sources": [
+    "anchor",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/decants",
+   "title": "Perfume Decants Category | 3ml, 10ml, 15ml, 30ml Bangladesh | Valore Parfums",
+   "h1": [
+    "Perfume Decants in Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/decants"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants?page=2",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/nocturno-edp",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/products/yara-edp"
+   ]
+  },
+  "/category/decants?page=2": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/decants?page=2",
+   "title": "Perfume Decants Category | 3ml, 10ml, 15ml, 30ml Bangladesh | Valore Parfums",
+   "h1": [
+    "Perfume Decants in Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/decants"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/corium",
+    "/products/hawas-fire",
+    "/products/supremacy-collectors-edition-edp"
+   ]
+  },
+  "/category/full-bottles": {
+   "sources": [
+    "anchor",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/full-bottles",
+   "title": "Full Bottle Perfume Requests Bangladesh | Authentic Sourcing | Valore Parfums",
+   "h1": [
+    "Full Bottle Perfumes on Request"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/full-bottles"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/full-bottles?page=2",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/nocturno-edp",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/products/yara-edp"
+   ]
+  },
+  "/category/full-bottles?page=2": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/full-bottles?page=2",
+   "title": "Full Bottle Perfume Requests Bangladesh | Authentic Sourcing | Valore Parfums",
+   "h1": [
+    "Full Bottle Perfumes on Request"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/full-bottles"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/full-bottles",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/corium",
+    "/products/hawas-fire",
+    "/products/supremacy-collectors-edition-edp"
+   ]
+  },
+  "/checkout": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/decants-bangladesh": {
+   "sources": [
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/decants-bangladesh",
+   "title": "Perfume Decants Bangladesh | 3ml, 10ml, 15ml, 30ml Authentic Samples | Valore Parfums",
+   "h1": [
+    "Perfume Decants Bangladesh"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/full-bottle-perfume-bd": {
+   "sources": [
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/full-bottle-perfume-bd",
+   "title": "Full Bottle Perfume Bangladesh | Request Authentic Bottles | Valore Parfums",
+   "h1": [
+    "Full Bottle Perfume Bangladesh"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/full-bottles",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/guides/decant-vs-full-bottle": {
+   "sources": [
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/guides/decant-vs-full-bottle",
+   "title": "Decant vs Full Bottle Guide | Which Perfume Buying Path Is Better? | Valore Parfums",
+   "h1": [
+    "Decant vs Full Bottle - Which Should You Buy?"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/guides/decant-vs-full-bottle"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/investor": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     307,
+     "/login?next=/investor"
+    ]
+   ],
+   "final": "/login?next=/investor",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums",
+    "Sign In"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/signup",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/investor/statement": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     307,
+     "/login?next=/investor"
+    ]
+   ],
+   "final": "/login?next=/investor",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums",
+    "Sign In"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/signup",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/login": {
+   "sources": [
+    "anchor",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/login",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums",
+    "Sign In"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/signup",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/login?next=/investor": {
+   "sources": [
+    "redirect"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/login?next=/investor",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums",
+    "Sign In"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/signup",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/niche-perfume-decants": {
+   "sources": [
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/niche-perfume-decants",
+   "title": "Niche Perfume Decants Bangladesh | Explore Rare And Premium Scents | Valore Parfums",
+   "h1": [
+    "Niche Perfume Decants Bangladesh"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp",
+    "/shop"
+   ]
+  },
+  "/packs": {
+   "sources": [
+    "anchor",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs",
+   "title": "Perfume Packs & Decant Bundles in Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Perfume Packs"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/packs/hawas-collection",
+    "/packs/rayhaan-collection",
+    "/packs/special-occasion-pack",
+    "/packs/summer-pack",
+    "/packs/sweet-escape",
+    "/packs/tobacco-spice",
+    "/packs/velvet-romance",
+    "/packs/winter-pack",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/hawas-collection": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/hawas-collection",
+   "title": "Hawas Collection — 3 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Hawas Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/hawas-collection"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/hawas-black-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/rayhaan-collection": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/rayhaan-collection",
+   "title": "Rayhaan-Collection — 4 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rayhaan-Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/rayhaan-collection"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/aquatica",
+    "/products/corium",
+    "/products/givenchy",
+    "/products/terra-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/special-occasion-pack": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/special-occasion-pack",
+   "title": "Special Occasion Pack — 3 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Special Occasion Pack"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/special-occasion-pack"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/summer-pack": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/summer-pack",
+   "title": "Summer Pack — 4 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Summer Pack"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/summer-pack"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/aquatica",
+    "/products/hawas-ice-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/sweet-escape": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/sweet-escape",
+   "title": "Sweet Escape — 2 × 15ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Sweet Escape"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/sweet-escape"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/rave-now-women-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/tobacco-spice": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/tobacco-spice",
+   "title": "Tobacco & Spice — 2 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Tobacco & Spice"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/tobacco-spice"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/velvet-romance": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/velvet-romance",
+   "title": "Velvet Romance — 2 × 10ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Velvet Romance"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/velvet-romance"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/angham-edp",
+    "/products/hawas-diva-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/winter-pack": {
+   "sources": [
+    "anchor",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/winter-pack",
+   "title": "Winter Pack — 4 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Winter Pack"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/winter-pack"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/corium",
+    "/products/exquisite-prive-edp",
+    "/products/khamrah-qahwa",
+    "/products/liquid-brun",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/partials": {
+   "sources": [
+    "anchor",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [
+    [
+     307,
+     "/shop?deal=partials"
+    ]
+   ],
+   "final": "/shop?deal=partials",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/perfume/01b62113-9521-408c-bc20-6be78b43d135": {
+   "sources": [
+    "legacy template sample"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     307,
+     "/products/yara-edp"
+    ]
+   ],
+   "final": "/products/yara-edp",
+   "title": "Yara EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/212-men": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 404,
+   "redirects": [],
+   "final": "/products/212-men",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex",
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/products/212-men-nyc-edt": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/212-men-nyc-edt",
+   "title": "212 Men NYC EDT by Carolina Herrera | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Carolina Herrera 212 Men NYC EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/212-men-nyc-edt"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/9pm-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/9pm-edp",
+   "title": "9PM EDP  by Afnan | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Afnan 9PM EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/9pm-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/amber-oud-aqua-dubai-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/amber-oud-aqua-dubai-edp",
+   "title": "Amber Oud Aqua Dubai EDP by Al Haramain | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Al Haramain Amber Oud Aqua Dubai EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/amber-oud-aqua-dubai-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/amber-oud-gold-edition-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/amber-oud-gold-edition-edp",
+   "title": "Amber Oud Gold Edition EDP by Al Haramain | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Al Haramain Amber Oud Gold Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/amber-oud-gold-edition-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/angham-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/angham-edp",
+   "title": "Angham EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Angham EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/angham-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/aquatica": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 404,
+   "redirects": [],
+   "final": "/products/aquatica",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex",
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/products/aquatica-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/aquatica-edp",
+   "title": "Aquatica EDP by Rayhaan | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rayhaan Aquatica EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/aquatica-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/audit-missing-fragrance": {
+   "sources": [
+    "test"
+   ],
+   "home_reachable": false,
+   "status": 404,
+   "redirects": [],
+   "final": "/products/audit-missing-fragrance",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex",
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/products/bois-blanc-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/bois-blanc-edp",
+   "title": "Bois Blanc EDP by Arabiyat Prestige | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Arabiyat Prestige Bois Blanc EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/bois-blanc-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/club-de-nuit-intense-man-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/club-de-nuit-intense-man-edp",
+   "title": "Club De Nuit Intense Man EDP by Armaf | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Armaf Club De Nuit Intense Man EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/club-de-nuit-intense-man-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/corium": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/corium",
+   "title": "Corium by Rayhaan | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rayhaan Corium"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/corium"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/dynasty-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/dynasty-edp",
+   "title": "Dynasty EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Dynasty EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/dynasty-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/exquisite-prive-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/exquisite-prive-edp",
+   "title": "Exquisite Prive EDP by Maison Alhambra | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Maison Alhambra Exquisite Prive EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/exquisite-prive-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/fakhar-black-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/fakhar-black-edp",
+   "title": "Fakhar Black  EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Fakhar Black  EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/fakhar-black-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/givenchy": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 404,
+   "redirects": [],
+   "final": "/products/givenchy",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex",
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/products/hawas-black-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-black-edp",
+   "title": "Hawas Black EDP by Rasasi | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rasasi Hawas Black EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-black-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-diva-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-diva-edp",
+   "title": "Hawas Diva EDP by Rasasi | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rasasi Hawas Diva EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-diva-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-fire": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-fire",
+   "title": "Hawas Fire by Rasasi | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rasasi Hawas Fire"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-fire"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-ice-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-ice-edp",
+   "title": "Hawas Ice EDP by Rasasi | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rasasi Hawas Ice EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-ice-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hayaati-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hayaati-edp",
+   "title": "Hayaati EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Hayaati EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hayaati-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/khamrah-qahwa": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 404,
+   "redirects": [],
+   "final": "/products/khamrah-qahwa",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex",
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/products/khamrah-qahwa-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/khamrah-qahwa-edp",
+   "title": "Khamrah Qahwa EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Khamrah Qahwa EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/khamrah-qahwa-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/liquid-brun": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/liquid-brun",
+   "title": "Liquid Brun by French Avenue | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "French Avenue Liquid Brun"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/liquid-brun"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/nocturno-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/nocturno-edp",
+   "title": "Nocturno EDP by Rayhaan | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rayhaan Nocturno EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/nocturno-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/rave-now-women-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/rave-now-women-edp",
+   "title": "Rave Now Women EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Rave Now Women EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/rave-now-women-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/spicebomb-infrared-edt": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/spicebomb-infrared-edt",
+   "title": "Spicebomb Infrared EDT by Viktor&Rolf | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Viktor&Rolf Spicebomb Infrared EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/spicebomb-infrared-edt"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/supremacy-collectors-edition-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/supremacy-collectors-edition-edp",
+   "title": "Supremacy Collector's Edition EDP by Afnan | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Afnan Supremacy Collector's Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/supremacy-collectors-edition-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/terra-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/terra-edp",
+   "title": "Terra EDP by Rayhaan | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Rayhaan Terra EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/terra-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/tobacco-touch-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/tobacco-touch-edp",
+   "title": "Tobacco Touch EDP by Maison Alhambra | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Maison Alhambra Tobacco Touch EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/tobacco-touch-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/touch-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/touch-edp",
+   "title": "Touch EDP by Burberry | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Burberry Touch EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/touch-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/uomo-born-in-roma-coral-fantasy-edt": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/uomo-born-in-roma-coral-fantasy-edt",
+   "title": "Uomo Born In Roma Coral Fantasy EDT by Valentino | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Valentino Uomo Born In Roma Coral Fantasy EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/uomo-born-in-roma-coral-fantasy-edt"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/yara-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/yara-edp",
+   "title": "Yara EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/yara-edp?size=10ml": {
+   "sources": [
+    "variant sample"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/yara-edp?size=10ml",
+   "title": "Yara EDP by Lattafa | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Valore Parfums",
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/requests": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/requests",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop": {
+   "sources": [
+    "anchor",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ],
+   "catalog": [
+    {
+     "name": "Yara EDP",
+     "brand": "Lattafa",
+     "slug": "yara-edp",
+     "brandSlug": "lattafa",
+     "id": "01b62113-9521-408c-bc20-6be78b43d135",
+     "path": "/products/yara-edp"
+    },
+    {
+     "name": "Exquisite Prive EDP",
+     "brand": "Maison Alhambra",
+     "slug": "exquisite-prive-edp",
+     "brandSlug": "maison-alhambra",
+     "id": "036fd366-13cf-400b-997f-e24bf7137267",
+     "path": "/products/exquisite-prive-edp"
+    },
+    {
+     "name": "Liquid Brun",
+     "brand": "French Avenue",
+     "slug": "liquid-brun",
+     "brandSlug": "french-avenue",
+     "id": "108dee74-c08d-4820-8fec-32e106810f30",
+     "path": "/products/liquid-brun"
+    },
+    {
+     "name": "Hawas Ice EDP",
+     "brand": "Rasasi",
+     "slug": "hawas-ice-edp",
+     "brandSlug": "rasasi",
+     "id": "1780c3b1-a750-4b08-8265-735df844fcff",
+     "path": "/products/hawas-ice-edp"
+    },
+    {
+     "name": "Tobacco Touch EDP",
+     "brand": "Maison Alhambra",
+     "slug": "tobacco-touch-edp",
+     "brandSlug": "maison-alhambra",
+     "id": "18b5e505-ef21-4732-b97c-5021e82373af",
+     "path": "/products/tobacco-touch-edp"
+    },
+    {
+     "name": "Touch EDP",
+     "brand": "Burberry",
+     "slug": "touch-edp",
+     "brandSlug": "burberry",
+     "id": "1b6477f3-87c4-409a-888b-e0ffa719cf2d",
+     "path": "/products/touch-edp"
+    },
+    {
+     "name": "Rave Now Women EDP",
+     "brand": "Lattafa",
+     "slug": "rave-now-women-edp",
+     "brandSlug": "lattafa",
+     "id": "25be022c-c060-4137-94bf-a4826cd8eac1",
+     "path": "/products/rave-now-women-edp"
+    },
+    {
+     "name": "Khamrah Qahwa EDP",
+     "brand": "Lattafa",
+     "slug": "khamrah-qahwa-edp",
+     "brandSlug": "lattafa",
+     "id": "2b2cc84b-41ee-4aac-8d8c-fedfc1c6e290",
+     "path": "/products/khamrah-qahwa-edp"
+    },
+    {
+     "name": "Club De Nuit Intense Man EDP",
+     "brand": "Armaf",
+     "slug": "club-de-nuit-intense-man-edp",
+     "brandSlug": "armaf",
+     "id": "2f3518f0-da65-404e-8c19-d55a434bda86",
+     "path": "/products/club-de-nuit-intense-man-edp"
+    },
+    {
+     "name": "Bois Blanc EDP",
+     "brand": "Arabiyat Prestige",
+     "slug": "bois-blanc-edp",
+     "brandSlug": "arabiyat-prestige",
+     "id": "3f32c315-33f7-4a5f-bc74-19cbb1d7bc6f",
+     "path": "/products/bois-blanc-edp"
+    },
+    {
+     "name": "Spicebomb Infrared EDT",
+     "brand": "Viktor&Rolf",
+     "slug": "spicebomb-infrared-edt",
+     "brandSlug": "viktor-rolf",
+     "id": "45bd6085-4f79-4ca6-b07d-a0d084240fe6",
+     "path": "/products/spicebomb-infrared-edt"
+    },
+    {
+     "name": "Hawas Black EDP",
+     "brand": "Rasasi",
+     "slug": "hawas-black-edp",
+     "brandSlug": "rasasi",
+     "id": "4d994bc1-c4f7-4211-a228-1ed7606bd0ef",
+     "path": "/products/hawas-black-edp"
+    },
+    {
+     "name": "Hayaati EDP",
+     "brand": "Lattafa",
+     "slug": "hayaati-edp",
+     "brandSlug": "lattafa",
+     "id": "4f36b2d7-498d-435d-9ac8-6303b94c0134",
+     "path": "/products/hayaati-edp"
+    },
+    {
+     "name": "Amber Oud Aqua Dubai EDP",
+     "brand": "Al Haramain",
+     "slug": "amber-oud-aqua-dubai-edp",
+     "brandSlug": "al-haramain",
+     "id": "5145701c-31d8-4e3c-9537-59d972133aef",
+     "path": "/products/amber-oud-aqua-dubai-edp"
+    },
+    {
+     "name": "212 Men NYC EDT",
+     "brand": "Carolina Herrera",
+     "slug": "212-men-nyc-edt",
+     "brandSlug": "carolina-herrera",
+     "id": "527a0988-91ed-49d9-af59-226c594ea6f5",
+     "path": "/products/212-men-nyc-edt"
+    },
+    {
+     "name": "Uomo Born In Roma Coral Fantasy EDT",
+     "brand": "Valentino",
+     "slug": "uomo-born-in-roma-coral-fantasy-edt",
+     "brandSlug": "valentino",
+     "id": "52b41794-4612-4c68-ab56-ae1cdb7abe2f",
+     "path": "/products/uomo-born-in-roma-coral-fantasy-edt"
+    },
+    {
+     "name": "Angham EDP",
+     "brand": "Lattafa",
+     "slug": "angham-edp",
+     "brandSlug": "lattafa",
+     "id": "5600dfa5-1e26-45cb-869d-8c751a517264",
+     "path": "/products/angham-edp"
+    },
+    {
+     "name": "Fakhar Black  EDP",
+     "brand": "Lattafa",
+     "slug": "fakhar-black-edp",
+     "brandSlug": "lattafa",
+     "id": "61924fd8-fdd3-4267-a05c-4c69fd83631c",
+     "path": "/products/fakhar-black-edp"
+    },
+    {
+     "name": "Terra EDP",
+     "brand": "Rayhaan",
+     "slug": "terra-edp",
+     "brandSlug": "rayhaan",
+     "id": "68899cc7-2ad8-45f0-b3e4-c7c5433842e8",
+     "path": "/products/terra-edp"
+    },
+    {
+     "name": "9PM EDP ",
+     "brand": "Afnan",
+     "slug": "9pm-edp",
+     "brandSlug": "afnan",
+     "id": "690cdf94-4806-4605-aa26-ac382ff39407",
+     "path": "/products/9pm-edp"
+    },
+    {
+     "name": "Hawas Diva EDP",
+     "brand": "Rasasi",
+     "slug": "hawas-diva-edp",
+     "brandSlug": "rasasi",
+     "id": "7fd5cff3-fded-468c-8811-125249fa91b9",
+     "path": "/products/hawas-diva-edp"
+    },
+    {
+     "name": "Dynasty EDP",
+     "brand": "Lattafa",
+     "slug": "dynasty-edp",
+     "brandSlug": "lattafa",
+     "id": "83327f2e-9938-40a0-a448-e5968e4152fe",
+     "path": "/products/dynasty-edp"
+    },
+    {
+     "name": "Aquatica EDP",
+     "brand": "Rayhaan",
+     "slug": "aquatica-edp",
+     "brandSlug": "rayhaan",
+     "id": "8f4a5eb9-ce98-40b4-a16b-b48d281d8ad7",
+     "path": "/products/aquatica-edp"
+    },
+    {
+     "name": "Nocturno EDP",
+     "brand": "Rayhaan",
+     "slug": "nocturno-edp",
+     "brandSlug": "rayhaan",
+     "id": "9551fcd8-d233-4073-aa98-2366b7c1432d",
+     "path": "/products/nocturno-edp"
+    },
+    {
+     "name": "Amber Oud Gold Edition EDP",
+     "brand": "Al Haramain",
+     "slug": "amber-oud-gold-edition-edp",
+     "brandSlug": "al-haramain",
+     "id": "a2aa0ef7-5571-4ec8-b3e1-2cd2463604cf",
+     "path": "/products/amber-oud-gold-edition-edp"
+    },
+    {
+     "name": "Corium",
+     "brand": "Rayhaan",
+     "slug": "corium",
+     "brandSlug": "rayhaan",
+     "id": "b4f6424c-06f2-4add-aab1-2564a14e1767",
+     "path": "/products/corium"
+    },
+    {
+     "name": "Hawas Fire",
+     "brand": "Rasasi",
+     "slug": "hawas-fire",
+     "brandSlug": "rasasi",
+     "id": "e5a49cd9-b10e-4b71-9dc1-7f34dd07c6e4",
+     "path": "/products/hawas-fire"
+    },
+    {
+     "name": "Supremacy Collector's Edition EDP",
+     "brand": "Afnan",
+     "slug": "supremacy-collectors-edition-edp",
+     "brandSlug": "afnan",
+     "id": "f4013f85-ed88-454d-9171-4cf65aa03994",
+     "path": "/products/supremacy-collectors-edition-edp"
+    }
+   ]
+  },
+  "/shop?bestSeller=true": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?bestSeller=true",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?brand=designer": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?brand=designer",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?brand=niche": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?brand=niche",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?brand=uae": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?brand=uae",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Men": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Men",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Oud": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Oud",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Unisex": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Unisex",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Women": {
+   "sources": [
+    "anchor",
+    "test"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Women",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?deal=partials": {
+   "sources": [
+    "redirect"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?deal=partials",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?page=2": {
+   "sources": [
+    "test"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?page=2",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=All%20Season": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=All%20Season",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Autumn": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Autumn",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Rainy": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Rainy",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Spring": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Spring",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Summer": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Summer",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Winter": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Winter",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?sort=price-asc": {
+   "sources": [
+    "anchor",
+    "test"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?sort=price-asc",
+   "title": "Shop Perfume Decants & Samples | Valore Parfums Bangladesh | Valore Parfums",
+   "h1": [
+    "Valore Parfums"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/signup": {
+   "sources": [
+    "anchor",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/signup",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Valore Parfums",
+    "Create Account"
+   ],
+   "canonical": [],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/cart",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/sterile-decant-process": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/sterile-decant-process",
+   "title": "Sterile Decant Process | 100% Authentic Guarantee | Valore Parfums",
+   "h1": [
+    "Sterile Decant Process"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/sterile-decant-process"
+   ],
+   "robots": [
+    "index, follow"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/track": {
+   "sources": [
+    "anchor",
+    "route"
+   ],
+   "home_reachable": true,
+   "blocked": true
+  },
+  "/unsubscribe": {
+   "sources": [
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/unsubscribe",
+   "title": "Email preferences | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Email preferences"
+   ],
+   "canonical": [],
+   "robots": [
+    "noindex, nofollow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/"
+   ]
+  },
+  "/wishlist": {
+   "sources": [
+    "anchor",
+    "route"
+   ],
+   "home_reachable": true,
+   "blocked": true
+  }
+ }
+}

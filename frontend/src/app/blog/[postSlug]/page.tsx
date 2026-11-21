@@ -49,6 +49,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ postS
         title={post.title}
         intro={post.excerpt}
         sections={post.sections}
+        matchingProducts={post.matchingProducts}
         ctaText="Shop Perfume Decants"
         ctaHref="/category/decants"
       />

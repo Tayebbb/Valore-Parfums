@@ -3,23 +3,24 @@ import Link from "next/link";
 import { buildCanonicalProductPath, getActivePerfumes, SITE_URL } from "@/lib/seo-catalog";
 import { PaginationNav } from "@/components/ui/PaginationNav";
 
+import { catalogPage, catalogPagePath, paginateCatalog, type CatalogQuery } from "@/lib/catalog-pagination";
+
 export const revalidate = 300;
-const PAGE_SIZE = 24;
+type CategoryProps = { searchParams: Promise<CatalogQuery> };
 
-export const metadata: Metadata = {
-  title: "Full Bottle Perfume Requests Bangladesh | Authentic Sourcing",
-  description: "Request full bottle perfumes in Bangladesh after testing decants. Authentic sourcing with guided recommendations.",
-  alternates: { canonical: "/category/full-bottles" },
-  keywords: ["full bottle perfume Bangladesh", "request full bottle perfume", "authentic bottle sourcing"],
-};
+export async function generateMetadata({ searchParams }: CategoryProps): Promise<Metadata> {
+  const page = catalogPage(await searchParams);
+  return {
+    title: `Full Bottle Perfume Requests in Bangladesh${page > 1 ? ` – Page ${page}` : ""}`,
+    description: "Browse fragrances with a full bottle request option in Bangladesh. Choose a fragrance to ask about sourcing and availability.",
+    alternates: { canonical: catalogPagePath("/category/full-bottles", page) },
+  };
+}
 
-export default async function FullBottleCategoryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function FullBottleCategoryPage({ searchParams }: CategoryProps) {
   const perfumes = (await getActivePerfumes()).filter((item) => item.fullBottleAvailable ?? true);
-  const { page } = await searchParams;
-  const requestedPage = Math.max(1, Number.parseInt(page || "1", 10) || 1);
-  const totalPages = Math.max(1, Math.ceil(perfumes.length / PAGE_SIZE));
-  const currentPage = Math.min(requestedPage, totalPages);
-  const paginatedPerfumes = perfumes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const currentPage = catalogPage(await searchParams);
+  const { items: paginatedPerfumes, totalPages } = paginateCatalog(perfumes, currentPage);
 
   return (
     <>
@@ -39,11 +40,11 @@ export default async function FullBottleCategoryPage({ searchParams }: { searchP
       <main className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10 max-w-5xl mx-auto">
       <h1 className="font-serif text-3xl md:text-4xl font-light leading-tight">Full Bottle Perfumes on Request</h1>
       <p className="mt-4 text-text-secondary text-sm md:text-base leading-relaxed">
-        Try first, then upgrade. Every perfume below supports full bottle request from its canonical product page. Start with decants to validate performance and then submit your request with one click.
+        Select a fragrance to ask about a full bottle. You can also check decant sizes if you want to try it first.
       </p>
 
       <section className="mt-7 sm:mt-8">
-        <h2 className="font-serif text-2xl font-light mb-4">Popular Full Bottle Requests</h2>
+        <h2 className="font-serif text-2xl font-light mb-4">Fragrances to request</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {paginatedPerfumes.map((perfume) => (
             <Link key={perfume.id} href={buildCanonicalProductPath(perfume)} className="border border-border bg-card/35 rounded px-3.5 py-2.5 hover:border-gold transition-colors">

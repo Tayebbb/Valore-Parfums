@@ -1,0 +1,118 @@
+{
+  "/decants-bangladesh": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 12,
+    "occurrences": 23,
+    "heading": "Perfume Decants Bangladesh",
+    "mainWords": 1070,
+    "productLinks": [
+      "/products/yara-edp",
+      "/products/exquisite-prive-edp",
+      "/products/liquid-brun",
+      "/products/hawas-ice-edp",
+      "/products/tobacco-touch-edp",
+      "/products/touch-edp",
+      "/products/rave-now-women-edp",
+      "/products/khamrah-qahwa-edp",
+      "/products/club-de-nuit-intense-man-edp",
+      "/products/bois-blanc-edp",
+      "/products/spicebomb-infrared-edt",
+      "/products/hawas-black-edp"
+    ],
+    "mainTextHash": "4a4d99b56adb2fd4df3a90879bd5227eac8e15e5a3026bbdb973836da7fed22e"
+  },
+  "/affordable-perfume-decants": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 12,
+    "occurrences": 23,
+    "heading": "Affordable Perfume Decants",
+    "mainWords": 1064,
+    "productLinks": [
+      "/products/yara-edp",
+      "/products/exquisite-prive-edp",
+      "/products/liquid-brun",
+      "/products/hawas-ice-edp",
+      "/products/tobacco-touch-edp",
+      "/products/touch-edp",
+      "/products/rave-now-women-edp",
+      "/products/khamrah-qahwa-edp",
+      "/products/club-de-nuit-intense-man-edp",
+      "/products/bois-blanc-edp",
+      "/products/spicebomb-infrared-edt",
+      "/products/hawas-black-edp"
+    ],
+    "mainTextHash": "73afef21255cccf4da472c00732c96cc6999ab65bbf522085065b531c3a37b00"
+  },
+  "/blog/top-lattafa-perfumes-that-smell-expensive": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 12,
+    "occurrences": 23,
+    "heading": "Top Lattafa Perfumes That Smell Expensive",
+    "mainWords": 1070,
+    "productLinks": [
+      "/products/yara-edp",
+      "/products/exquisite-prive-edp",
+      "/products/liquid-brun",
+      "/products/hawas-ice-edp",
+      "/products/tobacco-touch-edp",
+      "/products/touch-edp",
+      "/products/rave-now-women-edp",
+      "/products/khamrah-qahwa-edp",
+      "/products/club-de-nuit-intense-man-edp",
+      "/products/bois-blanc-edp",
+      "/products/spicebomb-infrared-edt",
+      "/products/hawas-black-edp"
+    ],
+    "mainTextHash": "e422fbcb0e8f57eed13454f090a53b4329f204bfa02458682dc0899fe2f59f88"
+  },
+  "/guides/decant-vs-full-bottle": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 12,
+    "occurrences": 23,
+    "heading": "Decant vs Full Bottle - Which Should You Buy?",
+    "mainWords": 1077,
+    "productLinks": [
+      "/products/yara-edp",
+      "/products/exquisite-prive-edp",
+      "/products/liquid-brun",
+      "/products/hawas-ice-edp",
+      "/products/tobacco-touch-edp",
+      "/products/touch-edp",
+      "/products/rave-now-women-edp",
+      "/products/khamrah-qahwa-edp",
+      "/products/club-de-nuit-intense-man-edp",
+      "/products/bois-blanc-edp",
+      "/products/spicebomb-infrared-edt",
+      "/products/hawas-black-edp"
+    ],
+    "mainTextHash": "b5b29124f1c640263e32afb11e09a11315dd963372c93065cadb1055f6f0e6e4"
+  },
+  "/blog/decant-vs-full-bottle-which-should-you-buy": {
+    "status": 200,
+    "redirects": [],
+    "distinctParagraphsOver80Chars": 12,
+    "occurrences": 23,
+    "heading": "Decant vs Full Bottle - Which Should You Buy?",
+    "mainWords": 1078,
+    "productLinks": [
+      "/products/yara-edp",
+      "/products/exquisite-prive-edp",
+      "/products/liquid-brun",
+      "/products/hawas-ice-edp",
+      "/products/tobacco-touch-edp",
+      "/products/touch-edp",
+      "/products/rave-now-women-edp",
+      "/products/khamrah-qahwa-edp",
+      "/products/club-de-nuit-intense-man-edp",
+      "/products/bois-blanc-edp",
+      "/products/spicebomb-infrared-edt",
+      "/products/hawas-black-edp"
+    ],
+    "mainTextHash": "8c56a476b89a705e2bee9b0cc27038d1fe0030aa341863f6ef03809a7469db31"
+  },
+  "identicalLongParagraphsAcrossFirstThreePages": 12
+}

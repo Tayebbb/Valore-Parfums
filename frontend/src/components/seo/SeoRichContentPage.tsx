@@ -13,6 +13,7 @@ interface SeoRichContentPageProps {
   sections: ContentSection[];
   ctaText: string;
   ctaHref: string;
+  matchingProducts?: { heading: string; brand?: string; season?: string; category?: string };
 }
 
 export function buildSeoMetadata(metaTitle: string, metaDescription: string, keywords: string[], canonicalPath?: string): Metadata {
@@ -39,12 +40,15 @@ export function buildSeoMetadata(metaTitle: string, metaDescription: string, key
   };
 }
 
-export async function SeoRichContentPage({ title, intro, sections, ctaText, ctaHref }: SeoRichContentPageProps) {
-  const perfumes = await getActivePerfumes();
-  const internalLinks = perfumes.slice(0, 12).map((perfume) => ({
-    label: `${perfume.name} decant by ${perfume.brand}`,
-    href: buildCanonicalProductPath(perfume),
-  }));
+export async function SeoRichContentPage({ title, intro, sections, ctaText, ctaHref, matchingProducts }: SeoRichContentPageProps) {
+  const perfumes = matchingProducts ? await getActivePerfumes() : [];
+  const matches = perfumes.filter((perfume) => {
+    if (!matchingProducts) return false;
+    const seasons = Array.isArray(perfume.season) ? perfume.season : [perfume.season];
+    return (!matchingProducts.brand || perfume.brand === matchingProducts.brand)
+      && (!matchingProducts.category || perfume.category === matchingProducts.category)
+      && (!matchingProducts.season || seasons.includes(matchingProducts.season));
+  });
 
   return (
     <main className="px-4 sm:px-6 md:px-[5%] py-8 sm:py-10 max-w-5xl mx-auto">
@@ -66,26 +70,22 @@ export async function SeoRichContentPage({ title, intro, sections, ctaText, ctaH
         ))}
       </div>
 
-      <section className="mt-10 sm:mt-12">
-        <h2 className="font-serif text-2xl md:text-3xl font-light mb-4">Popular Perfume Decants</h2>
+      {matches.length > 0 && <section className="mt-10 sm:mt-12">
+        <h2 className="font-serif text-2xl md:text-3xl font-light mb-4">{matchingProducts?.heading}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          {internalLinks.map((item) => (
+          {matches.map((perfume) => (
             <Link
-              key={item.href}
-              href={item.href}
+              key={perfume.id}
+              href={buildCanonicalProductPath(perfume)}
               className="border border-[var(--border)] bg-[var(--bg-card)]/35 rounded px-3.5 py-2.5 text-sm hover:border-[var(--gold)] transition-colors"
             >
-              {item.label}
+              {perfume.brand} · {perfume.name}
             </Link>
           ))}
         </div>
-      </section>
+      </section>}
 
       <section className="mt-8 sm:mt-10 border border-[var(--border)] rounded p-5 sm:p-6 bg-[var(--bg-card)]/55">
-        <h2 className="font-serif text-2xl font-light mb-3">Ready To Shop?</h2>
-        <p className="text-[var(--text-secondary)] mb-5 text-sm md:text-base">
-          Start with a decant, validate performance on your skin, then request a full bottle when you are fully confident.
-        </p>
         <Link
           href={ctaHref}
           className="inline-flex items-center justify-center bg-[var(--gold)] text-black px-6 py-3 text-xs uppercase tracking-wider font-medium rounded hover:bg-[var(--gold-light)] transition-colors"

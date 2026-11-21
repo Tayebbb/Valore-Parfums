@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import PackDetailClient from "@/components/store/PackDetailClient";
 import { getPublicPackBySlug, getPublicPacks } from "@/lib/packs-api";
 import { SITE_NAME, SITE_URL } from "@/lib/seo-catalog";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { packDiscountLabel } from "@/types/pack";
 
 export const revalidate = 300;
@@ -63,47 +64,18 @@ export default async function PackPage({ params }: RouteProps) {
   if (!pack) notFound();
 
   const url = `${SITE_URL}/packs/${pack.slug}`;
-  const images = pack.items.map((i) => absoluteImage(i.image)).filter(Boolean);
-
-  // Product/Offer markup only states facts the page shows: the current final price and availability.
-  const productJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: pack.name,
-    description:
-      pack.description?.trim() ||
-      `${pack.name}: ${pack.items.map((i) => `${i.name} (${pack.decantSizeMl}ml)`).join(", ")}.`,
-    image: images,
-    brand: { "@type": "Brand", name: SITE_NAME },
-    url,
-    offers: {
-      "@type": "Offer",
-      url,
-      priceCurrency: "BDT",
-      price: pack.finalPrice,
-      itemCondition: "https://schema.org/NewCondition",
-      availability: pack.available ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    },
-  };
-
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-              { "@type": "ListItem", position: 2, name: "Packs", item: `${SITE_URL}/packs` },
-              { "@type": "ListItem", position: 3, name: pack.name, item: url },
-            ],
-          }),
-        }}
-      />
-      <PackDetailClient initialPack={pack} />
+      <JsonLd value={{
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "Packs", item: `${SITE_URL}/packs` },
+          { "@type": "ListItem", position: 3, name: pack.name, item: url },
+        ],
+      }} />
+      <PackDetailClient initialPack={pack} canonicalUrl={url} />
     </>
   );
 }

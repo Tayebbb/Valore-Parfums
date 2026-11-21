@@ -1,0 +1,1018 @@
+{
+  "home": {
+    "path": "/",
+    "labRuns": [
+      {
+        "lcpMs": 1724,
+        "lcpElement": "H1",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1636,
+        "lcpElement": "H1",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1592,
+        "lcpElement": "H1",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+      "canonical": [
+        "https://www.valoreparfums.app"
+      ],
+      "robots": [],
+      "h1": [
+        "Discover Your Signature Scent"
+      ],
+      "mainLinks": 23,
+      "productLinks": [
+        "/products/9pm-edp",
+        "/products/amber-oud-aqua-dubai-edp",
+        "/products/amber-oud-gold-edition-edp",
+        "/products/angham-edp",
+        "/products/aquatica-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/dynasty-edp",
+        "/products/hawas-ice-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/rave-now-women-edp",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp"
+      ],
+      "images": 23,
+      "imagesWithoutAlt": 11,
+      "schemaTypes": [
+        "Organization",
+        "WebSite"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+      "canonical": [
+        "https://www.valoreparfums.app"
+      ],
+      "robots": [],
+      "h1": [
+        "Discover Your Signature Scent"
+      ],
+      "mainLinks": 23,
+      "productLinks": [
+        "/products/9pm-edp",
+        "/products/amber-oud-aqua-dubai-edp",
+        "/products/amber-oud-gold-edition-edp",
+        "/products/angham-edp",
+        "/products/aquatica-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/dynasty-edp",
+        "/products/hawas-ice-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/rave-now-women-edp",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp"
+      ],
+      "images": 23,
+      "imagesWithoutAlt": 11,
+      "schemaTypes": [
+        "Organization",
+        "WebSite"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [
+      {
+        "alt": "Amber Oud Aqua Dubai EDP",
+        "complete": true,
+        "naturalWidth": 206
+      },
+      {
+        "alt": "9PM EDP ",
+        "complete": true,
+        "naturalWidth": 206
+      }
+    ],
+    "lcpMsMedian": 1636,
+    "clsMedian": 0
+  },
+  "shop": {
+    "path": "/shop",
+    "labRuns": [
+      {
+        "lcpMs": 2392,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 2376,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1624,
+        "lcpElement": "IMG",
+        "cls": 0.0001
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/shop",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/shop"
+      ],
+      "robots": [],
+      "h1": [
+        "All Fragrances"
+      ],
+      "mainLinks": 26,
+      "productLinks": [
+        "/products/212-men-nyc-edt",
+        "/products/9pm-edp",
+        "/products/amber-oud-aqua-dubai-edp",
+        "/products/amber-oud-gold-edition-edp",
+        "/products/angham-edp",
+        "/products/aquatica-edp",
+        "/products/bois-blanc-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/dynasty-edp",
+        "/products/exquisite-prive-edp",
+        "/products/fakhar-black-edp",
+        "/products/hawas-black-edp",
+        "/products/hawas-diva-edp",
+        "/products/hawas-ice-edp",
+        "/products/hayaati-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/rave-now-women-edp",
+        "/products/spicebomb-infrared-edt",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp",
+        "/products/tobacco-touch-edp",
+        "/products/touch-edp",
+        "/products/uomo-born-in-roma-coral-fantasy-edt",
+        "/products/yara-edp"
+      ],
+      "images": 24,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/shop"
+      ],
+      "robots": [],
+      "h1": [
+        "All Fragrances"
+      ],
+      "mainLinks": 26,
+      "productLinks": [
+        "/products/212-men-nyc-edt",
+        "/products/9pm-edp",
+        "/products/amber-oud-aqua-dubai-edp",
+        "/products/amber-oud-gold-edition-edp",
+        "/products/angham-edp",
+        "/products/aquatica-edp",
+        "/products/bois-blanc-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/dynasty-edp",
+        "/products/exquisite-prive-edp",
+        "/products/fakhar-black-edp",
+        "/products/hawas-black-edp",
+        "/products/hawas-diva-edp",
+        "/products/hawas-ice-edp",
+        "/products/hayaati-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/rave-now-women-edp",
+        "/products/spicebomb-infrared-edt",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp",
+        "/products/tobacco-touch-edp",
+        "/products/touch-edp",
+        "/products/uomo-born-in-roma-coral-fantasy-edt",
+        "/products/yara-edp"
+      ],
+      "images": 24,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [
+      {
+        "alt": "Afnan Supremacy Collector's Edition EDP",
+        "complete": true,
+        "naturalWidth": 206
+      },
+      {
+        "alt": "Lattafa Dynasty EDP",
+        "complete": true,
+        "naturalWidth": 206
+      }
+    ],
+    "lcpMsMedian": 2376,
+    "clsMedian": 0
+  },
+  "category": {
+    "path": "/category/decants",
+    "labRuns": [
+      {
+        "lcpMs": 2120,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1872,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1792,
+        "lcpElement": "IMG",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/category/decants",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Perfume Decants by Brand in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/category/decants"
+      ],
+      "robots": [],
+      "h1": [
+        "Perfume Decants in Bangladesh"
+      ],
+      "mainLinks": 26,
+      "productLinks": [
+        "/products/212-men-nyc-edt",
+        "/products/9pm-edp",
+        "/products/amber-oud-aqua-dubai-edp",
+        "/products/amber-oud-gold-edition-edp",
+        "/products/angham-edp",
+        "/products/aquatica-edp",
+        "/products/bois-blanc-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/dynasty-edp",
+        "/products/exquisite-prive-edp",
+        "/products/fakhar-black-edp",
+        "/products/hawas-black-edp",
+        "/products/hawas-diva-edp",
+        "/products/hawas-ice-edp",
+        "/products/hayaati-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/rave-now-women-edp",
+        "/products/spicebomb-infrared-edt",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp",
+        "/products/tobacco-touch-edp",
+        "/products/touch-edp",
+        "/products/uomo-born-in-roma-coral-fantasy-edt",
+        "/products/yara-edp"
+      ],
+      "images": 24,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Perfume Decants by Brand in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/category/decants"
+      ],
+      "robots": [],
+      "h1": [
+        "Perfume Decants in Bangladesh"
+      ],
+      "mainLinks": 26,
+      "productLinks": [
+        "/products/212-men-nyc-edt",
+        "/products/9pm-edp",
+        "/products/amber-oud-aqua-dubai-edp",
+        "/products/amber-oud-gold-edition-edp",
+        "/products/angham-edp",
+        "/products/aquatica-edp",
+        "/products/bois-blanc-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/dynasty-edp",
+        "/products/exquisite-prive-edp",
+        "/products/fakhar-black-edp",
+        "/products/hawas-black-edp",
+        "/products/hawas-diva-edp",
+        "/products/hawas-ice-edp",
+        "/products/hayaati-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/rave-now-women-edp",
+        "/products/spicebomb-infrared-edt",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp",
+        "/products/tobacco-touch-edp",
+        "/products/touch-edp",
+        "/products/uomo-born-in-roma-coral-fantasy-edt",
+        "/products/yara-edp"
+      ],
+      "images": 24,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [
+      {
+        "alt": "Supremacy Collector's Edition EDP",
+        "complete": true,
+        "naturalWidth": 206
+      },
+      {
+        "alt": "Dynasty EDP",
+        "complete": true,
+        "naturalWidth": 206
+      }
+    ],
+    "lcpMsMedian": 1872,
+    "clsMedian": 0
+  },
+  "product": {
+    "path": "/products/hawas-ice-edp",
+    "labRuns": [
+      {
+        "lcpMs": 1404,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1448,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1804,
+        "lcpElement": "IMG",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/products/hawas-ice-edp",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Rasasi Hawas Ice EDP Decant | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/products/hawas-ice-edp"
+      ],
+      "robots": [],
+      "h1": [
+        "Rasasi Hawas Ice EDP"
+      ],
+      "mainLinks": 4,
+      "productLinks": [],
+      "images": 2,
+      "imagesWithoutAlt": 1,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList",
+        "ProductGroup"
+      ],
+      "productSchema": [
+        {
+          "@context": "https://schema.org",
+          "@type": "ProductGroup",
+          "productGroupID": "1780c3b1-a750-4b08-8265-735df844fcff",
+          "name": "Rasasi Hawas Ice EDP decant",
+          "description": "Shop Rasasi Hawas Ice EDP decants in Bangladesh. Available sizes: 5 ml, 10 ml, 15 ml. From 259 BDT.",
+          "brand": {
+            "@type": "Brand",
+            "name": "Rasasi"
+          },
+          "variesBy": "https://schema.org/size",
+          "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+          "hasVariant": [
+            {
+              "@type": "Product",
+              "sku": "hawas-ice-edp-5ml",
+              "name": "Rasasi Hawas Ice EDP 5 ml decant",
+              "size": "5 ml",
+              "image": [
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+              ],
+              "offers": {
+                "@type": "Offer",
+                "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+                "priceCurrency": "BDT",
+                "price": 259,
+                "availability": "https://schema.org/InStock"
+              }
+            },
+            {
+              "@type": "Product",
+              "sku": "hawas-ice-edp-10ml",
+              "name": "Rasasi Hawas Ice EDP 10 ml decant",
+              "size": "10 ml",
+              "image": [
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+              ],
+              "offers": {
+                "@type": "Offer",
+                "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+                "priceCurrency": "BDT",
+                "price": 479,
+                "availability": "https://schema.org/InStock"
+              }
+            },
+            {
+              "@type": "Product",
+              "sku": "hawas-ice-edp-15ml",
+              "name": "Rasasi Hawas Ice EDP 15 ml decant",
+              "size": "15 ml",
+              "image": [
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+              ],
+              "offers": {
+                "@type": "Offer",
+                "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+                "priceCurrency": "BDT",
+                "price": 689,
+                "availability": "https://schema.org/InStock"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "rendered": {
+      "title": "Rasasi Hawas Ice EDP Decant | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/products/hawas-ice-edp"
+      ],
+      "robots": [],
+      "h1": [
+        "Rasasi Hawas Ice EDP"
+      ],
+      "mainLinks": 4,
+      "productLinks": [],
+      "images": 2,
+      "imagesWithoutAlt": 1,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList",
+        "ProductGroup"
+      ],
+      "productSchema": [
+        {
+          "@context": "https://schema.org",
+          "@type": "ProductGroup",
+          "productGroupID": "1780c3b1-a750-4b08-8265-735df844fcff",
+          "name": "Rasasi Hawas Ice EDP decant",
+          "description": "Shop Rasasi Hawas Ice EDP decants in Bangladesh. Available sizes: 5 ml, 10 ml, 15 ml. From 259 BDT.",
+          "brand": {
+            "@type": "Brand",
+            "name": "Rasasi"
+          },
+          "variesBy": "https://schema.org/size",
+          "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+          "hasVariant": [
+            {
+              "@type": "Product",
+              "sku": "hawas-ice-edp-5ml",
+              "name": "Rasasi Hawas Ice EDP 5 ml decant",
+              "size": "5 ml",
+              "image": [
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+              ],
+              "offers": {
+                "@type": "Offer",
+                "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+                "priceCurrency": "BDT",
+                "price": 259,
+                "availability": "https://schema.org/InStock"
+              }
+            },
+            {
+              "@type": "Product",
+              "sku": "hawas-ice-edp-10ml",
+              "name": "Rasasi Hawas Ice EDP 10 ml decant",
+              "size": "10 ml",
+              "image": [
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+              ],
+              "offers": {
+                "@type": "Offer",
+                "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+                "priceCurrency": "BDT",
+                "price": 479,
+                "availability": "https://schema.org/InStock"
+              }
+            },
+            {
+              "@type": "Product",
+              "sku": "hawas-ice-edp-15ml",
+              "name": "Rasasi Hawas Ice EDP 15 ml decant",
+              "size": "15 ml",
+              "image": [
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+                "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+              ],
+              "offers": {
+                "@type": "Offer",
+                "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+                "priceCurrency": "BDT",
+                "price": 689,
+                "availability": "https://schema.org/InStock"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [
+      {
+        "alt": "Rasasi Hawas Ice EDP",
+        "complete": true,
+        "naturalWidth": 412
+      },
+      {
+        "alt": "",
+        "complete": true,
+        "naturalWidth": 49
+      }
+    ],
+    "lcpMsMedian": 1448,
+    "clsMedian": 0
+  },
+  "guide": {
+    "path": "/guides/decant-vs-full-bottle",
+    "labRuns": [
+      {
+        "lcpMs": 1516,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1388,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1368,
+        "lcpElement": "P",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/blog/decant-vs-full-bottle-which-should-you-buy",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Decant vs Full Bottle - Which Should You Buy? | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+      ],
+      "robots": [],
+      "h1": [
+        "Decant vs Full Bottle - Which Should You Buy?"
+      ],
+      "mainLinks": 1,
+      "productLinks": [],
+      "images": 0,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BlogPosting"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Decant vs Full Bottle - Which Should You Buy? | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+      ],
+      "robots": [],
+      "h1": [
+        "Decant vs Full Bottle - Which Should You Buy?"
+      ],
+      "mainLinks": 1,
+      "productLinks": [],
+      "images": 0,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BlogPosting"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [],
+    "lcpMsMedian": 1388,
+    "clsMedian": 0
+  },
+  "blog": {
+    "path": "/blog/best-winter-perfumes-for-men-in-bangladesh",
+    "labRuns": [
+      {
+        "lcpMs": 1336,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1148,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1156,
+        "lcpElement": "P",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/blog/best-winter-perfumes-for-men-in-bangladesh",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Winter Perfumes for Men in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/blog/best-winter-perfumes-for-men-in-bangladesh"
+      ],
+      "robots": [],
+      "h1": [
+        "Winter Perfumes for Men in Bangladesh"
+      ],
+      "mainLinks": 9,
+      "productLinks": [
+        "/products/9pm-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/corium",
+        "/products/hawas-black-edp",
+        "/products/liquid-brun",
+        "/products/spicebomb-infrared-edt",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp"
+      ],
+      "images": 0,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BlogPosting"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Winter Perfumes for Men in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/blog/best-winter-perfumes-for-men-in-bangladesh"
+      ],
+      "robots": [],
+      "h1": [
+        "Winter Perfumes for Men in Bangladesh"
+      ],
+      "mainLinks": 9,
+      "productLinks": [
+        "/products/9pm-edp",
+        "/products/club-de-nuit-intense-man-edp",
+        "/products/corium",
+        "/products/hawas-black-edp",
+        "/products/liquid-brun",
+        "/products/spicebomb-infrared-edt",
+        "/products/supremacy-collectors-edition-edp",
+        "/products/terra-edp"
+      ],
+      "images": 0,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BlogPosting"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [],
+    "lcpMsMedian": 1156,
+    "clsMedian": 0
+  },
+  "landing": {
+    "path": "/decants-bangladesh",
+    "labRuns": [
+      {
+        "lcpMs": 1384,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1176,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1164,
+        "lcpElement": "P",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/decants-bangladesh",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Perfume Decants in Bangladesh | Sizes and Prices | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/decants-bangladesh"
+      ],
+      "robots": [],
+      "h1": [
+        "Perfume Decants Bangladesh"
+      ],
+      "mainLinks": 1,
+      "productLinks": [],
+      "images": 0,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Perfume Decants in Bangladesh | Sizes and Prices | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/decants-bangladesh"
+      ],
+      "robots": [],
+      "h1": [
+        "Perfume Decants Bangladesh"
+      ],
+      "mainLinks": 1,
+      "productLinks": [],
+      "images": 0,
+      "imagesWithoutAlt": 0,
+      "schemaTypes": [
+        "Organization",
+        "WebSite"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [],
+    "lcpMsMedian": 1176,
+    "clsMedian": 0
+  },
+  "packs": {
+    "path": "/packs",
+    "labRuns": [
+      {
+        "lcpMs": 1860,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1784,
+        "lcpElement": "IMG",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1812,
+        "lcpElement": "IMG",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/packs",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Perfume Packs & Decant Bundles in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/packs"
+      ],
+      "robots": [],
+      "h1": [
+        "Perfume Packs"
+      ],
+      "mainLinks": 16,
+      "productLinks": [],
+      "images": 24,
+      "imagesWithoutAlt": 24,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ],
+      "productSchema": []
+    },
+    "rendered": {
+      "title": "Perfume Packs & Decant Bundles in Bangladesh | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/packs"
+      ],
+      "robots": [],
+      "h1": [
+        "Perfume Packs"
+      ],
+      "mainLinks": 16,
+      "productLinks": [],
+      "images": 24,
+      "imagesWithoutAlt": 24,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList"
+      ],
+      "productSchema": []
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [
+      {
+        "alt": "",
+        "complete": true,
+        "naturalWidth": 412
+      },
+      {
+        "alt": "",
+        "complete": true,
+        "naturalWidth": 412
+      }
+    ],
+    "lcpMsMedian": 1812,
+    "clsMedian": 0
+  },
+  "pack": {
+    "path": "/packs/winter-pack",
+    "labRuns": [
+      {
+        "lcpMs": 1728,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 1884,
+        "lcpElement": "P",
+        "cls": 0
+      },
+      {
+        "lcpMs": 2212,
+        "lcpElement": "P",
+        "cls": 0
+      }
+    ],
+    "chromium": "148.0.7778.96",
+    "status": 200,
+    "finalURL": "http://127.0.0.1:4317/packs/winter-pack",
+    "xRobotsTag": null,
+    "raw": {
+      "title": "Winter Pack — 4 × 5ml Perfume Pack | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/packs/winter-pack"
+      ],
+      "robots": [],
+      "h1": [
+        "Winter Pack"
+      ],
+      "mainLinks": 6,
+      "productLinks": [
+        "/products/corium",
+        "/products/exquisite-prive-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/liquid-brun"
+      ],
+      "images": 8,
+      "imagesWithoutAlt": 8,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList",
+        "Product"
+      ],
+      "productSchema": [
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Winter Pack",
+          "description": "Embrace the warmth of winter with our **Winter Pack**, featuring 4 rich and captivating fragrances: Liquid Brun, Corium, Exquisite Prive, and Khamrah Qahwa. A perfect blend of warm, sweet, spicy, and woody notes, crafted for cozy evenings, cold nights, and special occasions.",
+          "size": "4 × 5 ml",
+          "image": [
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122383/valore-parfums/images/perfumes/1777122382086-a94g6f3z-webp.webp",
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122791/valore-parfums/images/perfumes/1777122790313-6yzco7xj-webp.webp",
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1777038827/valore-parfums/images/perfumes/1777038826798-4oiwfjbc-webp.webp",
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1785687229/valore-parfums/images/perfumes/1785687227754-jzh5vn73-webp.webp"
+          ],
+          "url": "https://www.valoreparfums.app/packs/winter-pack",
+          "brand": {
+            "@type": "Brand",
+            "name": "Valore Parfums"
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": "https://www.valoreparfums.app/packs/winter-pack",
+            "priceCurrency": "BDT",
+            "price": 806,
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
+    },
+    "rendered": {
+      "title": "Winter Pack — 4 × 5ml Perfume Pack | Valore Parfums",
+      "canonical": [
+        "https://www.valoreparfums.app/packs/winter-pack"
+      ],
+      "robots": [],
+      "h1": [
+        "Winter Pack"
+      ],
+      "mainLinks": 6,
+      "productLinks": [
+        "/products/corium",
+        "/products/exquisite-prive-edp",
+        "/products/khamrah-qahwa-edp",
+        "/products/liquid-brun"
+      ],
+      "images": 8,
+      "imagesWithoutAlt": 8,
+      "schemaTypes": [
+        "Organization",
+        "WebSite",
+        "BreadcrumbList",
+        "Product"
+      ],
+      "productSchema": [
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Winter Pack",
+          "description": "Embrace the warmth of winter with our **Winter Pack**, featuring 4 rich and captivating fragrances: Liquid Brun, Corium, Exquisite Prive, and Khamrah Qahwa. A perfect blend of warm, sweet, spicy, and woody notes, crafted for cozy evenings, cold nights, and special occasions.",
+          "size": "4 × 5 ml",
+          "image": [
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122383/valore-parfums/images/perfumes/1777122382086-a94g6f3z-webp.webp",
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122791/valore-parfums/images/perfumes/1777122790313-6yzco7xj-webp.webp",
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1777038827/valore-parfums/images/perfumes/1777038826798-4oiwfjbc-webp.webp",
+            "https://res.cloudinary.com/dhkubnheh/image/upload/v1785687229/valore-parfums/images/perfumes/1785687227754-jzh5vn73-webp.webp"
+          ],
+          "url": "https://www.valoreparfums.app/packs/winter-pack",
+          "brand": {
+            "@type": "Brand",
+            "name": "Valore Parfums"
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": "https://www.valoreparfums.app/packs/winter-pack",
+            "priceCurrency": "BDT",
+            "price": 806,
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
+    },
+    "horizontalOverflow": false,
+    "renderedMainPhoto": [
+      {
+        "alt": "",
+        "complete": true,
+        "naturalWidth": 412
+      },
+      {
+        "alt": "",
+        "complete": true,
+        "naturalWidth": 412
+      }
+    ],
+    "lcpMsMedian": 1884,
+    "clsMedian": 0
+  }
+}

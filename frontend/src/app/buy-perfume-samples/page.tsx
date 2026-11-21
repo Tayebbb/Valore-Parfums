@@ -8,6 +8,7 @@ export const metadata: Metadata = buildSeoMetadata(
   content?.metaTitle || "Buy Perfume Samples",
   content?.metaDescription || "Buy perfume samples in Bangladesh",
   content?.keywordCluster || ["buy perfume samples"],
+  "/buy-perfume-samples",
 );
 
 export default async function BuyPerfumeSamplesPage() {

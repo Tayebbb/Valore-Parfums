@@ -1,0 +1,681 @@
+{
+  "records": 36,
+  "active": 28,
+  "inactive": 8,
+  "products": [
+    {
+      "path": "/products/yara-edp",
+      "name": "Yara EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 209,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 379,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 549,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/exquisite-prive-edp",
+      "name": "Exquisite Prive EDP",
+      "brand": "Maison Alhambra",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 159,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 289,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 409,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/liquid-brun",
+      "name": "Liquid Brun",
+      "brand": "French Avenue",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 309,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 569,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 829,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/hawas-ice-edp",
+      "name": "Hawas Ice EDP",
+      "brand": "Rasasi",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 259,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 479,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 689,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/tobacco-touch-edp",
+      "name": "Tobacco Touch EDP",
+      "brand": "Maison Alhambra",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 189,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 349,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 499,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/touch-edp",
+      "name": "Touch EDP",
+      "brand": "Burberry",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 409,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 769,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 1119,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/rave-now-women-edp",
+      "name": "Rave Now Women EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 189,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 349,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 499,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/khamrah-qahwa-edp",
+      "name": "Khamrah Qahwa EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 249,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 469,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 669,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/club-de-nuit-intense-man-edp",
+      "name": "Club De Nuit Intense Man EDP",
+      "brand": "Armaf",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 269,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 499,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 719,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/bois-blanc-edp",
+      "name": "Bois Blanc EDP",
+      "brand": "Arabiyat Prestige",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 269,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 499,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 719,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/spicebomb-infrared-edt",
+      "name": "Spicebomb Infrared EDT",
+      "brand": "Viktor&Rolf",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 699,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 1379,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 2049,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/hawas-black-edp",
+      "name": "Hawas Black EDP",
+      "brand": "Rasasi",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 249,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 469,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 669,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/hayaati-edp",
+      "name": "Hayaati EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 169,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 309,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 439,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/amber-oud-aqua-dubai-edp",
+      "name": "Amber Oud Aqua Dubai EDP",
+      "brand": "Al Haramain",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 409,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 769,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 1119,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/212-men-nyc-edt",
+      "name": "212 Men NYC EDT",
+      "brand": "Carolina Herrera",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 489,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 929,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 1359,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/uomo-born-in-roma-coral-fantasy-edt",
+      "name": "Uomo Born In Roma Coral Fantasy EDT",
+      "brand": "Valentino",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 639,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 1269,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 1869,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/angham-edp",
+      "name": "Angham EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 249,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 469,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 669,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/fakhar-black-edp",
+      "name": "Fakhar Black  EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 229,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 429,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 609,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/terra-edp",
+      "name": "Terra EDP",
+      "brand": "Rayhaan",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 199,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 379,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 539,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/9pm-edp",
+      "name": "9PM EDP ",
+      "brand": "Afnan",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 269,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 499,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 719,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/hawas-diva-edp",
+      "name": "Hawas Diva EDP",
+      "brand": "Rasasi",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 239,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 439,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 629,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/dynasty-edp",
+      "name": "Dynasty EDP",
+      "brand": "Lattafa",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 259,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 489,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 709,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/aquatica-edp",
+      "name": "Aquatica EDP",
+      "brand": "Rayhaan",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 199,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 379,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 539,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/nocturno-edp",
+      "name": "Nocturno EDP",
+      "brand": "Rayhaan",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 189,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 349,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 499,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/amber-oud-gold-edition-edp",
+      "name": "Amber Oud Gold Edition EDP",
+      "brand": "Al Haramain",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 399,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 739,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 1079,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/corium",
+      "name": "Corium",
+      "brand": "Rayhaan",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 189,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 349,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 499,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/hawas-fire",
+      "name": "Hawas Fire",
+      "brand": "Rasasi",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 279,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 519,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 739,
+          "available": true
+        }
+      ]
+    },
+    {
+      "path": "/products/supremacy-collectors-edition-edp",
+      "name": "Supremacy Collector's Edition EDP",
+      "brand": "Afnan",
+      "sizes": [
+        {
+          "ml": 5,
+          "BDT": 459,
+          "available": true
+        },
+        {
+          "ml": 10,
+          "BDT": 869,
+          "available": true
+        },
+        {
+          "ml": 15,
+          "BDT": 1269,
+          "available": true
+        }
+      ]
+    }
+  ],
+  "packs": [
+    {
+      "path": "/packs/winter-pack",
+      "BDT": 806,
+      "available": true,
+      "mlEach": 5,
+      "items": 4
+    },
+    {
+      "path": "/packs/summer-pack",
+      "BDT": 1275,
+      "available": true,
+      "mlEach": 5,
+      "items": 4
+    },
+    {
+      "path": "/packs/special-occasion-pack",
+      "BDT": 1492,
+      "available": true,
+      "mlEach": 5,
+      "items": 3
+    },
+    {
+      "path": "/packs/hawas-collection",
+      "BDT": 700,
+      "available": true,
+      "mlEach": 5,
+      "items": 3
+    },
+    {
+      "path": "/packs/rayhaan-collection",
+      "BDT": 719,
+      "available": true,
+      "mlEach": 5,
+      "items": 4
+    },
+    {
+      "path": "/packs/sweet-escape",
+      "BDT": 954,
+      "available": true,
+      "mlEach": 15,
+      "items": 2
+    },
+    {
+      "path": "/packs/tobacco-spice",
+      "BDT": 799,
+      "available": true,
+      "mlEach": 5,
+      "items": 2
+    },
+    {
+      "path": "/packs/velvet-romance",
+      "BDT": 835,
+      "available": true,
+      "mlEach": 10,
+      "items": 2
+    }
+  ]
+}

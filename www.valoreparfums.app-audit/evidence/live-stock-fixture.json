@@ -1,0 +1,30 @@
+{
+  "mixed": {
+    "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+    "injected10mlBDT": 481,
+    "injected10mlAvailable": false,
+    "schema10ml": {
+      "price": "479",
+      "availability": "https://schema.org/InStock"
+    },
+    "canAdd": true,
+    "stockText": [
+      "Stock: 60ml available"
+    ],
+    "selectedButton": []
+  },
+  "sold-out": {
+    "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+    "injected10mlBDT": 481,
+    "injected10mlAvailable": false,
+    "schema10ml": {
+      "price": "479",
+      "availability": "https://schema.org/InStock"
+    },
+    "canAdd": false,
+    "stockText": [
+      "Stock: 60ml available"
+    ],
+    "selectedButton": []
+  }
+}

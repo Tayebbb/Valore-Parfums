@@ -1,19 +1,23 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/store/cart";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/ui/Toaster";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, Minus, Plus, ShoppingBag, Heart, Zap } from "lucide-react";
+import { ChevronDown, Minus, Plus, ShoppingBag, Heart, Zap } from "lucide-react";
+import type { DecantPrice } from "@/lib/catalog-pricing";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildProductGroup } from "@/lib/product-group";
 import { parseImageList } from "@/lib/image-utils";
 
 interface Perfume {
   id: string;
   name: string;
   brand: string;
+  description?: string;
   slug?: string;
   brandSlug?: string;
   inspiredBy?: string;
@@ -33,48 +37,38 @@ interface Perfume {
   season?: string[];
 }
 
-interface PriceOption {
-  ml: number;
-  sellingPrice: number;
-  totalCost: number;
-  bottleCost: number;
-  packagingCost: number;
-  profitMargin: number;
-  tier: string;
-  inStock: boolean;
-  bottleAvailable: boolean;
-  available: boolean;
-}
-
 interface BulkRule {
   minQuantity: number;
   discountPercent: number;
 }
 
-function getSprayEstimateLabel(ml: number): string {
-  const spraysPerMl = 15;
-  return `${ml * spraysPerMl}+ sprays`;
-}
-
 export default function PerfumePage({
-  params,
+  canonicalUrl,
+  brandPath,
+  fullBottleEnquiry,
+  skuPrefix,
+  requestedMl,
   initialPerfume,
   initialPrices,
-  initialBulkRules,
 }: {
-  params: Promise<{ id: string }>;
-  initialPerfume?: Perfume | null;
-  initialPrices?: PriceOption[];
-  initialBulkRules?: BulkRule[];
+  canonicalUrl: string;
+  brandPath: string;
+  fullBottleEnquiry: boolean;
+  skuPrefix: string;
+  requestedMl: number | null;
+  initialPerfume: Perfume;
+  initialPrices: DecantPrice[];
 }) {
-  const { id } = use(params);
-  const [perfume, setPerfume] = useState<Perfume | null>(initialPerfume ?? null);
-  const [prices, setPrices] = useState<PriceOption[]>(initialPrices ?? []);
-  const [bulkRules, setBulkRules] = useState<BulkRule[]>(initialBulkRules ?? []);
-  const [selectedMl, setSelectedMl] = useState<number | null>(() => initialPrices?.find((price) => price.available)?.ml ?? null);
+  const id = initialPerfume.id;
+  const [perfume, setPerfume] = useState(initialPerfume);
+  const [prices, setPrices] = useState(initialPrices);
+  const [bulkRules, setBulkRules] = useState<BulkRule[]>([]);
+  const [selectedMl, setSelectedMl] = useState<number | null>(() =>
+    initialPrices.find((p) => p.ml === requestedMl)?.ml ??
+    initialPrices.find((p) => p.available)?.ml ?? initialPrices[0]?.ml ?? requestedMl
+  );
   const [selectedOptionState, setSelectedOptionState] = useState<"decant" | "full-bottle">("decant");
   const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(!(initialPerfume && (initialPrices?.length ?? 0) > 0));
   const [showRequest, setShowRequest] = useState(false);
   const [reqForm, setReqForm] = useState({ customerName: "", customerPhone: "", desiredMl: 0, quantity: 1 });
   const [wishlisted, setWishlisted] = useState(false);
@@ -107,32 +101,25 @@ export default function PerfumePage({
     // Always revalidate on mount: server-rendered props can come from a cached
     // (ISR) page, so prices/stock are re-fetched cache-busted and applied on
     // top without blocking first paint.
-    const hasInitialData = Boolean(initialPerfume && (initialPrices?.length ?? 0) > 0);
+    let active = true;
     const bust = Date.now();
 
     Promise.all([
       fetchJsonSafe<Perfume | null>(`/api/perfumes/${id}?fresh=${bust}`, null),
-      fetchJsonSafe<{ prices?: PriceOption[]; bulkRules?: BulkRule[] }>(`/api/pricing?perfumeId=${id}&fresh=${bust}`, {}),
+      fetchJsonSafe<{ prices?: DecantPrice[]; bulkRules?: BulkRule[] }>(`/api/pricing?perfumeId=${id}&fresh=${bust}`, {}),
     ])
       .then(([p, pricing]) => {
-        if (!p) return;
-
-        const safePrices = Array.isArray(pricing.prices) ? pricing.prices : [];
-        const safeBulkRules = Array.isArray(pricing.bulkRules) ? pricing.bulkRules : [];
-        // Keep the server-rendered data over a failed/empty refresh.
-        if (safePrices.length === 0 && hasInitialData) return;
-
-        setPerfume(p);
-        setPrices(safePrices);
-        setBulkRules(safeBulkRules);
-        // Preserve the user's selection when it is still available.
-        setSelectedMl((prev) => {
-          if (prev !== null && safePrices.some((pr) => pr.ml === prev && pr.available)) return prev;
-          return safePrices.find((pr) => pr.available)?.ml ?? null;
-        });
-      })
-      .finally(() => setLoading(false));
-  }, [id, initialPerfume, initialPrices]);
+        if (!active) return;
+        if (p) setPerfume(p);
+        if (!Array.isArray(pricing.prices)) return;
+        const fresh = pricing.prices;
+        setPrices(fresh);
+        setBulkRules(pricing.bulkRules ?? []);
+        setSelectedMl((prev) => fresh.find((pr) => pr.ml === prev)?.ml ??
+          fresh.find((pr) => pr.available)?.ml ?? fresh[0]?.ml ?? null);
+      });
+    return () => { active = false; };
+  }, [id]);
 
   // Check wishlist status
   useEffect(() => {
@@ -167,7 +154,7 @@ export default function PerfumePage({
 
   const selectedPrice = prices.find((p) => p.ml === selectedMl);
   const images: string[] = perfume ? parseImageList(perfume.images) : [];
-  const outOfStock = perfume ? Number(perfume.totalStockMl || 0) <= 0 : false;
+  const outOfStock = Number(perfume.totalStockMl || 0) <= 0 || (prices.length > 0 && prices.every((p) => !p.available));
 
   // Calculate bulk discount for current quantity — pick the highest-tier rule that applies
   const activeBulkRule = bulkRules.reduce<BulkRule | null>((best, rule) => {
@@ -184,23 +171,18 @@ export default function PerfumePage({
   const handleAddToCart = () => {
     if (!perfume) return;
 
-    if (selectedOption === "decant" && !selectedPrice) return;
+    if (selectedOption !== "decant" || !selectedPrice?.available) return;
 
     addItem({
       perfumeId: perfume.id,
       perfumeName: perfume.name,
-      ml: selectedOption === "full-bottle" ? 0 : (selectedPrice?.ml ?? 0),
-      isFullBottle: selectedOption === "full-bottle",
+      ml: selectedPrice.ml,
+      isFullBottle: false,
       quantity,
       unitPrice: effectiveUnitPrice,
       image: images[0],
     });
-    toast(
-      selectedOption === "full-bottle"
-        ? `${perfume.name} Full Bottle request added to cart`
-        : `${perfume.name} ${selectedPrice?.ml}ml added to cart`,
-      "success",
-    );
+    toast(`${perfume.name} ${selectedPrice.ml}ml added to cart`, "success");
     setQuantity(1);
   };
 
@@ -239,47 +221,25 @@ export default function PerfumePage({
   };
 
 
-  if (loading) {
-    return (
-      <div className="px-4 sm:px-6 md:px-[5%] py-10 sm:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="skeleton aspect-square rounded" />
-          <div className="space-y-4">
-            <div className="skeleton h-8 rounded w-3/4" />
-            <div className="skeleton h-4 rounded w-1/2" />
-            <div className="skeleton h-32 rounded" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!perfume) {
-    return (
-      <div className="px-4 sm:px-6 md:px-[5%] py-16 sm:py-20 text-center">
-        <p className="font-serif text-2xl text-[var(--text-muted)]">Perfume not found</p>
-        <Link href="/" className="text-sm text-[var(--gold)] mt-4 inline-block hover:underline">
-          ← Back to collection
-        </Link>
-      </div>
-    );
-  }
-
+  const hasOffers = selectedOption === "decant" && prices.some((p) => p.sellingPrice > 0);
   return (
     <div className="px-4 sm:px-6 md:px-[5%] py-7 sm:py-8 pb-24 md:pb-8">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors mb-6"
-      >
-        <ArrowLeft size={14} /> Back to Collection
-      </Link>
+      {hasOffers && (
+        <JsonLd value={buildProductGroup(perfume, prices, images, canonicalUrl, skuPrefix)} />
+      )}
+      <nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-xs text-[var(--text-muted)] mb-6">
+        <Link href="/">Home</Link><span aria-hidden="true">/</span>
+        <Link href="/shop">Shop</Link><span aria-hidden="true">/</span>
+        <Link href={brandPath}>{perfume.brand}</Link><span aria-hidden="true">/</span>
+        <span aria-current="page">{perfume.name}</span>
+      </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-10">
         {/* Images */}
         <div>
           <div className="aspect-square max-h-[760px] bg-[var(--bg-surface)] rounded overflow-hidden img-zoom relative">
             {images[0] ? (
-              <Image src={images[0]} alt={perfume.name} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" priority />
+              <Image src={images[0]} alt={`${perfume.brand} ${perfume.name}`} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" priority />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <span className="font-serif text-6xl text-[var(--text-muted)]">{perfume.name?.[0] || "P"}</span>
@@ -315,6 +275,8 @@ export default function PerfumePage({
 
           <h1 className="font-serif text-3xl md:text-4xl font-light">{perfume.brand} {perfume.name}</h1>
 
+          {perfume.description && <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{perfume.description}</p>}
+
           {perfume.inspiredBy && (
             <p className="text-xs uppercase tracking-[0.15em] text-[var(--text-muted)]">
               Inspired by: <span className="text-[var(--gold)]">{perfume.inspiredBy}</span>
@@ -341,8 +303,7 @@ export default function PerfumePage({
                 </span>
               </button>
 
-              {isFragranceNotesOpen && (
-                <div id="fragrance-notes-panel" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div id="fragrance-notes-panel" hidden={!isFragranceNotesOpen} className={isFragranceNotesOpen ? "grid grid-cols-1 sm:grid-cols-3 gap-3" : "hidden"}>
                   <div className="rounded border border-[var(--border)] bg-[var(--bg-surface)] p-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Top Notes</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -374,7 +335,6 @@ export default function PerfumePage({
                     </div>
                   </div>
                 </div>
-              )}
             </div>
           ) : null}
 
@@ -431,22 +391,24 @@ export default function PerfumePage({
                   <button
                     key={p.ml}
                     onClick={() => {
-                      if (!p.available) return;
                       setSelectedOptionState("decant");
                       setSelectedMl(p.ml);
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("size", `${p.ml}ml`);
+                      window.history.replaceState(window.history.state, "", url);
                     }}
-                    disabled={!p.available}
+                    aria-pressed={selectedMl === p.ml}
                     className={`px-4 py-3 rounded text-sm transition-all font-sans tabular-nums ${
                       selectedOption === "decant" && selectedMl === p.ml
                         ? "bg-[var(--gold)] text-black"
                         : p.available
                         ? "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--gold)]"
-                        : "border border-[var(--border)] text-[var(--text-muted)] opacity-40 cursor-not-allowed line-through"
+                        : "border border-[var(--border)] text-[var(--text-muted)] opacity-70"
                     }`}
                   >
-                    <span className="font-sans text-base uppercase tracking-wide tabular-nums">{p.ml}ml ({getSprayEstimateLabel(p.ml)})</span>
+                    <span className="font-sans text-base uppercase tracking-wide tabular-nums">{p.ml}ml</span>
                     <span className="block text-[10px] uppercase tracking-wider mt-0.5 font-sans tabular-nums">
-                      {p.sellingPrice.toLocaleString("en-BD")} BDT
+                      {p.sellingPrice.toLocaleString("en-BD")} BDT{!p.available && " · Out of stock"}
                     </span>
                   </button>
                 ))}
@@ -455,12 +417,20 @@ export default function PerfumePage({
 
           </div>
 
+          {fullBottleEnquiry && (
+            <Link href={{ pathname: "/requests", query: { type: "full_bottle", perfumeName: perfume.name, brand: perfume.brand } }}
+              rel="nofollow" className="inline-block text-sm underline">
+              Ask about a full bottle
+            </Link>
+          )}
+
           {/* Quantity */}
           {(selectedOption === "full-bottle" || (selectedPrice && selectedPrice.available)) && (
             <div>
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-3">Quantity</h3>
               <div className="flex items-center gap-3">
                 <button
+                  aria-label="Decrease quantity"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="w-11 h-11 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
@@ -468,6 +438,7 @@ export default function PerfumePage({
                 </button>
                 <span className="font-serif text-xl w-8 text-center">{quantity}</span>
                 <button
+                  aria-label="Increase quantity"
                   onClick={() => setQuantity(quantity + 1)}
                   className="w-11 h-11 border border-[var(--border)] rounded flex items-center justify-center hover:border-[var(--gold)] transition-colors"
                 >
@@ -538,7 +509,7 @@ export default function PerfumePage({
           ) : (
             <div className="space-y-3">
               <div className="w-full py-3.5 text-center bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-muted)] text-xs uppercase tracking-wider">
-                {outOfStock ? "Out of Stock" : "Select an available size"}
+                {selectedPrice ? `${selectedPrice.ml} ml out of stock` : "No decant size currently available"}
               </div>
               {outOfStock && (
                 <button
@@ -552,11 +523,11 @@ export default function PerfumePage({
           )}
 
           {/* Stock status */}
-          <p className="text-xs text-[var(--text-muted)]">
-            Stock: <span className={outOfStock ? "text-[var(--error)]" : "text-[var(--success)]"}>
-              {outOfStock ? "Out of Stock" : `${Number(perfume.totalStockMl || 0)}ml available`}
+          {selectedOption === "decant" && <p className="text-xs text-[var(--text-muted)]">
+            Stock: <span className={outOfStock || !selectedPrice?.available ? "text-[var(--error)]" : "text-[var(--success)]"}>
+              {outOfStock ? "Out of Stock" : selectedPrice ? `${selectedPrice.ml} ml ${selectedPrice.available ? "in stock" : "out of stock"}` : "No decant size currently available"}
             </span>
-          </p>
+          </p>}
 
         </div>
       </div>
@@ -564,6 +535,7 @@ export default function PerfumePage({
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-elevated)] border-t border-[var(--border)] p-2.5 md:hidden">
         {selectedOption === "decant" && selectedPrice?.available ? (
           <div className="grid grid-cols-2 gap-2">
+            <p className="col-span-2 text-center text-xs">{selectedPrice.ml} ml · {totalDisplayPrice.toLocaleString("en-BD")} BDT{quantity > 1 && ` for ${quantity}`}</p>
             <button
               onClick={handleAddToCart}
               className="w-full bg-[var(--gold)] text-black py-3 text-xs uppercase tracking-wider font-sans font-semibold tabular-nums"
@@ -588,7 +560,7 @@ export default function PerfumePage({
           </button>
         ) : (
           <div className="flex items-center justify-center w-full py-3 text-xs uppercase tracking-wider font-sans font-semibold text-[var(--text-muted)]">
-            ↑ Select a Size
+            {selectedPrice ? `${selectedPrice.ml} ml out of stock` : "No decant size currently available"}
           </div>
         )}
       </div>

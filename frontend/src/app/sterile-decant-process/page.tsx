@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Sterile Decant Process | 100% Authentic Guarantee",
@@ -20,7 +21,8 @@ export default function SterileDecantProcessPage() {
         <h2 className="font-serif text-2xl font-light">Hygiene Workflow</h2>
         <p>Each transfer uses cleaned equipment and fresh atomizers. Bottles are capped immediately and stored away from heat and direct light.</p>
         <h2 className="font-serif text-2xl font-light">Packaging Transparency</h2>
-        <p>We use real packaging images and provide product-level decant/full-bottle options on one canonical page for clear buying decisions.</p>
+        <p>A decant contains part of the fragrance shown in the bottle photograph. Check the selected volume on the fragrance page to see how much you are ordering.</p>
+        <Link href="/shop" className="underline">Browse perfume decants</Link>
       </section>
     </main>
   );

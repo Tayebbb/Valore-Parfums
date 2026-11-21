@@ -1,0 +1,5402 @@
+{
+ "origin": "http://127.0.0.1:4317",
+ "robots": "User-Agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /investor\n\nHost: https://www.valoreparfums.app\nSitemap: https://www.valoreparfums.app/sitemap.xml\n",
+ "sitemap_urls": [
+  "/",
+  "/shop",
+  "/packs",
+  "/category/decants",
+  "/category/full-bottles",
+  "/blog",
+  "/sterile-decant-process",
+  "/brand/afnan",
+  "/brand/lattafa",
+  "/brand/al-haramain",
+  "/brand/armaf",
+  "/brand/rayhaan",
+  "/brand/rasasi",
+  "/brand/carolina-herrera",
+  "/brand/arabiyat-prestige",
+  "/brand/burberry",
+  "/brand/maison-alhambra",
+  "/brand/viktor-rolf",
+  "/brand/valentino",
+  "/brand/french-avenue",
+  "/decants-bangladesh",
+  "/buy-perfume-samples",
+  "/full-bottle-perfume-bd",
+  "/affordable-perfume-decants",
+  "/niche-perfume-decants",
+  "/blog/best-winter-perfumes-for-men-in-bangladesh",
+  "/blog/top-lattafa-perfumes-that-smell-expensive",
+  "/blog/decant-vs-full-bottle-which-should-you-buy",
+  "/products/supremacy-collectors-edition-edp",
+  "/products/dynasty-edp",
+  "/products/rave-now-women-edp",
+  "/products/amber-oud-gold-edition-edp",
+  "/products/club-de-nuit-intense-man-edp",
+  "/products/terra-edp",
+  "/products/aquatica-edp",
+  "/products/khamrah-qahwa-edp",
+  "/products/hawas-diva-edp",
+  "/products/hayaati-edp",
+  "/products/212-men-nyc-edt",
+  "/products/bois-blanc-edp",
+  "/products/yara-edp",
+  "/products/touch-edp",
+  "/products/angham-edp",
+  "/products/9pm-edp",
+  "/products/exquisite-prive-edp",
+  "/products/spicebomb-infrared-edt",
+  "/products/tobacco-touch-edp",
+  "/products/fakhar-black-edp",
+  "/products/hawas-ice-edp",
+  "/products/hawas-black-edp",
+  "/products/amber-oud-aqua-dubai-edp",
+  "/products/uomo-born-in-roma-coral-fantasy-edt",
+  "/products/liquid-brun",
+  "/products/nocturno-edp",
+  "/products/hawas-fire",
+  "/products/corium",
+  "/packs/winter-pack",
+  "/packs/summer-pack",
+  "/packs/special-occasion-pack",
+  "/packs/hawas-collection",
+  "/packs/rayhaan-collection",
+  "/packs/sweet-escape",
+  "/packs/tobacco-spice",
+  "/packs/velvet-romance"
+ ],
+ "route_templates": [
+  "/",
+  "/admin",
+  "/admin/bottles",
+  "/admin/brand-sections",
+  "/admin/customers",
+  "/admin/decant-sizes",
+  "/admin/export",
+  "/admin/inventory",
+  "/admin/investments",
+  "/admin/investments/[id]",
+  "/admin/notes-library",
+  "/admin/notifications",
+  "/admin/orders",
+  "/admin/packs",
+  "/admin/pickup-locations",
+  "/admin/reports",
+  "/admin/requests",
+  "/admin/settings",
+  "/admin/stock-requests",
+  "/admin/vouchers",
+  "/affordable-perfume-decants",
+  "/blog",
+  "/blog/[postSlug]",
+  "/brand/[brand]",
+  "/brand/[brand]/[perfume]",
+  "/buy-perfume-samples",
+  "/cart",
+  "/category/decants",
+  "/category/full-bottles",
+  "/checkout",
+  "/decants-bangladesh",
+  "/full-bottle-perfume-bd",
+  "/guides/decant-vs-full-bottle",
+  "/investor",
+  "/investor/investments/[id]",
+  "/investor/statement",
+  "/login",
+  "/niche-perfume-decants",
+  "/packs",
+  "/packs/[slug]",
+  "/partials",
+  "/perfume/[id]",
+  "/products/[slug]",
+  "/requests",
+  "/shop",
+  "/signup",
+  "/sterile-decant-process",
+  "/track",
+  "/unsubscribe",
+  "/wishlist"
+ ],
+ "catalog_count": 28,
+ "catalog_not_in_sitemap": [],
+ "catalog_without_inbound": [],
+ "catalog_unreachable_from_home": [],
+ "counts": {
+  "home": {
+   "discovered": 1,
+   "crawled": 1,
+   "sitemap": 1,
+   "home_reachable": 1
+  },
+  "staff": {
+   "discovered": 20,
+   "blocked": 20
+  },
+  "landing pages": {
+   "discovered": 5,
+   "crawled": 5,
+   "sitemap": 5,
+   "home_reachable": 5
+  },
+  "editorial": {
+   "discovered": 6,
+   "crawled": 6,
+   "sitemap": 5,
+   "home_reachable": 5
+  },
+  "brand": {
+   "discovered": 14,
+   "crawled": 14,
+   "sitemap": 13,
+   "home_reachable": 13,
+   "error_or_http_4xx_5xx": 1
+  },
+  "legacy aliases": {
+   "discovered": 4,
+   "crawled": 4
+  },
+  "utility or redirect": {
+   "discovered": 10,
+   "crawled": 10,
+   "home_reachable": 6
+  },
+  "categories": {
+   "discovered": 4,
+   "crawled": 4,
+   "sitemap": 2,
+   "home_reachable": 4
+  },
+  "pack index": {
+   "discovered": 1,
+   "crawled": 1,
+   "sitemap": 1,
+   "home_reachable": 1
+  },
+  "packs": {
+   "discovered": 8,
+   "crawled": 8,
+   "sitemap": 8,
+   "home_reachable": 8
+  },
+  "products": {
+   "discovered": 33,
+   "crawled": 33,
+   "sitemap": 28,
+   "home_reachable": 28,
+   "error_or_http_4xx_5xx": 1
+  },
+  "product variants": {
+   "discovered": 2,
+   "crawled": 2
+  },
+  "shop": {
+   "discovered": 1,
+   "crawled": 1,
+   "sitemap": 1,
+   "home_reachable": 1
+  },
+  "shop views": {
+   "discovered": 18,
+   "crawled": 18,
+   "home_reachable": 18
+  }
+ },
+ "urls": {
+  "/": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "entry",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Discover Your Signature Scent"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/packs/special-occasion-pack",
+    "/packs/summer-pack",
+    "/packs/winter-pack",
+    "/partials",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/hawas-ice-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/admin": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/bottles": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/brand-sections": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/customers": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/decant-sizes": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/export": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/inventory": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/investments": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/notes-library": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/notifications": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/orders": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/packs": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/pickup-locations": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/reports": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/requests": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/settings": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/stock-requests": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/admin/vouchers": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/affordable-perfume-decants": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/affordable-perfume-decants",
+   "title": "Affordable Perfume Decants Bangladesh | Premium Scents, Budget Entry | Valore Parfums",
+   "h1": [
+    "Affordable Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/affordable-perfume-decants"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/shop?sort=price-asc"
+   ]
+  },
+  "/blog": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog",
+   "title": "Perfume Buying Guides for Bangladesh | Valore Parfums",
+   "h1": [
+    "Perfume Buying Blog"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/affordable-perfume-decants",
+    "/blog/best-winter-perfumes-for-men-in-bangladesh",
+    "/blog/decant-vs-full-bottle-which-should-you-buy",
+    "/blog/top-lattafa-perfumes-that-smell-expensive",
+    "/buy-perfume-samples",
+    "/decants-bangladesh",
+    "/full-bottle-perfume-bd",
+    "/niche-perfume-decants"
+   ]
+  },
+  "/blog/best-winter-perfumes-for-men-in-bangladesh": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog/best-winter-perfumes-for-men-in-bangladesh",
+   "title": "Winter Perfumes for Men in Bangladesh | Valore Parfums",
+   "h1": [
+    "Winter Perfumes for Men in Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/best-winter-perfumes-for-men-in-bangladesh"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/9pm-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/corium",
+    "/products/hawas-black-edp",
+    "/products/liquid-brun",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp"
+   ]
+  },
+  "/blog/decant-vs-full-bottle-which-should-you-buy": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog/decant-vs-full-bottle-which-should-you-buy",
+   "title": "Decant vs Full Bottle - Which Should You Buy? | Valore Parfums",
+   "h1": [
+    "Decant vs Full Bottle - Which Should You Buy?"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants"
+   ]
+  },
+  "/blog/top-lattafa-perfumes-that-smell-expensive": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/blog/top-lattafa-perfumes-that-smell-expensive",
+   "title": "Lattafa Perfume Decants by Scent Profile | Valore Parfums",
+   "h1": [
+    "Lattafa Perfume Decants by Scent Profile"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/top-lattafa-perfumes-that-smell-expensive"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/angham-edp",
+    "/products/dynasty-edp",
+    "/products/fakhar-black-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/brand/afnan": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/afnan",
+   "title": "Afnan Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Afnan Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/afnan"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/9pm-edp",
+    "/products/supremacy-collectors-edition-edp"
+   ]
+  },
+  "/brand/afnan/supremacy-collectors-edition-edp": {
+   "sources": [
+    "legacy template sample"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/supremacy-collectors-edition-edp"
+    ]
+   ],
+   "final": "/products/supremacy-collectors-edition-edp",
+   "title": "Afnan Supremacy Collector's Edition EDP Decant | Valore Parfums",
+   "h1": [
+    "Afnan Supremacy Collector's Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/supremacy-collectors-edition-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/afnan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/brand/al-haramain": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/al-haramain",
+   "title": "Al Haramain Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Al Haramain Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/al-haramain"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp"
+   ]
+  },
+  "/brand/arabiyat-prestige": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/arabiyat-prestige",
+   "title": "Arabiyat Prestige Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Arabiyat Prestige Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/arabiyat-prestige"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/bois-blanc-edp"
+   ]
+  },
+  "/brand/armaf": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/armaf",
+   "title": "Armaf Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Armaf Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/armaf"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/club-de-nuit-intense-man-edp"
+   ]
+  },
+  "/brand/audit-missing-house": {
+   "sources": [
+    "comparison",
+    "test"
+   ],
+   "home_reachable": false,
+   "status": 404,
+   "redirects": [],
+   "final": "/brand/audit-missing-house",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/brand/burberry": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/burberry",
+   "title": "Burberry Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Burberry Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/burberry"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/touch-edp"
+   ]
+  },
+  "/brand/carolina-herrera": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/carolina-herrera",
+   "title": "Carolina Herrera Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Carolina Herrera Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/carolina-herrera"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/212-men-nyc-edt"
+   ]
+  },
+  "/brand/french-avenue": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/french-avenue",
+   "title": "French Avenue Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "French Avenue Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/french-avenue"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/liquid-brun"
+   ]
+  },
+  "/brand/lattafa": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/lattafa",
+   "title": "Lattafa Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Lattafa Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/lattafa"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/angham-edp",
+    "/products/dynasty-edp",
+    "/products/fakhar-black-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/yara-edp"
+   ]
+  },
+  "/brand/lattafa/yara-edp": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/yara-edp"
+    ]
+   ],
+   "final": "/products/yara-edp",
+   "title": "Lattafa Yara EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/brand/maison-alhambra": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/maison-alhambra",
+   "title": "Maison Alhambra Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Maison Alhambra Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/maison-alhambra"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/exquisite-prive-edp",
+    "/products/tobacco-touch-edp"
+   ]
+  },
+  "/brand/rasasi": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/rasasi",
+   "title": "Rasasi Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Rasasi Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/rasasi"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp"
+   ]
+  },
+  "/brand/rayhaan": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/rayhaan",
+   "title": "Rayhaan Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Rayhaan Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/rayhaan"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/aquatica-edp",
+    "/products/corium",
+    "/products/nocturno-edp",
+    "/products/terra-edp"
+   ]
+  },
+  "/brand/valentino": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/valentino",
+   "title": "Valentino Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Valentino Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/valentino"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/uomo-born-in-roma-coral-fantasy-edt"
+   ]
+  },
+  "/brand/viktor-rolf": {
+   "sources": [
+    "anchor",
+    "brand catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/brand/viktor-rolf",
+   "title": "Viktor&Rolf Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Viktor&Rolf Perfume Decants"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/brand/viktor-rolf"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/products/spicebomb-infrared-edt"
+   ]
+  },
+  "/buy-perfume-samples": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/buy-perfume-samples",
+   "title": "Buy Perfume Samples In Bangladesh | Try Before You Buy | Valore Parfums",
+   "h1": [
+    "Buy Perfume Samples In Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/buy-perfume-samples"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants"
+   ]
+  },
+  "/cart": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/cart",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Your Cart is Empty"
+   ],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/category/decants": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/decants",
+   "title": "Perfume Decants by Brand in Bangladesh | Valore Parfums",
+   "h1": [
+    "Perfume Decants in Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/decants"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants?page=2",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/products/yara-edp"
+   ]
+  },
+  "/category/decants?page=2": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/decants?page=2",
+   "title": "Perfume Decants by Brand in Bangladesh – Page 2 | Valore Parfums",
+   "h1": [
+    "Perfume Decants in Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/decants?page=2"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants",
+    "/products/corium",
+    "/products/hawas-fire",
+    "/products/liquid-brun",
+    "/products/nocturno-edp"
+   ]
+  },
+  "/category/full-bottles": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/full-bottles",
+   "title": "Full Bottle Perfume Requests in Bangladesh | Valore Parfums",
+   "h1": [
+    "Full Bottle Perfumes on Request"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/full-bottles"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/full-bottles?page=2",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/products/yara-edp"
+   ]
+  },
+  "/category/full-bottles?page=2": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/category/full-bottles?page=2",
+   "title": "Full Bottle Perfume Requests in Bangladesh – Page 2 | Valore Parfums",
+   "h1": [
+    "Full Bottle Perfumes on Request"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/category/full-bottles?page=2"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/full-bottles",
+    "/products/corium",
+    "/products/hawas-fire",
+    "/products/liquid-brun",
+    "/products/nocturno-edp"
+   ]
+  },
+  "/checkout": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/checkout",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/decants-bangladesh": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/decants-bangladesh",
+   "title": "Perfume Decants in Bangladesh | Sizes and Prices | Valore Parfums",
+   "h1": [
+    "Perfume Decants Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/decants-bangladesh"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants"
+   ]
+  },
+  "/full-bottle-perfume-bd": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/full-bottle-perfume-bd",
+   "title": "Full Bottle Perfume Bangladesh | Request Authentic Bottles | Valore Parfums",
+   "h1": [
+    "Full Bottle Perfume Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/full-bottle-perfume-bd"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/full-bottles"
+   ]
+  },
+  "/guides/decant-vs-full-bottle": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/blog/decant-vs-full-bottle-which-should-you-buy"
+    ]
+   ],
+   "final": "/blog/decant-vs-full-bottle-which-should-you-buy",
+   "title": "Decant vs Full Bottle - Which Should You Buy? | Valore Parfums",
+   "h1": [
+    "Decant vs Full Bottle - Which Should You Buy?"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/category/decants"
+   ]
+  },
+  "/investor": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/investor/statement": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "blocked": true
+  },
+  "/login": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/login",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Sign In"
+   ],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/signup",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/login?next=/investor": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/login?next=/investor",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Sign In"
+   ],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/signup",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/niche-perfume-decants": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/niche-perfume-decants",
+   "title": "Niche Perfume Decants Bangladesh | Explore Rare And Premium Scents | Valore Parfums",
+   "h1": [
+    "Niche Perfume Decants Bangladesh"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/niche-perfume-decants"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/shop?brand=niche"
+   ]
+  },
+  "/packs": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs",
+   "title": "Perfume Packs & Decant Bundles in Bangladesh | Valore Parfums",
+   "h1": [
+    "Perfume Packs"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/packs/hawas-collection",
+    "/packs/rayhaan-collection",
+    "/packs/special-occasion-pack",
+    "/packs/summer-pack",
+    "/packs/sweet-escape",
+    "/packs/tobacco-spice",
+    "/packs/velvet-romance",
+    "/packs/winter-pack",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/hawas-collection": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/hawas-collection",
+   "title": "Hawas Collection — 3 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Hawas Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/hawas-collection"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/hawas-black-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/rayhaan-collection": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/rayhaan-collection",
+   "title": "Rayhaan-Collection — 4 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Rayhaan-Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/rayhaan-collection"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/aquatica-edp",
+    "/products/corium",
+    "/products/nocturno-edp",
+    "/products/terra-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/special-occasion-pack": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/special-occasion-pack",
+   "title": "Special Occasion Pack — 3 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Special Occasion Pack"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/special-occasion-pack"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/summer-pack": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/summer-pack",
+   "title": "Summer Pack — 4 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Summer Pack"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/summer-pack"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/aquatica-edp",
+    "/products/hawas-ice-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/sweet-escape": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/sweet-escape",
+   "title": "Sweet Escape — 2 × 15ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Sweet Escape"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/sweet-escape"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/rave-now-women-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/tobacco-spice": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/tobacco-spice",
+   "title": "Tobacco & Spice — 2 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Tobacco & Spice"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/tobacco-spice"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/spicebomb-infrared-edt",
+    "/products/tobacco-touch-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/velvet-romance": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/velvet-romance",
+   "title": "Velvet Romance — 2 × 10ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Velvet Romance"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/velvet-romance"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/angham-edp",
+    "/products/hawas-diva-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/packs/winter-pack": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/packs/winter-pack",
+   "title": "Winter Pack — 4 × 5ml Perfume Pack | Valore Parfums",
+   "h1": [
+    "Winter Pack"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/packs/winter-pack"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/corium",
+    "/products/exquisite-prive-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/partials": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [
+    [
+     307,
+     "/shop?deal=partials"
+    ]
+   ],
+   "final": "/shop?deal=partials",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Partial Deals"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/perfume/01b62113-9521-408c-bc20-6be78b43d135": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/yara-edp"
+    ]
+   ],
+   "final": "/products/yara-edp",
+   "title": "Lattafa Yara EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/perfume/f4013f85-ed88-454d-9171-4cf65aa03994": {
+   "sources": [
+    "legacy template sample"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/supremacy-collectors-edition-edp"
+    ]
+   ],
+   "final": "/products/supremacy-collectors-edition-edp",
+   "title": "Afnan Supremacy Collector's Edition EDP Decant | Valore Parfums",
+   "h1": [
+    "Afnan Supremacy Collector's Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/supremacy-collectors-edition-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/afnan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/212-men": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/212-men-nyc-edt"
+    ]
+   ],
+   "final": "/products/212-men-nyc-edt",
+   "title": "Carolina Herrera 212 Men NYC EDT Decant | Valore Parfums",
+   "h1": [
+    "Carolina Herrera 212 Men NYC EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/212-men-nyc-edt"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/carolina-herrera",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/212-men-nyc-edt": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/212-men-nyc-edt",
+   "title": "Carolina Herrera 212 Men NYC EDT Decant | Valore Parfums",
+   "h1": [
+    "Carolina Herrera 212 Men NYC EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/212-men-nyc-edt"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/carolina-herrera",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/9pm-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/9pm-edp",
+   "title": "Afnan 9PM EDP  Decant | Valore Parfums",
+   "h1": [
+    "Afnan 9PM EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/9pm-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/afnan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/amber-oud-aqua-dubai-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/amber-oud-aqua-dubai-edp",
+   "title": "Al Haramain Amber Oud Aqua Dubai EDP Decant | Valore Parfums",
+   "h1": [
+    "Al Haramain Amber Oud Aqua Dubai EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/amber-oud-aqua-dubai-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/al-haramain",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/amber-oud-gold-edition-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/amber-oud-gold-edition-edp",
+   "title": "Al Haramain Amber Oud Gold Edition EDP Decant | Valore Parfums",
+   "h1": [
+    "Al Haramain Amber Oud Gold Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/amber-oud-gold-edition-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/al-haramain",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/angham-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/angham-edp",
+   "title": "Lattafa Angham EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Angham EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/angham-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/aquatica": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/aquatica-edp"
+    ]
+   ],
+   "final": "/products/aquatica-edp",
+   "title": "Rayhaan Aquatica EDP Decant | Valore Parfums",
+   "h1": [
+    "Rayhaan Aquatica EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/aquatica-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rayhaan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/aquatica-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/aquatica-edp",
+   "title": "Rayhaan Aquatica EDP Decant | Valore Parfums",
+   "h1": [
+    "Rayhaan Aquatica EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/aquatica-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rayhaan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/audit-missing-fragrance": {
+   "sources": [
+    "comparison",
+    "test"
+   ],
+   "home_reachable": false,
+   "status": 404,
+   "redirects": [],
+   "final": "/products/audit-missing-fragrance",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [
+    "noindex"
+   ],
+   "x_robots": null,
+   "links": []
+  },
+  "/products/bois-blanc-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/bois-blanc-edp",
+   "title": "Arabiyat Prestige Bois Blanc EDP Decant | Valore Parfums",
+   "h1": [
+    "Arabiyat Prestige Bois Blanc EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/bois-blanc-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/arabiyat-prestige",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/club-de-nuit-intense-man-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/club-de-nuit-intense-man-edp",
+   "title": "Armaf Club De Nuit Intense Man EDP Decant | Valore Parfums",
+   "h1": [
+    "Armaf Club De Nuit Intense Man EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/club-de-nuit-intense-man-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/armaf",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/corium": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/corium",
+   "title": "Rayhaan Corium Decant | Valore Parfums",
+   "h1": [
+    "Rayhaan Corium"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/corium"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rayhaan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/dynasty-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/dynasty-edp",
+   "title": "Lattafa Dynasty EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Dynasty EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/dynasty-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/exquisite-prive-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/exquisite-prive-edp",
+   "title": "Maison Alhambra Exquisite Prive EDP Decant | Valore Parfums",
+   "h1": [
+    "Maison Alhambra Exquisite Prive EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/exquisite-prive-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/maison-alhambra",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/fakhar-black-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/fakhar-black-edp",
+   "title": "Lattafa Fakhar Black  EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Fakhar Black  EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/fakhar-black-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/givenchy": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/nocturno-edp"
+    ]
+   ],
+   "final": "/products/nocturno-edp",
+   "title": "Rayhaan Nocturno EDP Decant | Valore Parfums",
+   "h1": [
+    "Rayhaan Nocturno EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/nocturno-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rayhaan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-black-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-black-edp",
+   "title": "Rasasi Hawas Black EDP Decant | Valore Parfums",
+   "h1": [
+    "Rasasi Hawas Black EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-black-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rasasi",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-diva-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-diva-edp",
+   "title": "Rasasi Hawas Diva EDP Decant | Valore Parfums",
+   "h1": [
+    "Rasasi Hawas Diva EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-diva-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rasasi",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-fire": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-fire",
+   "title": "Rasasi Hawas Fire Decant | Valore Parfums",
+   "h1": [
+    "Rasasi Hawas Fire"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-fire"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rasasi",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hawas-ice-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hawas-ice-edp",
+   "title": "Rasasi Hawas Ice EDP Decant | Valore Parfums",
+   "h1": [
+    "Rasasi Hawas Ice EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hawas-ice-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rasasi",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/hayaati-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/hayaati-edp",
+   "title": "Lattafa Hayaati EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Hayaati EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/hayaati-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/khamrah-qahwa": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [
+    [
+     308,
+     "/products/khamrah-qahwa-edp"
+    ]
+   ],
+   "final": "/products/khamrah-qahwa-edp",
+   "title": "Lattafa Khamrah Qahwa EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Khamrah Qahwa EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/khamrah-qahwa-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/khamrah-qahwa-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/khamrah-qahwa-edp",
+   "title": "Lattafa Khamrah Qahwa EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Khamrah Qahwa EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/khamrah-qahwa-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/liquid-brun": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/liquid-brun",
+   "title": "French Avenue Liquid Brun Decant | Valore Parfums",
+   "h1": [
+    "French Avenue Liquid Brun"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/liquid-brun"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/french-avenue",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/nocturno-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/nocturno-edp",
+   "title": "Rayhaan Nocturno EDP Decant | Valore Parfums",
+   "h1": [
+    "Rayhaan Nocturno EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/nocturno-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rayhaan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/rave-now-women-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/rave-now-women-edp",
+   "title": "Lattafa Rave Now Women EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Rave Now Women EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/rave-now-women-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/spicebomb-infrared-edt": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/spicebomb-infrared-edt",
+   "title": "Viktor&Rolf Spicebomb Infrared EDT Decant | Valore Parfums",
+   "h1": [
+    "Viktor&Rolf Spicebomb Infrared EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/spicebomb-infrared-edt"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/viktor-rolf",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/supremacy-collectors-edition-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/supremacy-collectors-edition-edp",
+   "title": "Afnan Supremacy Collector's Edition EDP Decant | Valore Parfums",
+   "h1": [
+    "Afnan Supremacy Collector's Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/supremacy-collectors-edition-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/afnan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/supremacy-collectors-edition-edp?size=10ml": {
+   "sources": [
+    "variant sample"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/supremacy-collectors-edition-edp?size=10ml",
+   "title": "Afnan Supremacy Collector's Edition EDP Decant | Valore Parfums",
+   "h1": [
+    "Afnan Supremacy Collector's Edition EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/supremacy-collectors-edition-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/afnan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/terra-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/terra-edp",
+   "title": "Rayhaan Terra EDP Decant | Valore Parfums",
+   "h1": [
+    "Rayhaan Terra EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/terra-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/rayhaan",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/tobacco-touch-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/tobacco-touch-edp",
+   "title": "Maison Alhambra Tobacco Touch EDP Decant | Valore Parfums",
+   "h1": [
+    "Maison Alhambra Tobacco Touch EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/tobacco-touch-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/maison-alhambra",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/touch-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/touch-edp",
+   "title": "Burberry Touch EDP Decant | Valore Parfums",
+   "h1": [
+    "Burberry Touch EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/touch-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/burberry",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/uomo-born-in-roma-coral-fantasy-edt": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/uomo-born-in-roma-coral-fantasy-edt",
+   "title": "Valentino Uomo Born In Roma Coral Fantasy EDT Decant | Valore Parfums",
+   "h1": [
+    "Valentino Uomo Born In Roma Coral Fantasy EDT"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/uomo-born-in-roma-coral-fantasy-edt"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/valentino",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/yara-edp": {
+   "sources": [
+    "anchor",
+    "catalog",
+    "comparison",
+    "redirect",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/yara-edp",
+   "title": "Lattafa Yara EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/products/yara-edp?size=10ml": {
+   "sources": [
+    "comparison"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/products/yara-edp?size=10ml",
+   "title": "Lattafa Yara EDP Decant | Valore Parfums",
+   "h1": [
+    "Lattafa Yara EDP"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/products/yara-edp"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/brand/lattafa",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/requests": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/requests",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "All Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/rave-now-women-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?page=2",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ],
+   "catalog": [
+    {
+     "name": "Supremacy Collector's Edition EDP",
+     "brand": "Afnan",
+     "slug": "supremacy-collectors-edition-edp",
+     "brandSlug": "afnan",
+     "id": "f4013f85-ed88-454d-9171-4cf65aa03994",
+     "path": "/products/supremacy-collectors-edition-edp"
+    },
+    {
+     "name": "Dynasty EDP",
+     "brand": "Lattafa",
+     "slug": "dynasty-edp",
+     "brandSlug": "lattafa",
+     "id": "83327f2e-9938-40a0-a448-e5968e4152fe",
+     "path": "/products/dynasty-edp"
+    },
+    {
+     "name": "Rave Now Women EDP",
+     "brand": "Lattafa",
+     "slug": "rave-now-women-edp",
+     "brandSlug": "lattafa",
+     "id": "25be022c-c060-4137-94bf-a4826cd8eac1",
+     "path": "/products/rave-now-women-edp"
+    },
+    {
+     "name": "Amber Oud Gold Edition EDP",
+     "brand": "Al Haramain",
+     "slug": "amber-oud-gold-edition-edp",
+     "brandSlug": "al-haramain",
+     "id": "a2aa0ef7-5571-4ec8-b3e1-2cd2463604cf",
+     "path": "/products/amber-oud-gold-edition-edp"
+    },
+    {
+     "name": "Club De Nuit Intense Man EDP",
+     "brand": "Armaf",
+     "slug": "club-de-nuit-intense-man-edp",
+     "brandSlug": "armaf",
+     "id": "2f3518f0-da65-404e-8c19-d55a434bda86",
+     "path": "/products/club-de-nuit-intense-man-edp"
+    },
+    {
+     "name": "Terra EDP",
+     "brand": "Rayhaan",
+     "slug": "terra-edp",
+     "brandSlug": "rayhaan",
+     "id": "68899cc7-2ad8-45f0-b3e4-c7c5433842e8",
+     "path": "/products/terra-edp"
+    },
+    {
+     "name": "Aquatica EDP",
+     "brand": "Rayhaan",
+     "slug": "aquatica-edp",
+     "brandSlug": "rayhaan",
+     "id": "8f4a5eb9-ce98-40b4-a16b-b48d281d8ad7",
+     "path": "/products/aquatica-edp"
+    },
+    {
+     "name": "Khamrah Qahwa EDP",
+     "brand": "Lattafa",
+     "slug": "khamrah-qahwa-edp",
+     "brandSlug": "lattafa",
+     "id": "2b2cc84b-41ee-4aac-8d8c-fedfc1c6e290",
+     "path": "/products/khamrah-qahwa-edp"
+    },
+    {
+     "name": "Hawas Diva EDP",
+     "brand": "Rasasi",
+     "slug": "hawas-diva-edp",
+     "brandSlug": "rasasi",
+     "id": "7fd5cff3-fded-468c-8811-125249fa91b9",
+     "path": "/products/hawas-diva-edp"
+    },
+    {
+     "name": "Hayaati EDP",
+     "brand": "Lattafa",
+     "slug": "hayaati-edp",
+     "brandSlug": "lattafa",
+     "id": "4f36b2d7-498d-435d-9ac8-6303b94c0134",
+     "path": "/products/hayaati-edp"
+    },
+    {
+     "name": "212 Men NYC EDT",
+     "brand": "Carolina Herrera",
+     "slug": "212-men-nyc-edt",
+     "brandSlug": "carolina-herrera",
+     "id": "527a0988-91ed-49d9-af59-226c594ea6f5",
+     "path": "/products/212-men-nyc-edt"
+    },
+    {
+     "name": "Bois Blanc EDP",
+     "brand": "Arabiyat Prestige",
+     "slug": "bois-blanc-edp",
+     "brandSlug": "arabiyat-prestige",
+     "id": "3f32c315-33f7-4a5f-bc74-19cbb1d7bc6f",
+     "path": "/products/bois-blanc-edp"
+    },
+    {
+     "name": "Yara EDP",
+     "brand": "Lattafa",
+     "slug": "yara-edp",
+     "brandSlug": "lattafa",
+     "id": "01b62113-9521-408c-bc20-6be78b43d135",
+     "path": "/products/yara-edp"
+    },
+    {
+     "name": "Touch EDP",
+     "brand": "Burberry",
+     "slug": "touch-edp",
+     "brandSlug": "burberry",
+     "id": "1b6477f3-87c4-409a-888b-e0ffa719cf2d",
+     "path": "/products/touch-edp"
+    },
+    {
+     "name": "Angham EDP",
+     "brand": "Lattafa",
+     "slug": "angham-edp",
+     "brandSlug": "lattafa",
+     "id": "5600dfa5-1e26-45cb-869d-8c751a517264",
+     "path": "/products/angham-edp"
+    },
+    {
+     "name": "9PM EDP ",
+     "brand": "Afnan",
+     "slug": "9pm-edp",
+     "brandSlug": "afnan",
+     "id": "690cdf94-4806-4605-aa26-ac382ff39407",
+     "path": "/products/9pm-edp"
+    },
+    {
+     "name": "Exquisite Prive EDP",
+     "brand": "Maison Alhambra",
+     "slug": "exquisite-prive-edp",
+     "brandSlug": "maison-alhambra",
+     "id": "036fd366-13cf-400b-997f-e24bf7137267",
+     "path": "/products/exquisite-prive-edp"
+    },
+    {
+     "name": "Spicebomb Infrared EDT",
+     "brand": "Viktor&Rolf",
+     "slug": "spicebomb-infrared-edt",
+     "brandSlug": "viktor-rolf",
+     "id": "45bd6085-4f79-4ca6-b07d-a0d084240fe6",
+     "path": "/products/spicebomb-infrared-edt"
+    },
+    {
+     "name": "Tobacco Touch EDP",
+     "brand": "Maison Alhambra",
+     "slug": "tobacco-touch-edp",
+     "brandSlug": "maison-alhambra",
+     "id": "18b5e505-ef21-4732-b97c-5021e82373af",
+     "path": "/products/tobacco-touch-edp"
+    },
+    {
+     "name": "Fakhar Black  EDP",
+     "brand": "Lattafa",
+     "slug": "fakhar-black-edp",
+     "brandSlug": "lattafa",
+     "id": "61924fd8-fdd3-4267-a05c-4c69fd83631c",
+     "path": "/products/fakhar-black-edp"
+    },
+    {
+     "name": "Hawas Ice EDP",
+     "brand": "Rasasi",
+     "slug": "hawas-ice-edp",
+     "brandSlug": "rasasi",
+     "id": "1780c3b1-a750-4b08-8265-735df844fcff",
+     "path": "/products/hawas-ice-edp"
+    },
+    {
+     "name": "Hawas Black EDP",
+     "brand": "Rasasi",
+     "slug": "hawas-black-edp",
+     "brandSlug": "rasasi",
+     "id": "4d994bc1-c4f7-4211-a228-1ed7606bd0ef",
+     "path": "/products/hawas-black-edp"
+    },
+    {
+     "name": "Amber Oud Aqua Dubai EDP",
+     "brand": "Al Haramain",
+     "slug": "amber-oud-aqua-dubai-edp",
+     "brandSlug": "al-haramain",
+     "id": "5145701c-31d8-4e3c-9537-59d972133aef",
+     "path": "/products/amber-oud-aqua-dubai-edp"
+    },
+    {
+     "name": "Uomo Born In Roma Coral Fantasy EDT",
+     "brand": "Valentino",
+     "slug": "uomo-born-in-roma-coral-fantasy-edt",
+     "brandSlug": "valentino",
+     "id": "52b41794-4612-4c68-ab56-ae1cdb7abe2f",
+     "path": "/products/uomo-born-in-roma-coral-fantasy-edt"
+    },
+    {
+     "name": "Liquid Brun",
+     "brand": "French Avenue",
+     "slug": "liquid-brun",
+     "brandSlug": "french-avenue",
+     "id": "108dee74-c08d-4820-8fec-32e106810f30",
+     "path": "/products/liquid-brun"
+    },
+    {
+     "name": "Nocturno EDP",
+     "brand": "Rayhaan",
+     "slug": "nocturno-edp",
+     "brandSlug": "rayhaan",
+     "id": "9551fcd8-d233-4073-aa98-2366b7c1432d",
+     "path": "/products/nocturno-edp"
+    },
+    {
+     "name": "Hawas Fire",
+     "brand": "Rasasi",
+     "slug": "hawas-fire",
+     "brandSlug": "rasasi",
+     "id": "e5a49cd9-b10e-4b71-9dc1-7f34dd07c6e4",
+     "path": "/products/hawas-fire"
+    },
+    {
+     "name": "Corium",
+     "brand": "Rayhaan",
+     "slug": "corium",
+     "brandSlug": "rayhaan",
+     "id": "b4f6424c-06f2-4add-aab1-2564a14e1767",
+     "path": "/products/corium"
+    }
+   ]
+  },
+  "/shop?bestSeller=true": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?bestSeller=true",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Best Sellers"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/angham-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/hawas-ice-edp",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?brand=designer": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?brand=designer",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "designer"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/spicebomb-infrared-edt",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?brand=niche": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?brand=niche",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "niche"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?brand=uae": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?brand=uae",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "uae"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/corium",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/nocturno-edp",
+    "/products/rave-now-women-edp",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Men": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Men",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Men Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/aquatica-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/corium",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-ice-edp",
+    "/products/liquid-brun",
+    "/products/nocturno-edp",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/touch-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Oud": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Oud",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Oud Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Unisex": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Unisex",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Unisex Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/bois-blanc-edp",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-fire",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/tobacco-touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?category=Women": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "test"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?category=Women",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Women Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/angham-edp",
+    "/products/hawas-diva-edp",
+    "/products/rave-now-women-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?deal=partials": {
+   "sources": [
+    "comparison",
+    "redirect"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?deal=partials",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Partial Deals"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?page=2": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "test"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?page=2",
+   "title": "Shop Perfume Decants in Bangladesh – Page 2 | Valore Parfums",
+   "h1": [
+    "All Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop?page=2"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/corium",
+    "/products/hawas-fire",
+    "/products/liquid-brun",
+    "/products/nocturno-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=All%20Season": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=All%20Season",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "All Season Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/dynasty-edp",
+    "/products/hawas-black-edp",
+    "/products/supremacy-collectors-edition-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Autumn": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Autumn",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Autumn Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/9pm-edp",
+    "/products/angham-edp",
+    "/products/bois-blanc-edp",
+    "/products/corium",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Rainy": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Rainy",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Rainy Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Spring": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Spring",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Spring Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/nocturno-edp",
+    "/products/rave-now-women-edp",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Summer": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Summer",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Summer Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/dynasty-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/nocturno-edp",
+    "/products/rave-now-women-edp",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/touch-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?season=Winter": {
+   "sources": [
+    "anchor",
+    "comparison"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?season=Winter",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "Winter Collection"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/9pm-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/corium",
+    "/products/exquisite-prive-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-fire",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?sort=price-asc": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "test"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?sort=price-asc",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "All Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/9pm-edp",
+    "/products/amber-oud-aqua-dubai-edp",
+    "/products/amber-oud-gold-edition-edp",
+    "/products/angham-edp",
+    "/products/aquatica-edp",
+    "/products/bois-blanc-edp",
+    "/products/club-de-nuit-intense-man-edp",
+    "/products/corium",
+    "/products/dynasty-edp",
+    "/products/exquisite-prive-edp",
+    "/products/fakhar-black-edp",
+    "/products/hawas-black-edp",
+    "/products/hawas-diva-edp",
+    "/products/hawas-fire",
+    "/products/hawas-ice-edp",
+    "/products/hayaati-edp",
+    "/products/khamrah-qahwa-edp",
+    "/products/liquid-brun",
+    "/products/nocturno-edp",
+    "/products/rave-now-women-edp",
+    "/products/terra-edp",
+    "/products/tobacco-touch-edp",
+    "/products/touch-edp",
+    "/products/yara-edp",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/shop?sort=price-asc&page=2",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/shop?sort=price-asc&page=2": {
+   "sources": [
+    "anchor"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/shop?sort=price-asc&page=2",
+   "title": "Shop Perfume Decants in Bangladesh | Valore Parfums",
+   "h1": [
+    "All Fragrances"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/shop"
+   ],
+   "robots": [
+    "noindex, follow"
+   ],
+   "x_robots": null,
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/products/212-men-nyc-edt",
+    "/products/spicebomb-infrared-edt",
+    "/products/supremacy-collectors-edition-edp",
+    "/products/uomo-born-in-roma-coral-fantasy-edt",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/shop?sort=price-asc",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/signup": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/signup",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Create Account"
+   ],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/sterile-decant-process": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route",
+    "sitemap"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/sterile-decant-process",
+   "title": "Sterile Decant Process | 100% Authentic Guarantee | Valore Parfums",
+   "h1": [
+    "Sterile Decant Process"
+   ],
+   "canonical": [
+    "https://www.valoreparfums.app/sterile-decant-process"
+   ],
+   "robots": [],
+   "x_robots": null,
+   "links": [
+    "/shop"
+   ]
+  },
+  "/track": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/track",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Track Order"
+   ],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  },
+  "/unsubscribe": {
+   "sources": [
+    "comparison",
+    "route"
+   ],
+   "home_reachable": false,
+   "status": 200,
+   "redirects": [],
+   "final": "/unsubscribe",
+   "title": "Email preferences | Valore Parfums | Valore Parfums",
+   "h1": [
+    "Email preferences"
+   ],
+   "canonical": [],
+   "robots": [
+    "noindex, nofollow"
+   ],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/"
+   ]
+  },
+  "/wishlist": {
+   "sources": [
+    "anchor",
+    "comparison",
+    "route"
+   ],
+   "home_reachable": true,
+   "status": 200,
+   "redirects": [],
+   "final": "/wishlist",
+   "title": "Valore Parfums | Perfume Decants & Samples in Bangladesh",
+   "h1": [
+    "Your Wishlist"
+   ],
+   "canonical": [],
+   "robots": [],
+   "x_robots": "noindex, nofollow",
+   "links": [
+    "/",
+    "/blog",
+    "/cart",
+    "/category/decants",
+    "/category/full-bottles",
+    "/login",
+    "/packs",
+    "/partials",
+    "/shop",
+    "/shop?bestSeller=true",
+    "/shop?brand=designer",
+    "/shop?brand=niche",
+    "/shop?brand=uae",
+    "/shop?category=Men",
+    "/shop?category=Oud",
+    "/shop?category=Unisex",
+    "/shop?category=Women",
+    "/shop?season=All%20Season",
+    "/shop?season=Autumn",
+    "/shop?season=Rainy",
+    "/shop?season=Spring",
+    "/shop?season=Summer",
+    "/shop?season=Winter",
+    "/sterile-decant-process",
+    "/track",
+    "/wishlist"
+   ]
+  }
+ }
+}

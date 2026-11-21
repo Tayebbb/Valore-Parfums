@@ -1,0 +1,42 @@
+{
+  "supplied": {
+    "start": "https://www.valoreparfums.app/",
+    "redirects": [],
+    "final": "https://www.valoreparfums.app/",
+    "status": 200,
+    "canonical": [],
+    "ogUrl": [
+      "https://www.valoreparfums.app"
+    ]
+  },
+  "apex": {
+    "start": "https://valoreparfums.app/",
+    "redirects": [
+      [
+        308,
+        "https://www.valoreparfums.app/"
+      ]
+    ],
+    "final": "https://www.valoreparfums.app/",
+    "status": 200,
+    "canonical": [],
+    "ogUrl": [
+      "https://www.valoreparfums.app"
+    ]
+  },
+  "http": {
+    "start": "http://www.valoreparfums.app/",
+    "redirects": [
+      [
+        308,
+        "https://www.valoreparfums.app/"
+      ]
+    ],
+    "final": "https://www.valoreparfums.app/",
+    "status": 200,
+    "canonical": [],
+    "ogUrl": [
+      "https://www.valoreparfums.app"
+    ]
+  }
+}

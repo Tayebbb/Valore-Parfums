@@ -1,0 +1,187 @@
+{
+  "summary": {
+    "health_score": 38,
+    "business_type": "Bangladesh perfume decant ecommerce storefront",
+    "top_findings": [
+      "Nine of 28 products lacked a home-link path",
+      "Four pack links returned 404",
+      "10 ml deep links selected 5 ml",
+      "Unconfirmed preorders, shipping and returns in offers",
+      "Repeated buyer guides and indexable utility pages"
+    ],
+    "quick_wins": [
+      "Server-render shop cards",
+      "Preserve historical pack item slugs",
+      "Use checkout pricing for variant offers",
+      "Set utility noindex headers",
+      "Link relevant buyer guides and brands"
+    ]
+  },
+  "categories": [
+    {
+      "name": "Technical SEO",
+      "score": 33,
+      "weight": 22,
+      "checks_passed": 2,
+      "checks_counted": 6,
+      "what_works": [
+        "Apex redirects to www and missing products return 404."
+      ],
+      "findings": [
+        {
+          "title": "Incomplete discovery and URL controls",
+          "severity": "High",
+          "description": "Nine catalog products were unreachable from the live homepage.",
+          "recommendation": "Serve product links in HTML and self-canonicalize pagination."
+        }
+      ]
+    },
+    {
+      "name": "Content Quality",
+      "score": 40,
+      "weight": 23,
+      "checks_passed": 2,
+      "checks_counted": 5,
+      "what_works": [
+        "Product names and scent notes are visible."
+      ],
+      "findings": [
+        {
+          "title": "Repeated buyer content",
+          "severity": "Medium",
+          "description": "Three sampled pages shared all 12 distinct long paragraphs.",
+          "recommendation": "Limit copy to relevant catalog facts and link matching fragrances."
+        }
+      ]
+    },
+    {
+      "name": "On-Page SEO",
+      "score": 20,
+      "weight": 20,
+      "checks_passed": 1,
+      "checks_counted": 5,
+      "what_works": [
+        "The product heading identifies the fragrance."
+      ],
+      "findings": [
+        {
+          "title": "Shared metadata and headings",
+          "severity": "Medium",
+          "description": "Retailer name repeated in titles and a shared logo added an H1.",
+          "recommendation": "Use a single page heading and unique titles."
+        }
+      ]
+    },
+    {
+      "name": "Schema / Structured Data",
+      "score": 33,
+      "weight": 10,
+      "checks_passed": 2,
+      "checks_counted": 6,
+      "what_works": [
+        "BDT offers are present and unsupported ratings are omitted."
+      ],
+      "findings": [
+        {
+          "title": "Unbacked full-bottle and policy offers",
+          "severity": "High",
+          "description": "Direct 10 ml entry selected 5 ml and a simulated stock change left stale offer markup.",
+          "recommendation": "Build variants from the same prices and stock used by the selector."
+        }
+      ]
+    },
+    {
+      "name": "Performance (mobile lab proxy)",
+      "score": 56,
+      "weight": 10,
+      "checks_passed": 5,
+      "checks_counted": 9,
+      "what_works": [
+        "Five live template medians were within the 2.5 second LCP threshold."
+      ],
+      "findings": [
+        {
+          "title": "Slow live shop LCP",
+          "severity": "Medium",
+          "description": "Live shop median LCP reached 4.260 seconds.",
+          "recommendation": "Measure again on production and monitor field data."
+        }
+      ]
+    },
+    {
+      "name": "AI Search Readiness",
+      "score": 50,
+      "weight": 10,
+      "checks_passed": 1,
+      "checks_counted": 2,
+      "what_works": [
+        "The home browsing audit passed layout stability."
+      ],
+      "findings": [
+        {
+          "title": "Unnamed mobile controls",
+          "severity": "Medium",
+          "description": "Lighthouse agentic browsing scored 1/2 on the live home.",
+          "recommendation": "Label navigation, cart and search controls."
+        }
+      ]
+    },
+    {
+      "name": "Images",
+      "score": 67,
+      "weight": 5,
+      "checks_passed": 2,
+      "checks_counted": 3,
+      "what_works": [
+        "The product hero loaded and had a fragrance name."
+      ],
+      "findings": [
+        {
+          "title": "Pack image link label",
+          "severity": "Medium",
+          "description": "Pack collage links were identified by the discount or had no useful name.",
+          "recommendation": "Label pack links with the pack name."
+        }
+      ]
+    }
+  ],
+  "action_plan": {
+    "phases": [
+      {
+        "name": "Implemented and verified locally",
+        "timeframe": "Before deployment",
+        "items": [
+          "Catalog discovery, offers, shopper controls and content fixes completed"
+        ]
+      },
+      {
+        "name": "Production verification",
+        "timeframe": "At approved deployment",
+        "items": [
+          "Repeat crawl, validate merchant results and inspect Google-selected canonicals"
+        ]
+      },
+      {
+        "name": "Business data",
+        "timeframe": "Owner review",
+        "items": [
+          "Verify policies, concentrations, Niche assortment and analytics access"
+        ]
+      },
+      {
+        "name": "Measurement",
+        "timeframe": "28 days after deployment",
+        "items": [
+          "Compare Bangladesh organic clicks, queries, product impressions/CTR and attributable orders against the prior 28 days"
+        ]
+      }
+    ]
+  },
+  "artifacts": {
+    "findings_dir": "findings/",
+    "screenshots_dir": "screenshots/",
+    "live_crawl": "live-crawl.json",
+    "local_crawl": "local-crawl.json",
+    "evidence_dir": "evidence/"
+  }
+}

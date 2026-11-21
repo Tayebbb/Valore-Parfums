@@ -1,0 +1,121 @@
+{
+  "/brand/lattafa": {
+    "status": 200,
+    "raw": {
+      "h1": [
+        "Lattafa Perfume Decants"
+      ],
+      "productAnchors": 7,
+      "canonical": [
+        "https://www.valoreparfums.app/brand/lattafa"
+      ]
+    },
+    "mobile": {
+      "h1": [
+        "Lattafa Perfume Decants"
+      ],
+      "productAnchors": 7,
+      "canonical": [
+        "https://www.valoreparfums.app/brand/lattafa"
+      ]
+    },
+    "overflow": false
+  },
+  "/blog": {
+    "status": 200,
+    "raw": {
+      "h1": [
+        "Perfume Buying Blog"
+      ],
+      "productAnchors": 0,
+      "canonical": [
+        "https://www.valoreparfums.app/blog"
+      ]
+    },
+    "mobile": {
+      "h1": [
+        "Perfume Buying Blog"
+      ],
+      "productAnchors": 0,
+      "canonical": [
+        "https://www.valoreparfums.app/blog"
+      ]
+    },
+    "overflow": false
+  },
+  "/sterile-decant-process": {
+    "status": 200,
+    "raw": {
+      "h1": [
+        "Sterile Decant Process"
+      ],
+      "productAnchors": 0,
+      "canonical": [
+        "https://www.valoreparfums.app/sterile-decant-process"
+      ]
+    },
+    "mobile": {
+      "h1": [
+        "Sterile Decant Process"
+      ],
+      "productAnchors": 0,
+      "canonical": [
+        "https://www.valoreparfums.app/sterile-decant-process"
+      ]
+    },
+    "overflow": false
+  },
+  "/category/full-bottles": {
+    "status": 200,
+    "raw": {
+      "h1": [
+        "Full Bottle Perfumes on Request"
+      ],
+      "productAnchors": 24,
+      "canonical": [
+        "https://www.valoreparfums.app/category/full-bottles"
+      ]
+    },
+    "mobile": {
+      "h1": [
+        "Full Bottle Perfumes on Request"
+      ],
+      "productAnchors": 24,
+      "canonical": [
+        "https://www.valoreparfums.app/category/full-bottles"
+      ]
+    },
+    "overflow": false
+  },
+  "/shop?page=2": {
+    "status": 200,
+    "raw": {
+      "h1": [
+        "All Fragrances"
+      ],
+      "productAnchors": 4,
+      "canonical": [
+        "https://www.valoreparfums.app/shop?page=2"
+      ]
+    },
+    "mobile": {
+      "h1": [
+        "All Fragrances"
+      ],
+      "productAnchors": 4,
+      "canonical": [
+        "https://www.valoreparfums.app/shop?page=2"
+      ]
+    },
+    "overflow": false
+  },
+  "/llms.txt": {
+    "status": 404
+  },
+  "/.well-known/ucp": {
+    "status": 404
+  },
+  "/.well-known/ai-catalog.json": {
+    "status": 404
+  }
+}

@@ -3,9 +3,11 @@ import { blogPosts, landingPages } from "@/lib/seo-content";
 import { SITE_URL, getActivePerfumes, buildCanonicalProductPath } from "@/lib/seo-catalog";
 import { getPublicPacks } from "@/lib/packs-api";
 
+export const revalidate = 300;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [perfumes, packs] = await Promise.all([getActivePerfumes(), getPublicPacks()]);
-  const now = new Date();
+  const brands = new Set(perfumes.map((p) => p.brandSlug).filter(Boolean));
 
   const staticPages: MetadataRoute.Sitemap = [
     "",
@@ -13,26 +15,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/packs",
     "/category/decants",
     "/category/full-bottles",
-    "/guides/decant-vs-full-bottle",
+    "/blog",
+    "/sterile-decant-process",
+    ...Array.from(brands, (brand) => `/brand/${brand}`),
     ...landingPages.map((item) => `/${item.slug}`),
     ...blogPosts.map((item) => `/blog/${item.slug}`),
   ].map((path) => ({
     url: `${SITE_URL}${path}`,
-    lastModified: now,
     changeFrequency: "weekly",
     priority: path === "" ? 1 : 0.8,
   }));
 
   const productPages: MetadataRoute.Sitemap = perfumes.map((perfume) => ({
     url: `${SITE_URL}${buildCanonicalProductPath(perfume)}`,
-    lastModified: now,
     changeFrequency: "daily",
     priority: 0.9,
   }));
 
   const packPages: MetadataRoute.Sitemap = packs.map((pack) => ({
     url: `${SITE_URL}/packs/${pack.slug}`,
-    lastModified: now,
     changeFrequency: "weekly",
     priority: 0.8,
   }));

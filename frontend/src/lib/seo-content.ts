@@ -12,62 +12,31 @@ export interface BlogPostContent {
   slug: string;
   title: string;
   type: "top-list" | "comparison" | "buying-guide";
+  matchingProducts?: { heading: string; brand?: string; season?: string; category?: string };
   metaDescription: string;
   keywordCluster: string[];
   excerpt: string;
   sections: Array<{ heading: string; paragraphs: string[] }>;
 }
 
-const evergreenParagraphs = [
-  "Bangladeshi perfume buyers are now much more educated than before. Instead of blind buying expensive bottles, they compare batches, check reformulations, and evaluate dry down performance in Dhaka heat and humidity. This makes decants the most practical path for building a fragrance wardrobe without overspending.",
-  "A proper decant store should always explain bottle source, decant hygiene, atomizer quality, and storage practice. Buyers do not only want low price; they want trust signals that prove authenticity. When those trust signals are visible, conversion rates increase and repeat purchase becomes predictable.",
-  "Perfume sampling is not only for beginners. Experienced collectors use decants for travel rotation, office-safe testing, layering experiments, and before-upgrade evaluation. In Bangladesh where full bottle inventory fluctuates, decants and on-request sourcing create a stable buying journey for every budget tier.",
-  "Search intent in fragrance commerce is highly specific. Users search for perfume name + decant size, brand + price in Bangladesh, and full bottle availability. Pages that include this intent directly in headings, internal links, and CTAs usually perform better than generic e-commerce pages.",
-  "Customers who first buy 3ml or 10ml often convert into 30ml repeat buyers and later request full bottles. This is why every decant page should include educational content, social proof, and an explicit full bottle upsell path. The best stores make that transition effortless.",
-];
-
-function buildLongSections(topic: string): Array<{ heading: string; paragraphs: string[] }> {
-  return [
-    {
-      heading: `${topic}: Why Demand Keeps Growing in Bangladesh`,
-      paragraphs: [...evergreenParagraphs],
-    },
-    {
-      heading: "How To Choose The Right Decant Size",
-      paragraphs: [
-        "A 3ml decant works best for first impression testing across 2-4 full wearings. A 10ml decant is ideal when you like the scent and want to test in different weather and social contexts. A 15ml or 30ml decant is for fragrances you already trust and plan to wear regularly.",
-        "For office buyers, smaller atomizers help avoid carrying heavy bottles and reduce risk of breakage. For enthusiasts, mid-size decants are useful for layering and side-by-side comparisons between flankers and concentration variants.",
-        ...evergreenParagraphs.slice(0, 3),
-      ],
-    },
-    {
-      heading: "Authenticity, Hygiene, And Buyer Confidence",
-      paragraphs: [
-        "Authenticity is the highest conversion driver in perfume commerce. Buyers need transparent sourcing statements and visible bottle photos. Hygiene standards are equally important: sterile tools, clean funnels, and fresh atomizers should be part of every decant process.",
-        "When stores publish sterile decant process documentation, they reduce customer hesitation. This boosts both direct conversion and branded search trust, especially for high-demand names from Dior, Lattafa, Maison Francis Kurkdjian, Tom Ford, and Creed.",
-        ...evergreenParagraphs.slice(2),
-      ],
-    },
-    {
-      heading: "Decant To Full Bottle Upsell Framework",
-      paragraphs: [
-        "Full bottle requests should be positioned as a continuation of sampling, not a separate journey. A buyer tests 10ml, confirms longevity and projection, then requests a full bottle from the same page. This behavior is common and should be intentionally supported.",
-        "Successful stores prefill a full bottle request message with perfume name and brand, reducing friction for mobile users. WhatsApp routing plus on-site request forms improves lead capture and gives users channel choice.",
-        ...evergreenParagraphs,
-      ],
-    },
-  ];
-}
-
 export const landingPages: LandingPageContent[] = [
   {
     slug: "decants-bangladesh",
     title: "Perfume Decants Bangladesh",
-    metaTitle: "Perfume Decants Bangladesh | 3ml, 10ml, 15ml, 30ml Authentic Samples",
-    metaDescription: "Shop authentic perfume decants in Bangladesh. Try 3ml, 10ml, 15ml, and 30ml before full bottle purchase.",
+    metaTitle: "Perfume Decants in Bangladesh | Sizes and Prices",
+    metaDescription: "Learn how to choose a perfume decant in Bangladesh, then compare the available volumes and BDT prices for the fragrance you want.",
     keywordCluster: ["perfume decant bangladesh", "authentic perfume samples bd", "buy decants dhaka"],
     intro: "Valore Parfums helps buyers discover authentic fragrances through decants in Bangladesh, then upgrade to full bottles when ready.",
-    sections: buildLongSections("Perfume Decants"),
+    sections: [
+      {
+        heading: "What comes in a decant?",
+        paragraphs: ["A decant is a measured portion of a fragrance transferred to a smaller atomizer. The volume tells you how much perfume you receive. EDT or EDP in the fragrance name identifies the concentration."],
+      },
+      {
+        heading: "Read the price for your size",
+        paragraphs: ["Open a fragrance and choose a size to see its BDT price and availability. Two fragrances from the same house can cost different amounts for the same volume."],
+      },
+    ],
   },
   {
     slug: "buy-perfume-samples",
@@ -76,16 +45,34 @@ export const landingPages: LandingPageContent[] = [
     metaDescription: "Buy authentic perfume sample decants in Bangladesh and test fragrance performance before full bottle commitment.",
     keywordCluster: ["buy perfume samples", "perfume sample bangladesh", "try before buy perfume"],
     intro: "Sample-first fragrance shopping reduces blind buys and helps you choose high-value perfumes confidently.",
-    sections: buildLongSections("Perfume Samples"),
+    sections: [
+      {
+        heading: "Compare two fragrances",
+        paragraphs: ["Choose a note you already enjoy, such as bergamot or cinnamon, and use the shop’s note filter to find fragrances that share it. Open each product to compare the brand, concentration and available decant sizes."],
+      },
+      {
+        heading: "Try one at a time",
+        paragraphs: ["Wear each sample on a different day. Note how the opening changes after a few hours and whether you would enjoy wearing it again. If you want several scents together, the pack page lists each fragrance and the volume of each decant."],
+      },
+    ],
   },
   {
     slug: "full-bottle-perfume-bd",
     title: "Full Bottle Perfume Bangladesh",
     metaTitle: "Full Bottle Perfume Bangladesh | Request Authentic Bottles",
-    metaDescription: "Request authentic full bottle perfumes in Bangladesh after testing decants. Fast sourcing for popular and niche scents.",
+    metaDescription: "Learn how to request a full bottle in Bangladesh and distinguish a confirmed decant price from a full bottle enquiry.",
     keywordCluster: ["full bottle perfume bangladesh", "request perfume bottle bd", "authentic full bottle bd"],
     intro: "From decant testing to full bottle sourcing, this page explains a low-risk fragrance buying path for Bangladesh.",
-    sections: buildLongSections("Full Bottle Perfume"),
+    sections: [
+      {
+        heading: "Check whether the fragrance accepts requests",
+        paragraphs: ["Open a fragrance in the full bottle collection. Where the request option is available, use the product page to start a request for that exact fragrance. Check the concentration in the name before sending it."],
+      },
+      {
+        heading: "What price applies?",
+        paragraphs: ["The price beside a decant size covers that volume only. A full bottle request asks the store to confirm the bottle and its price separately."],
+      },
+    ],
   },
   {
     slug: "affordable-perfume-decants",
@@ -94,7 +81,16 @@ export const landingPages: LandingPageContent[] = [
     metaDescription: "Discover affordable perfume decants in Bangladesh and access premium designer and niche scents without full bottle cost.",
     keywordCluster: ["affordable perfume decants", "budget decant bangladesh", "cheap authentic perfume sample"],
     intro: "Affordable decants make premium perfumery accessible while preserving authenticity and quality.",
-    sections: buildLongSections("Affordable Decants"),
+    sections: [
+      {
+        heading: "Compare the same volume",
+        paragraphs: ["A lower starting price can mean a smaller atomizer. Pick the same size on two product pages and compare their BDT prices. For a cost-per-millilitre comparison, divide each price by the selected volume."],
+      },
+      {
+        heading: "Set a budget for sampling",
+        paragraphs: ["If you are trying several unfamiliar scents, start with smaller available sizes. A curated pack is another option. Check its total price, number of fragrances and volume per fragrance before deciding."],
+      },
+    ],
   },
   {
     slug: "niche-perfume-decants",
@@ -103,37 +99,75 @@ export const landingPages: LandingPageContent[] = [
     metaDescription: "Shop niche perfume decants in Bangladesh. Experience rare fragrances before committing to full bottle purchases.",
     keywordCluster: ["niche perfume decants", "niche perfume bangladesh", "rare fragrance sample bd"],
     intro: "Niche perfume decants help you explore unique compositions and avoid expensive blind buys.",
-    sections: buildLongSections("Niche Perfume Decants"),
+    sections: [
+      {
+        heading: "Browse the niche collection",
+        paragraphs: ["The shop groups fragrance houses into collections, including Niche. Open that filter to see which fragrances the store currently lists, then compare the notes and available sizes on each product page."],
+      },
+      {
+        heading: "Choose by notes",
+        paragraphs: ["Start with a note you know you enjoy. Read the top, middle and base notes where the catalog lists them, then try a small decant before choosing a larger size."],
+      },
+    ],
   },
 ];
 
 export const blogPosts: BlogPostContent[] = [
   {
     slug: "best-winter-perfumes-for-men-in-bangladesh",
-    title: "Best Winter Perfumes for Men in Bangladesh",
+    matchingProducts: { heading: "Men’s winter decants", season: "Winter", category: "Men" },
+    title: "Winter Perfumes for Men in Bangladesh",
     type: "top-list",
-    metaDescription: "Discover long-lasting winter perfumes for men in Bangladesh and test top picks with decants before full bottle purchase.",
+    metaDescription: "Compare winter scents for men by their catalog notes, from cinnamon and bergamot to red berries and saffron. Explore available decants in Bangladesh.",
     keywordCluster: ["best winter perfumes men bangladesh", "long lasting winter perfume bd", "winter perfume decant"],
     excerpt: "A practical buying guide for men who want winter-ready projection and longevity without blind buying full bottles.",
-    sections: buildLongSections("Winter Perfume Selection"),
+    sections: [
+      {
+        heading: "Cinnamon or saffron?",
+        paragraphs: ["For a cinnamon opening, compare Afnan 9PM EDP, listed with apple and bergamot, with French Avenue Liquid Brun, listed with cardamom and bergamot. For a different direction, Viktor&Rolf Spicebomb Infrared EDT lists pink pepper, red berries and saffron."],
+      },
+      {
+        heading: "Find your winter decant",
+        paragraphs: ["The selection below uses the catalog’s Men and Winter tags. Check the concentration and size on the product page before comparing prices. A small decant lets you try the scent on a cool evening before choosing a larger volume."],
+      },
+    ],
   },
   {
     slug: "top-lattafa-perfumes-that-smell-expensive",
-    title: "Top Lattafa Perfumes That Smell Expensive",
+    matchingProducts: { heading: "Lattafa decants", brand: "Lattafa" },
+    title: "Lattafa Perfume Decants by Scent Profile",
     type: "top-list",
-    metaDescription: "Explore top Lattafa perfumes that smell premium. Try decants in Bangladesh before committing to full bottle purchases.",
+    metaDescription: "Compare spicy, fruity and floral Lattafa perfumes using their fragrance notes. Check current decant sizes and BDT prices for each scent.",
     keywordCluster: ["top lattafa perfumes", "lattafa decant bangladesh", "lattafa full bottle bd"],
-    excerpt: "A curated list of high-value Lattafa fragrances with sampling-first recommendations for Bangladeshi buyers.",
-    sections: buildLongSections("Lattafa Perfume Rankings"),
+    excerpt: "Explore Lattafa fragrances by their notes, from warm cinnamon to orange and jasmine.",
+    sections: [
+      {
+        heading: "Choose a scent profile",
+        paragraphs: ["For spice, compare Khamrah Qahwa EDP, which lists cardamom, cinnamon and ginger, with Khamrah Dukhan EDP, which lists Indian spices, mandarin and incense. For fruit and florals, Rave Now Women EDP lists orange, red berries and jasmine."],
+      },
+      {
+        heading: "Compare the same size",
+        paragraphs: ["Open a Lattafa fragrance below to see its decant sizes and BDT prices. Choose the same volume on each page for a like-for-like comparison."],
+      },
+    ],
   },
   {
     slug: "decant-vs-full-bottle-which-should-you-buy",
     title: "Decant vs Full Bottle - Which Should You Buy?",
     type: "comparison",
-    metaDescription: "Compare perfume decants and full bottles with a buyer-intent framework for Bangladesh fragrance shoppers.",
+    metaDescription: "Compare perfume decants and full bottles and learn when to check a decant price or request a bottle in Bangladesh.",
     keywordCluster: ["decant vs full bottle", "perfume buying guide bangladesh", "try before buy perfume"],
-    excerpt: "A conversion-focused framework to decide when a decant is enough and when a full bottle makes sense.",
-    sections: buildLongSections("Decant vs Full Bottle"),
+    excerpt: "Choose between a smaller atomizer for sampling and a full bottle of a fragrance you already know.",
+    sections: [
+      {
+        heading: "When to choose a decant",
+        paragraphs: ["Choose a decant when you are testing a fragrance, comparing concentrations or want a smaller atomizer. Select the size on the product page to see the price for that volume."],
+      },
+      {
+        heading: "When to request a bottle",
+        paragraphs: ["A full bottle may suit a fragrance you already wear regularly. Where the product offers a full bottle request, ask the store to confirm the bottle size, price and availability before deciding."],
+      },
+    ],
   },
 ];
 

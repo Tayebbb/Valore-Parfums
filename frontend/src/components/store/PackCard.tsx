@@ -15,7 +15,7 @@ export default function PackCard({ pack, priority = false }: { pack: PackPublic;
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded overflow-hidden card-hover group flex flex-col">
-      <Link href={href} className="block">
+      <Link href={href} aria-label={`View ${pack.name}`} className="block">
         <div className="aspect-square bg-[var(--bg-surface)] relative img-zoom">
           <PackImage images={images} fallbackLetter={pack.name?.[0] || "P"} sizes="(max-width: 768px) 100vw, 33vw" priority={priority} />
           <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 pointer-events-none">

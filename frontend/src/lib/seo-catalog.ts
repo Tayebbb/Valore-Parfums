@@ -1,83 +1,11 @@
+import { SITE_URL } from "@/lib/site-url";
 import { unstable_cache } from "next/cache";
-import { cache } from "react";
-import { parseImageList } from "@/lib/image-utils";
-import { DEFAULT_TIER_MARGINS, calculateSellingPrice, getBrandTier, getTierProfitMargin, parseTierMargins } from "@/lib/utils";
 
 export { parseImageList } from "@/lib/image-utils";
 
 export const SITE_NAME = "Valore Parfums";
 
-function normalizeSiteUrl(input?: string): string | null {
-  if (!input) return null;
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  return withProtocol.replace(/\/+$/, "");
-}
-
-function resolveSiteUrl(): string {
-  const isNetlify = process.env.NEXT_PUBLIC_ENV === "netlify" || process.env.NETLIFY === "true";
-
-  // Netlify provides URL/DEPLOY_PRIME_URL during build/runtime.
-  const fromNetlify = normalizeSiteUrl(process.env.URL) || normalizeSiteUrl(process.env.DEPLOY_PRIME_URL);
-  if (isNetlify && fromNetlify) return fromNetlify;
-
-  const fromPublicEnv = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
-  if (fromPublicEnv) return fromPublicEnv;
-
-  if (fromNetlify) return fromNetlify;
-
-  return "https://www.valoreparfums.app";
-}
-
-export const SITE_URL = resolveSiteUrl();
-
-// Static past date so structured data stays valid without per-request recomputation.
-export const OFFER_VALID_FROM = "2024-01-01";
-
-export function buildOfferPolicyNodes() {
-  return {
-    hasMerchantReturnPolicy: {
-      "@type": "MerchantReturnPolicy",
-      applicableCountry: "BD",
-      returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
-      merchantReturnDays: 7,
-      returnMethod: "https://schema.org/ReturnByMail",
-      returnFees: "https://schema.org/ReturnShippingFees",
-    },
-    shippingDetails: {
-      "@type": "OfferShippingDetails",
-      shippingRate: {
-        "@type": "MonetaryAmount",
-        value: "80",
-        currency: "BDT",
-      },
-      shippingDestination: {
-        "@type": "DefinedRegion",
-        addressCountry: "BD",
-      },
-      deliveryTime: {
-        "@type": "ShippingDeliveryTime",
-        handlingTime: {
-          "@type": "QuantitativeValue",
-          minValue: 0,
-          maxValue: 1,
-          unitCode: "DAY",
-        },
-        transitTime: {
-          "@type": "QuantitativeValue",
-          minValue: 1,
-          maxValue: 3,
-          unitCode: "DAY",
-        },
-      },
-    },
-  };
-}
-
-export const DECANT_VARIANTS = [3, 5, 10, 15, 30] as const;
-
-export type DecantVariant = (typeof DECANT_VARIANTS)[number];
+export { SITE_URL } from "@/lib/site-url";
 
 export interface PerfumeDocument {
   id: string;
@@ -113,18 +41,6 @@ export interface PerfumeDocument {
   [key: string]: unknown;
 }
 
-export interface PerfumeOffer {
-  ml: number;
-  price: number;
-  available: boolean;
-  availability:
-    | "https://schema.org/InStock"
-    | "https://schema.org/OutOfStock"
-    | "https://schema.org/PreOrder"
-    | "https://schema.org/BackOrder";
-  url: string;
-}
-
 export interface PerfumeReview {
   id: string;
   perfumeId: string;
@@ -132,12 +48,6 @@ export interface PerfumeReview {
   rating: number;
   comment: string;
   createdAt?: string;
-}
-
-export interface ProductKeywordBundle {
-  titleKeywords: string[];
-  descriptionKeywords: string[];
-  headingKeywords: string[];
 }
 
 type DataLayer = typeof import("@/lib/prisma");
@@ -213,35 +123,6 @@ export function buildCanonicalProductUrl(perfume: Pick<PerfumeDocument, "name" |
   return `${SITE_URL}${buildCanonicalProductPath(perfume)}`;
 }
 
-export function getProductKeywordBundle(perfumeName: string): ProductKeywordBundle {
-  return {
-    titleKeywords: [
-      "perfume decant Bangladesh",
-      `${perfumeName} 10ml decant`,
-      `buy ${perfumeName} BD`,
-      `full bottle ${perfumeName} Bangladesh`,
-    ],
-    descriptionKeywords: [
-      `${perfumeName} decant 3ml 10ml 15ml 30ml`,
-      `try before buy perfume ${perfumeName}`,
-      `${perfumeName} authentic perfume Bangladesh`,
-    ],
-    headingKeywords: [
-      `${perfumeName} decant Bangladesh`,
-      `${perfumeName} full bottle request`,
-      `buy ${perfumeName} perfume sample`,
-    ],
-  };
-}
-
-export function buildProductMetaTitle(perfume: Pick<PerfumeDocument, "name" | "brand">): string {
-  return `${perfume.name} by ${perfume.brand} | ${SITE_NAME}`;
-}
-
-export function buildProductMetaDescription(perfume: Pick<PerfumeDocument, "name">): string {
-  return `Buy 100% authentic ${perfume.name} decants (3ml, 10ml, 15ml, 30ml) in Bangladesh. Try before you buy. Full bottle available on request.`;
-}
-
 const getActivePerfumesCached = unstable_cache(
   async (): Promise<PerfumeDocument[]> => {
     try {
@@ -266,12 +147,15 @@ const getActivePerfumesCached = unstable_cache(
           // stored values (e.g. copy-pasted from another product) are ignored.
           return {
             ...perfume,
+            createdAt: String(serializeDocSafe(raw.createdAt) ?? ""),
+            storedSlug: typeof raw.slug === "string" ? raw.slug : undefined,
             slug: slugify(String(raw.name || perfume.name || "")),
             brandSlug: slugify(String(raw.brand || perfume.brand || "")),
             fullBottleAvailable: perfume.fullBottleAvailable ?? true,
           };
         })
-        .filter((p) => p.isActive !== false);
+        .filter((p) => p.isActive !== false)
+        .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
     } catch (error) {
       console.error("getActivePerfumes failed", error);
       return [];
@@ -423,205 +307,6 @@ const getPerfumeReviewsCached = unstable_cache(
 
 export async function getPerfumeReviews(perfumeId: string): Promise<PerfumeReview[]> {
   return getPerfumeReviewsCached(perfumeId);
-}
-
-// Persists pricing config across requests for up to 300 s (matches product-page revalidate).
-// Admin changes to decant sizes, bottle costs, or margins take effect within 5 min.
-const _pricingConfigCached = unstable_cache(
-  async () => {
-    try {
-      const dataLayer = await getDataLayer();
-      if (!dataLayer) {
-        return { sizes: [], bottles: [], packagingCost: 20, margins: DEFAULT_TIER_MARGINS };
-      }
-
-      const [sizesSnap, bottlesSnap, settingsDoc] = await Promise.all([
-        dataLayer.db.collection(dataLayer.Collections.decantSizes).get(),
-        dataLayer.db.collection(dataLayer.Collections.bottles).get(),
-        dataLayer.db.collection(dataLayer.Collections.settings).doc("default").get(),
-      ]);
-
-      const sizes = sizesSnap.docs
-        .map((doc): { id: string } & Record<string, unknown> => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }))
-        .filter((size) => Boolean(size.enabled))
-        .sort((a, b) => Number(a.ml) - Number(b.ml));
-      const bottles = bottlesSnap.docs.map((doc): { id: string } & Record<string, unknown> => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }));
-      const settings = settingsDoc.exists ? settingsDoc.data() : null;
-      const packagingCost = Number(settings?.packagingCost ?? 20);
-      const margins = parseTierMargins((settings as { tierMargins?: string } | null)?.tierMargins);
-
-      return { sizes, bottles, packagingCost, margins };
-    } catch (error) {
-      console.error("getPricingConfig failed", error);
-      return { sizes: [], bottles: [], packagingCost: 20, margins: DEFAULT_TIER_MARGINS };
-    }
-  },
-  ["pricing-config"],
-  { revalidate: 300, tags: ["pricing-config"] },
-);
-
-// Deduplicates within a single React render pass — prevents N×3 Firestore reads
-// when getPerfumeOffers() is called for multiple products in the same page render.
-const getPricingConfig = cache(_pricingConfigCached);
-
-function computeFullBottlePrice(perfume: PerfumeDocument): number {
-  if (typeof perfume.fullBottlePrice === "number" && Number.isFinite(perfume.fullBottlePrice) && perfume.fullBottlePrice > 0) {
-    return perfume.fullBottlePrice;
-  }
-  const perMl = Number(perfume.marketPricePerMl || 0);
-  return Math.max(0, Math.ceil(perMl * 100));
-}
-
-export async function getPerfumeOffers(perfume: PerfumeDocument): Promise<{ decantOffers: PerfumeOffer[]; fullBottleOffer: PerfumeOffer }> {
-  const { sizes, bottles, packagingCost, margins } = await getPricingConfig();
-  const marketPricePerMl = Number(perfume.marketPricePerMl || 0);
-  // Selling price derives from the market price only, for every owner type.
-  const effectiveMarketPricePerMl = marketPricePerMl;
-  const totalStockMl = Number(perfume.totalStockMl || 0);
-  const tier = getBrandTier(Math.max(1, effectiveMarketPricePerMl) * 100);
-
-  const sizeBuckets = sizes.length > 0 ? sizes : DECANT_VARIANTS.map((ml) => ({ ml, enabled: true }));
-
-  const decantOffers: PerfumeOffer[] = sizeBuckets
-    .filter((size) => DECANT_VARIANTS.includes(Number(size.ml) as DecantVariant))
-    .map((size) => {
-      const ml = Number(size.ml);
-      const bottle = bottles.find((item) => Number(item.ml) === ml);
-      const bottleCost = Number((bottle as { costPerBottle?: number } | undefined)?.costPerBottle || 0);
-      // If no bottle record exists for this ml size, assume available (only an explicit availableCount: 0 should gate it)
-      const bottleAvailable = bottle === undefined || Number((bottle as { availableCount?: number }).availableCount ?? 0) > 0;
-      const margin = getTierProfitMargin(tier, ml, margins);
-      const price = calculateSellingPrice(effectiveMarketPricePerMl, ml, bottleCost, packagingCost, margin);
-      const available = totalStockMl >= ml && bottleAvailable;
-
-      return {
-        ml,
-        price,
-        available,
-        availability: available ? "https://schema.org/InStock" as const : "https://schema.org/OutOfStock" as const,
-        url: `${buildCanonicalProductUrl(perfume)}?size=${ml}ml`,
-      };
-    })
-    .sort((a, b) => a.ml - b.ml);
-
-  const fullBottlePrice = computeFullBottlePrice(perfume);
-  const fullBottleAvailable = perfume.fullBottleAvailable ?? true;
-  const fullBottleOffer: PerfumeOffer = {
-    ml: 100,
-    price: fullBottlePrice,
-    available: fullBottleAvailable,
-    availability: fullBottleAvailable ? "https://schema.org/PreOrder" : "https://schema.org/BackOrder",
-    url: `${buildCanonicalProductUrl(perfume)}#request-full-bottle`,
-  };
-
-  // Safeguard: warn when cached data shows all decant sizes unavailable but perfume has stock.
-  // This indicates a stale cache or misconfigured bottle records. The bug-fix above (treating
-  // missing bottle records as available) prevents the most common case, but we log here to catch
-  // any future regression or Firestore data issues.
-  if (totalStockMl > 0 && decantOffers.length > 0 && decantOffers.every((o) => !o.available)) {
-    console.warn(
-      `[seo-catalog] Availability safeguard: perfume "${perfume.name}" (${perfume.id}) has ` +
-      `${totalStockMl}ml stock but all ${decantOffers.length} decant sizes show unavailable. ` +
-      `Consider revalidating cache (tag: "perfumes") or reviewing bottle records.`,
-    );
-  }
-
-  return { decantOffers, fullBottleOffer };
-}
-
-export function buildProductJsonLd(
-  perfume: PerfumeDocument,
-  offers: { decantOffers: PerfumeOffer[]; fullBottleOffer: PerfumeOffer },
-) {
-  const images = parseImageList(perfume.images).map((img) => (img.startsWith("http") ? img : `${SITE_URL}${img}`));
-  const offerPolicy = buildOfferPolicyNodes();
-
-  const offerNodes = [
-    ...offers.decantOffers.map((offer) => ({
-      "@type": "Offer",
-      sku: `${resolvePerfumeSlug(perfume)}-${offer.ml}ml`,
-      price: String(offer.price),
-      priceCurrency: "BDT",
-      availability: offer.availability,
-      url: offer.url,
-      itemCondition: "https://schema.org/NewCondition",
-      validFrom: OFFER_VALID_FROM,
-      priceValidUntil: "2027-12-31",
-      category: "Perfume Decant",
-      hasMerchantReturnPolicy: offerPolicy.hasMerchantReturnPolicy,
-      shippingDetails: offerPolicy.shippingDetails,
-    })),
-    {
-      "@type": "Offer",
-      sku: `${resolvePerfumeSlug(perfume)}-full-bottle`,
-      price: String(offers.fullBottleOffer.price),
-      priceCurrency: "BDT",
-      availability: offers.fullBottleOffer.availability,
-      url: offers.fullBottleOffer.url,
-      itemCondition: "https://schema.org/NewCondition",
-      validFrom: OFFER_VALID_FROM,
-      category: "Perfume Full Bottle",
-      hasMerchantReturnPolicy: offerPolicy.hasMerchantReturnPolicy,
-      shippingDetails: offerPolicy.shippingDetails,
-    },
-  ];
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: `${perfume.name} by ${perfume.brand}`,
-    description: perfume.description || buildProductMetaDescription(perfume),
-    image: images,
-    brand: {
-      "@type": "Brand",
-      name: perfume.brand,
-    },
-    // Add review/rating markup only when genuine reviews are also displayed on this page.
-    // Offers alone satisfy Google's Product snippet requirements.
-    offers: offerNodes,
-  };
-}
-
-export function buildFaqJsonLd(perfume: PerfumeDocument) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: `Is ${perfume.name} decant authentic?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `Yes. ${SITE_NAME} provides authentic ${perfume.name} decants from original bottles using sterile decant tools.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: `Which ${perfume.name} size should I buy first?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Start with 3ml or 10ml if you are testing performance and skin chemistry. Move to 15ml or 30ml if you already love the scent.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: `Can I request a full bottle of ${perfume.name} in Bangladesh?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `Yes. Use the Request Full Bottle button to request ${perfume.name}. We source authentic bottles on demand in Bangladesh.`,
-        },
-      },
-    ],
-  };
-}
-
-export function buildInternalLinkAnchors(perfume: PerfumeDocument): string[] {
-  return [
-    `${perfume.name} decant Bangladesh`,
-    `buy ${perfume.name} ${perfume.brand} decant`,
-    `full bottle ${perfume.name} Bangladesh`,
-    `${perfume.name} perfume sample`,
-  ];
 }
 
 export function serializePerfumeForApi(perfume: Partial<PerfumeDocument> & { id: string }) {

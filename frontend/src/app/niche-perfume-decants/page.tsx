@@ -8,6 +8,7 @@ export const metadata: Metadata = buildSeoMetadata(
   content?.metaTitle || "Niche Perfume Decants",
   content?.metaDescription || "Niche perfume decants in Bangladesh",
   content?.keywordCluster || ["niche perfume decants"],
+  "/niche-perfume-decants",
 );
 
 export default async function NichePerfumeDecantsPage() {
@@ -18,7 +19,7 @@ export default async function NichePerfumeDecantsPage() {
       intro={content.intro}
       sections={content.sections}
       ctaText="Explore Niche Decants"
-      ctaHref="/shop"
+      ctaHref="/shop?brand=niche"
     />
   );
 }

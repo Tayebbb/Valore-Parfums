@@ -46,6 +46,10 @@ const nextConfig: NextConfig = {
     // Example: Add Netlify-specific headers if needed
     const baseHeaders = [
       {
+        source: "/:section(cart|checkout|login|signup|wishlist|track|orders|requests|admin|investor|unsubscribe)/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-DNS-Prefetch-Control", value: "on" },

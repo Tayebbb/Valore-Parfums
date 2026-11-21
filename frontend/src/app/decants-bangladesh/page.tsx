@@ -8,6 +8,7 @@ export const metadata: Metadata = buildSeoMetadata(
   content?.metaTitle || "Perfume Decants Bangladesh",
   content?.metaDescription || "Authentic perfume decants in Bangladesh",
   content?.keywordCluster || ["perfume decant bangladesh"],
+  "/decants-bangladesh",
 );
 
 export default async function DecantsBangladeshPage() {

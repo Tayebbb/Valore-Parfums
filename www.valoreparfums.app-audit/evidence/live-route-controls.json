@@ -1,0 +1,114 @@
+[
+  {
+    "path": "/login",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/cart",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/checkout",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/wishlist",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/track",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/requests",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/signup",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/admin",
+    "status": "307",
+    "robots": "",
+    "xrobots": "",
+    "loc": "Location: /login",
+    "canonical": ""
+  },
+  {
+    "path": "/investor",
+    "status": "307",
+    "robots": "",
+    "xrobots": "",
+    "loc": "Location: /login?next=/investor",
+    "canonical": ""
+  },
+  {
+    "path": "/unsubscribe",
+    "status": "200",
+    "robots": "noindex, nofollow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/no-such-fragrance-audit",
+    "status": "404",
+    "robots": "noindex, index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/guides/decant-vs-full-bottle",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": "https://www.valoreparfums.app/guides/decant-vs-full-bottle"
+  },
+  {
+    "path": "/niche-perfume-decants",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": ""
+  },
+  {
+    "path": "/blog/decant-vs-full-bottle-which-should-you-buy",
+    "status": "200",
+    "robots": "index, follow",
+    "xrobots": "",
+    "loc": "",
+    "canonical": "https://www.valoreparfums.app/blog/decant-vs-full-bottle-which-should-you-buy"
+  }
+]

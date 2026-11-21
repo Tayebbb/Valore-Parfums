@@ -357,6 +357,8 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
           {/* Mobile menu button */}
           <button
             className="lg:hidden text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            aria-label={mobileMenuOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={mobileMenuOpen}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -365,9 +367,9 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <Image src="/valore-logo.png" alt="Valore Parfums" width={36} height={36} className="rounded-full object-cover" priority />
-            <h1 className="font-serif text-base sm:text-2xl font-light tracking-wide text-[var(--gold)] whitespace-nowrap">
+            <span className="font-serif text-base sm:text-2xl font-light tracking-wide text-[var(--gold)] whitespace-nowrap">
               Valore Parfums
-            </h1>
+            </span>
           </Link>
 
           {/* Desktop Nav */}
@@ -455,6 +457,8 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
           <div className="flex items-center gap-4">
             {/* Search */}
             <button
+              aria-label="Search fragrances"
+              aria-expanded={searchOpen}
               onClick={() => setSearchOpen(!searchOpen)}
               className="flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
             >
@@ -472,7 +476,7 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
 
             {/* Wishlist */}
             {user && (
-              <Link href="/wishlist" className="hidden sm:flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
+              <Link href="/wishlist" aria-label="Wishlist" className="hidden sm:flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors">
                 <Heart size={18} />
               </Link>
             )}
@@ -480,6 +484,8 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
             {/* User */}
             <div className="relative flex items-center justify-center" ref={userMenuRef}>
               <button
+                aria-label="Account menu"
+                aria-expanded={userMenuOpen}
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center justify-center p-2.5 min-w-[44px] min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors"
               >
@@ -527,7 +533,7 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
             </div>
 
             {/* Cart */}
-            <Link href="/cart" className="relative flex items-center justify-center">
+            <Link href="/cart" aria-label={cartCount ? `Cart, ${cartCount} items` : "Cart"} className="relative flex items-center justify-center">
               <ShoppingBag size={18} className="text-[var(--text-secondary)] hover:text-[var(--gold)] transition-colors" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 w-4 h-4 bg-[var(--gold)] text-black text-[9px] font-bold rounded-full flex items-center justify-center">
@@ -554,6 +560,7 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
               {searchLoading && <div className="spinner !w-4 !h-4 flex-shrink-0" />}
               <button
                 type="button"
+                aria-label="Close search"
                 onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
                 className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
@@ -765,6 +772,12 @@ export default function StoreClientShell({ children }: { children: React.ReactNo
               <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
                 Curated luxury in every drop. Experience premium perfume decants from the world&apos;s finest fragrance houses.
               </p>
+              <nav aria-label="Fragrance guides" className="mt-4 flex flex-col items-start gap-2 text-sm text-[var(--text-secondary)]">
+                <Link href="/blog">Fragrance buying guides</Link>
+                <Link href="/category/decants">Browse perfume decants</Link>
+                <Link href="/category/full-bottles">Full bottle requests</Link>
+                <Link href="/sterile-decant-process">How we prepare decants</Link>
+              </nav>
             </div>
             <div>
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] mb-4">Shop</h3>

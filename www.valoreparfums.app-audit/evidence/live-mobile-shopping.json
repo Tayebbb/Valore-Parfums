@@ -1,0 +1,1071 @@
+{
+  "shopBefore": [
+    {
+      "url": "/products/yara-edp",
+      "text": "WOMEN\nBEST SELLER\nYara EDP\n\nLattafa\n\nFrom 209 BDT"
+    },
+    {
+      "url": "/products/exquisite-prive-edp",
+      "text": "UNISEX\nBEST SELLER\nExquisite Prive EDP\n\nMaison Alhambra\n\nFrom 159 BDT"
+    },
+    {
+      "url": "/products/liquid-brun",
+      "text": "MEN\nBEST SELLER\nLiquid Brun\n\nFrench Avenue\n\nFrom 309 BDT"
+    },
+    {
+      "url": "/products/hawas-ice-edp",
+      "text": "MEN\nBEST SELLER\nHawas Ice EDP\n\nRasasi\n\nFrom 259 BDT"
+    },
+    {
+      "url": "/products/tobacco-touch-edp",
+      "text": "UNISEX\nBEST SELLER\nTobacco Touch EDP\n\nMaison Alhambra\n\nFrom 189 BDT"
+    },
+    {
+      "url": "/products/touch-edp",
+      "text": "MEN\nTouch EDP\n\nBurberry\n\nFrom 409 BDT"
+    },
+    {
+      "url": "/products/rave-now-women-edp",
+      "text": "WOMEN\nBEST SELLER\nRave Now Women EDP\n\nLattafa\n\nFrom 189 BDT"
+    },
+    {
+      "url": "/products/khamrah-qahwa-edp",
+      "text": "UNISEX\nBEST SELLER\nKhamrah Qahwa EDP\n\nLattafa\n\nFrom 249 BDT"
+    },
+    {
+      "url": "/products/club-de-nuit-intense-man-edp",
+      "text": "MEN\nBEST SELLER\nClub De Nuit Intense Man EDP\n\nArmaf\n\nFrom 269 BDT"
+    },
+    {
+      "url": "/products/bois-blanc-edp",
+      "text": "UNISEX\nBEST SELLER\nBois Blanc EDP\n\nArabiyat Prestige\n\nFrom 269 BDT"
+    },
+    {
+      "url": "/products/spicebomb-infrared-edt",
+      "text": "MEN\nSpicebomb Infrared EDT\n\nViktor&Rolf\n\nFrom 699 BDT"
+    },
+    {
+      "url": "/products/hawas-black-edp",
+      "text": "MEN\nBEST SELLER\nHawas Black EDP\n\nRasasi\n\nFrom 249 BDT"
+    },
+    {
+      "url": "/products/hayaati-edp",
+      "text": "UNISEX\nHayaati EDP\n\nLattafa\n\nFrom 169 BDT"
+    },
+    {
+      "url": "/products/amber-oud-aqua-dubai-edp",
+      "text": "MEN\nBEST SELLER\nAmber Oud Aqua Dubai EDP\n\nAl Haramain\n\nFrom 409 BDT"
+    },
+    {
+      "url": "/products/212-men-nyc-edt",
+      "text": "MEN\nBEST SELLER\n212 Men NYC EDT\n\nCarolina Herrera\n\nFrom 489 BDT"
+    },
+    {
+      "url": "/products/uomo-born-in-roma-coral-fantasy-edt",
+      "text": "UNISEX\nBEST SELLER\nUomo Born In Roma Coral Fantasy EDT\n\nValentino\n\nFrom 639 BDT"
+    },
+    {
+      "url": "/products/angham-edp",
+      "text": "WOMEN\nBEST SELLER\nAngham EDP\n\nLattafa\n\nFrom 249 BDT"
+    },
+    {
+      "url": "/products/fakhar-black-edp",
+      "text": "MEN\nFakhar Black EDP\n\nLattafa\n\nFrom 229 BDT"
+    },
+    {
+      "url": "/products/terra-edp",
+      "text": "MEN\nBEST SELLER\nTerra EDP\n\nRayhaan\n\nFrom 199 BDT"
+    },
+    {
+      "url": "/products/9pm-edp",
+      "text": "MEN\nBEST SELLER\n9PM EDP\n\nAfnan\n\nFrom 269 BDT"
+    },
+    {
+      "url": "/products/hawas-diva-edp",
+      "text": "WOMEN\nBEST SELLER\nHawas Diva EDP\n\nRasasi\n\nFrom 239 BDT"
+    },
+    {
+      "url": "/products/dynasty-edp",
+      "text": "UNISEX\nDynasty EDP\n\nLattafa\n\nFrom 259 BDT"
+    },
+    {
+      "url": "/products/aquatica-edp",
+      "text": "MEN\nBEST SELLER\nAquatica EDP\n\nRayhaan\n\nFrom 199 BDT"
+    },
+    {
+      "url": "/products/nocturno-edp",
+      "text": "MEN\nBEST SELLER\nNocturno EDP\n\nRayhaan\n\nFrom 189 BDT"
+    }
+  ],
+  "filtered": {
+    "url": "https://www.valoreparfums.app/shop?category=Women",
+    "cards": [
+      {
+        "url": "/products/yara-edp",
+        "text": "WOMEN\nBEST SELLER\nYara EDP\n\nLattafa\n\nFrom 209 BDT"
+      },
+      {
+        "url": "/products/rave-now-women-edp",
+        "text": "WOMEN\nBEST SELLER\nRave Now Women EDP\n\nLattafa\n\nFrom 189 BDT"
+      },
+      {
+        "url": "/products/angham-edp",
+        "text": "WOMEN\nBEST SELLER\nAngham EDP\n\nLattafa\n\nFrom 249 BDT"
+      },
+      {
+        "url": "/products/hawas-diva-edp",
+        "text": "WOMEN\nBEST SELLER\nHawas Diva EDP\n\nRasasi\n\nFrom 239 BDT"
+      }
+    ]
+  },
+  "sorted": {
+    "url": "https://www.valoreparfums.app/shop?category=Women&sort=name-asc",
+    "cards": [
+      {
+        "url": "/products/angham-edp",
+        "text": "WOMEN\nBEST SELLER\nAngham EDP\n\nLattafa\n\nFrom 249 BDT"
+      },
+      {
+        "url": "/products/hawas-diva-edp",
+        "text": "WOMEN\nBEST SELLER\nHawas Diva EDP\n\nRasasi\n\nFrom 239 BDT"
+      },
+      {
+        "url": "/products/rave-now-women-edp",
+        "text": "WOMEN\nBEST SELLER\nRave Now Women EDP\n\nLattafa\n\nFrom 189 BDT"
+      },
+      {
+        "url": "/products/yara-edp",
+        "text": "WOMEN\nBEST SELLER\nYara EDP\n\nLattafa\n\nFrom 209 BDT"
+      }
+    ]
+  },
+  "filterAndSortEventTiming": [
+    {
+      "type": "pointerdown",
+      "ms": 16
+    },
+    {
+      "type": "pointerup",
+      "ms": 16
+    },
+    {
+      "type": "click",
+      "ms": 16
+    },
+    {
+      "type": "pointerdown",
+      "ms": 16
+    },
+    {
+      "type": "pointerup",
+      "ms": 16
+    },
+    {
+      "type": "click",
+      "ms": 16
+    }
+  ],
+  "ordinaryBefore": {
+    "main": "BACK TO COLLECTION\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML (75+ SPRAYS)\n259 BDT\n10ML (150+ SPRAYS)\n479 BDT\n15ML (225+ SPRAYS)\n689 BDT\nQUANTITY\n1\n\n259 BDT\n\nStock: 60ml available\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Hawas Ice EDP by Rasasi",
+        "description": "Buy 100% authentic Hawas Ice EDP decants (3ml, 10ml, 15ml, 30ml) in Bangladesh. Try before you buy. Full bottle available on request.",
+        "image": [
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+        ],
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "offers": [
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-5ml",
+            "price": "259",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-10ml",
+            "price": "479",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-15ml",
+            "price": "689",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-full-bottle",
+            "price": "3300",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/PreOrder",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp#request-full-bottle",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "category": "Perfume Full Bottle",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "ordinaryAfter": {
+    "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+    "main": "BACK TO COLLECTION\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML (75+ SPRAYS)\n259 BDT\n10ML (150+ SPRAYS)\n479 BDT\n15ML (225+ SPRAYS)\n689 BDT\nQUANTITY\n1\n\n479 BDT\n\nStock: 60ml available\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Hawas Ice EDP by Rasasi",
+        "description": "Buy 100% authentic Hawas Ice EDP decants (3ml, 10ml, 15ml, 30ml) in Bangladesh. Try before you buy. Full bottle available on request.",
+        "image": [
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+        ],
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "offers": [
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-5ml",
+            "price": "259",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-10ml",
+            "price": "479",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-15ml",
+            "price": "689",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-full-bottle",
+            "price": "3300",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/PreOrder",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp#request-full-bottle",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "category": "Perfume Full Bottle",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "variantEventTiming": [
+    {
+      "type": "pointerdown",
+      "ms": 16
+    },
+    {
+      "type": "pointerup",
+      "ms": 16
+    },
+    {
+      "type": "click",
+      "ms": 16
+    }
+  ],
+  "cart": "CONTINUE SHOPPING\nShopping Cart\nHawas Ice EDP\n\n10ml\n\n479 BDT each\n\n1\n\n479 BDT\n\nORDER SUMMARY\nHawas Ice EDP 10ml ×1\n479\nSubtotal\n479 BDT\nPROCEED TO CHECKOUT\n\nSUBTOTAL\n\n479 BDT\n\nCHECKOUT",
+  "checkout": {
+    "url": "https://www.valoreparfums.app/checkout",
+    "h1": [
+      "Checkout"
+    ],
+    "body": "BACK TO CART\nCheckout\n\nFast and compact checkout designed for mobile. Fill details, choose payment, and place order.\n\nCUSTOMER\nADDRESS\nPAYMENT\nSUMMARY\n\nSECTION 1\n\nCustomer Info\nNAME\nPHONE\nRECIPIENT EMAIL\n\nSECTION 2\n\nDelivery Address\nPICKUP\nDELIVERY\n\nDELIVERY ZONE\n\nINSIDE DHAKA\nOUTSIDE DHAKA\nAREA\nCITY\nADDRESS\nDELIVERY NOTE (OPTIONAL)\n\nDelivery Fee: 0 BDT\n\nSECTION 3\n\nPayment Method\nCOD\nBKASH\nBANK\n\nVOUCHER\n\nAPPLY\n\nSECTION 4\n\nOrder Summary\n\nHawas Ice"
+  },
+  "deepLink": {
+    "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+    "main": "BACK TO COLLECTION\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML (75+ SPRAYS)\n259 BDT\n10ML (150+ SPRAYS)\n479 BDT\n15ML (225+ SPRAYS)\n689 BDT\nQUANTITY\n1\n\n259 BDT\n\nStock: 60ml available\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Hawas Ice EDP by Rasasi",
+        "description": "Buy 100% authentic Hawas Ice EDP decants (3ml, 10ml, 15ml, 30ml) in Bangladesh. Try before you buy. Full bottle available on request.",
+        "image": [
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+        ],
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "offers": [
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-5ml",
+            "price": "259",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-10ml",
+            "price": "479",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-15ml",
+            "price": "689",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-full-bottle",
+            "price": "3300",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/PreOrder",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp#request-full-bottle",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "category": "Perfume Full Bottle",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "edge": {
+    "url": "https://www.valoreparfums.app/products/hawas-ice-edp",
+    "body": "BACK TO COLLECTION\nMEN\nRasasi Hawas Ice EDP\nFragrance Notes\nBest Seasons\nSUMMER\nSPRING\nSelect Your Size\nVARIANT SELECTOR\nFull Bottle (Soon)\nDecant\n5ML (75+ SPRAYS)\n259 BDT\n10ML (150+ SPRAYS)\n479 BDT\n15ML (225+ SPRAYS)\n689 BDT\nQUANTITY\n1\n\n259 BDT\n\nStock: 60ml available\n\nADD TO CART\nBUY NOW",
+    "schema": [
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Hawas Ice EDP by Rasasi",
+        "description": "Buy 100% authentic Hawas Ice EDP decants (3ml, 10ml, 15ml, 30ml) in Bangladesh. Try before you buy. Full bottle available on request.",
+        "image": [
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-webp.webp",
+          "https://res.cloudinary.com/dhkubnheh/image/upload/v1777122408/valore-parfums/images/perfumes/1777122406883-uf63z1c1-png.png"
+        ],
+        "brand": {
+          "@type": "Brand",
+          "name": "Rasasi"
+        },
+        "offers": [
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-5ml",
+            "price": "259",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=5ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-10ml",
+            "price": "479",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=10ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-15ml",
+            "price": "689",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp?size=15ml",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "priceValidUntil": "2027-12-31",
+            "category": "Perfume Decant",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "sku": "hawas-ice-edp-full-bottle",
+            "price": "3300",
+            "priceCurrency": "BDT",
+            "availability": "https://schema.org/PreOrder",
+            "url": "https://www.valoreparfums.app/products/hawas-ice-edp#request-full-bottle",
+            "itemCondition": "https://schema.org/NewCondition",
+            "validFrom": "2024-01-01",
+            "category": "Perfume Full Bottle",
+            "hasMerchantReturnPolicy": {
+              "@type": "MerchantReturnPolicy",
+              "applicableCountry": "BD",
+              "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+              "merchantReturnDays": 7,
+              "returnMethod": "https://schema.org/ReturnByMail",
+              "returnFees": "https://schema.org/ReturnShippingFees"
+            },
+            "shippingDetails": {
+              "@type": "OfferShippingDetails",
+              "shippingRate": {
+                "@type": "MonetaryAmount",
+                "value": "80",
+                "currency": "BDT"
+              },
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": "BD"
+              },
+              "deliveryTime": {
+                "@type": "ShippingDeliveryTime",
+                "handlingTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "unitCode": "DAY"
+                },
+                "transitTime": {
+                  "@type": "QuantitativeValue",
+                  "minValue": 1,
+                  "maxValue": 3,
+                  "unitCode": "DAY"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "buttons": [
+      [
+        "",
+        false
+      ],
+      [
+        "Fragrance Notes",
+        false
+      ],
+      [
+        "Full Bottle (Soon)",
+        true
+      ],
+      [
+        "Decant",
+        false
+      ],
+      [
+        "5ML (75+ SPRAYS)\n259 BDT",
+        false
+      ],
+      [
+        "10ML (150+ SPRAYS)\n479 BDT",
+        false
+      ],
+      [
+        "15ML (225+ SPRAYS)\n689 BDT",
+        false
+      ],
+      [
+        "",
+        false
+      ],
+      [
+        "",
+        false
+      ],
+      [
+        "ADD TO CART",
+        false
+      ],
+      [
+        "BUY NOW",
+        false
+      ]
+    ]
+  }
+}

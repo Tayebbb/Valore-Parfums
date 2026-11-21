@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -8,7 +8,7 @@ import { Search, X, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-rea
 import { buildCanonicalProductPath } from "@/lib/product-path";
 import { toPublicApiUrl } from "@/lib/public-api";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
-import { calculateSellingPrice, getBrandTier, getTierProfitMargin } from "@/lib/utils";
+import type { DecantPrice } from "@/lib/catalog-pricing";
 import { parseImageList } from "@/lib/image-utils";
 import { PaginationNav } from "@/components/ui/PaginationNav";
 
@@ -18,27 +18,12 @@ export interface Perfume {
   brand: string;
   slug: string;
   canonicalPath?: string;
-  inspiredBy: string;
   category: string;
   images: string;
   totalStockMl: number;
-  season: string[];
   isBestSeller: boolean;
   totalOrders?: number;
-  marketPricePerMl: number;
-  fragranceNotes?: {
-    top?: string[];
-    middle?: string[];
-    base?: string[];
-    all?: string[];
-  };
-  fragranceNoteIds?: {
-    top?: string[];
-    middle?: string[];
-    base?: string[];
-    all?: string[];
-  };
-  keyNotes?: string[];
+
 }
 
 interface NotesCategory {
@@ -48,30 +33,10 @@ interface NotesCategory {
   notes: string[];
 }
 
-interface PriceInfo {
-  ml: number;
-  sellingPrice: number;
-  available: boolean;
-}
-
-const DEFAULT_CARD_SIZE_ML = 5;
-const DEFAULT_PACKAGING_COST = 20;
-
-function getStartingPriceEstimate(perfume: Perfume): number {
-  const marketPricePerMl = Number(perfume.marketPricePerMl || 0);
-  if (marketPricePerMl <= 0) return 0;
-
-  const tier = getBrandTier(Math.max(1, marketPricePerMl * 100));
-  const margin = getTierProfitMargin(tier, DEFAULT_CARD_SIZE_ML);
-  return calculateSellingPrice(marketPricePerMl, DEFAULT_CARD_SIZE_ML, 0, DEFAULT_PACKAGING_COST, margin);
-}
-
-function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo[] }) {
+function PerfumeCard({ perfume, prices, priority }: { perfume: Perfume; prices?: DecantPrice[]; priority: boolean }) {
   const images: string[] = parseImageList(perfume.images);
   const lowestPrice = (prices || []).filter((p) => p.available).sort((a, b) => a.sellingPrice - b.sellingPrice)[0];
-  const estimatedStartingPrice = getStartingPriceEstimate(perfume);
-  const displayStartingPrice = lowestPrice?.sellingPrice || estimatedStartingPrice;
-  const outOfStock = perfume.totalStockMl <= 0;
+  const outOfStock = prices ? !lowestPrice : perfume.totalStockMl <= 0;
   const isDynamicBestSeller = Number(perfume.totalOrders || 0) > 0 || perfume.isBestSeller;
 
   return (
@@ -79,7 +44,7 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
       <div className="bg-card border border-border rounded overflow-hidden card-hover group">
         <div className="aspect-square bg-surface relative img-zoom">
           {images[0] ? (
-            <Image src={images[0]} alt={perfume.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
+            <Image src={images[0]} alt={`${perfume.brand} ${perfume.name}`} priority={priority} fill className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="font-serif text-4xl text-text-muted">{perfume.name?.[0] || "P"}</span>
@@ -106,13 +71,13 @@ function PerfumeCard({ perfume, prices }: { perfume: Perfume; prices?: PriceInfo
           <h3 className="font-serif text-lg font-light leading-tight line-clamp-2">{perfume.name}</h3>
           <p className="text-sm md:text-base leading-relaxed font-medium text-text-muted mt-0.5">{perfume.brand}</p>
           <div className="mt-2.5">
-            {displayStartingPrice > 0 ? (
+            {lowestPrice ? (
               <p className="font-serif text-base md:text-xl leading-snug font-medium text-gold-light">
-                From {displayStartingPrice.toLocaleString("en-BD")} BDT
+                {lowestPrice.ml} ml from {lowestPrice.sellingPrice.toLocaleString("en-BD")} BDT
               </p>
             ) : (
               <p className="text-base md:text-lg leading-snug font-medium text-text-secondary">
-                Unavailable
+                {outOfStock ? "Unavailable" : "See sizes and prices"}
               </p>
             )}
           </div>
@@ -142,7 +107,7 @@ function FilterSection({ title, children, defaultOpen = true }: { title: string;
 }
 
 const MAX_PRICE = 20000;
-const PAGE_SIZE = 24;
+
 
 /* ── Price Range Slider ── */
 function PriceRangeSlider({ min, max, value, onChange }: {
@@ -267,7 +232,13 @@ function PriceRangeSlider({ min, max, value, onChange }: {
   );
 }
 
-function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
+function ShopContent({ initialPerfumes: perfumes, priceMap, allBrands, pageSize, error }: {
+  initialPerfumes: Perfume[];
+  priceMap: Record<string, { prices: DecantPrice[] }>;
+  allBrands: string[];
+  pageSize: number;
+  error: string | null;
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -281,33 +252,13 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
   const sortParam = searchParams.get("sort") || "newest";
   const selectedNotes = notesParam.split(",").map((n) => n.trim()).filter(Boolean);
 
-  // If the server passed initial perfumes and no URL filters are active on mount,
-  // we skip the first client-side fetch — products are already server-rendered.
-  const skipInitialFetch = useRef(
-    Boolean(initialPerfumes && initialPerfumes.length > 0) &&
-    !qParam && !categoryParam && !seasonParam && !bestSellerParam && !brandParam && !dealParam && !notesParam,
-  );
-
-  const [perfumes, setPerfumes] = useState<Perfume[]>(initialPerfumes ?? []);
-  const [priceMap, setPriceMap] = useState<Record<string, PriceInfo[]>>({});
-  const [allBrands, setAllBrands] = useState<string[]>(() => {
-    if (!initialPerfumes) return [];
-    return [...new Set(
-      initialPerfumes.map((p) => p.brand).filter((b) => b && b.toLowerCase() !== "valore parfums"),
-    )].sort();
-  });
   const [allNotes, setAllNotes] = useState<string[]>([]);
   const [noteCategories, setNoteCategories] = useState<NotesCategory[]>([]);
-  const [loading, setLoading] = useState(!initialPerfumes || initialPerfumes.length === 0);
-  const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(qParam);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, MAX_PRICE]);
-  const fetchControllerRef = useRef<AbortController | null>(null);
-  const fetchSeqRef = useRef(0);
-
   const categories = ["Men", "Women", "Unisex", "Oud"];
-  const seasons = ["Summer", "Winter", "Spring", "Fall", "All Year"];
+  const seasons = ["Summer", "Winter", "Spring", "Fall", "Rainy", "All Year"];
   const sortOptions = [
     { value: "newest", label: "Newest First" },
     { value: "name-asc", label: "Name A→Z" },
@@ -315,94 +266,6 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
     { value: "price-asc", label: "Price: Low to High" },
     { value: "price-desc", label: "Price: High to Low" },
   ];
-
-  const fetchPerfumes = useCallback(async () => {
-    fetchControllerRef.current?.abort();
-    const controller = new AbortController();
-    fetchControllerRef.current = controller;
-    const seq = ++fetchSeqRef.current;
-
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (qParam) params.set("q", qParam);
-    if (categoryParam) params.set("category", categoryParam);
-    if (seasonParam) params.set("season", seasonParam);
-    if (bestSellerParam) params.set("bestSeller", bestSellerParam);
-    if (brandParam) params.set("brand", brandParam);
-    if (dealParam) params.set("deal", dealParam);
-    if (notesParam) params.set("notes", notesParam);
-    if (sortParam) params.set("sort", sortParam);
-
-    try {
-      // Use fetch with timeout for mobile stability
-      const perfumeRes = await fetchWithTimeout(toPublicApiUrl(`/api/perfumes/search?${params.toString()}`), {
-        timeout: 12000,
-        retries: 1,
-        signal: controller.signal,
-      });
-      if (!perfumeRes.ok) {
-        if (seq !== fetchSeqRef.current) return;
-        console.error("Perfume search API returned:", perfumeRes.status);
-        setError(`Failed to load perfumes (${perfumeRes.status})`);
-        setPerfumes([]);
-        setAllBrands([]);
-        setPriceMap({});
-        return;
-      }
-      const data = await perfumeRes.json();
-      if (seq !== fetchSeqRef.current) return;
-
-      const p = Array.isArray(data?.perfumes) ? (data.perfumes as Perfume[]) : [];
-      setPerfumes(p);
-      setError(null);
-      const brandList = Array.isArray(data?.brands) ? (data.brands as string[]) : [];
-      setAllBrands(brandList.filter((b) => b.toLowerCase() !== "valore parfums"));
-
-      const ids = p.map((pf) => pf.id);
-      if (ids.length === 0) {
-        setPriceMap({});
-        return;
-      }
-
-      // Use fetch with timeout for pricing API
-      const pricingRes = await fetchWithTimeout(toPublicApiUrl("/api/pricing"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ perfumeIds: ids }),
-        timeout: 10000,
-        retries: 1,
-        signal: controller.signal,
-      });
-      if (!pricingRes.ok) {
-        if (seq !== fetchSeqRef.current) return;
-        console.warn("Pricing API returned:", pricingRes.status);
-        setPriceMap({});
-        return;
-      }
-      const map = await pricingRes.json();
-      if (seq !== fetchSeqRef.current) return;
-
-      const parsed: Record<string, PriceInfo[]> = {};
-      for (const [id, val] of Object.entries((map && typeof map === "object") ? map : {})) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        parsed[id] = (val as any).prices || [];
-      }
-      setPriceMap(parsed);
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : "Failed to load perfumes";
-      console.error("Shop fetch error:", err);
-      if (seq === fetchSeqRef.current) {
-        setError(errMsg);
-        setPerfumes([]);
-        setAllBrands([]);
-        setPriceMap({});
-      }
-    } finally {
-      if (seq === fetchSeqRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [qParam, categoryParam, seasonParam, bestSellerParam, brandParam, dealParam, notesParam, sortParam]);
 
   useEffect(() => {
     // Use fetch with timeout for notes library
@@ -421,63 +284,6 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
         setNoteCategories([]);
       });
   }, []);
-
-  useEffect(() => {
-    // Skip the very first fetch if server-rendered initial data covers the current view
-    // (no URL filters active). Subsequent filter changes still re-fetch as normal.
-    if (skipInitialFetch.current) {
-      skipInitialFetch.current = false;
-      return;
-    }
-    skipInitialFetch.current = false;
-
-    const timer = window.setTimeout(() => {
-      fetchPerfumes();
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      fetchControllerRef.current?.abort();
-    };
-  }, [fetchPerfumes]);
-
-  useEffect(() => {
-    if (perfumes.length === 0 || Object.keys(priceMap).length > 0) return;
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const ids = perfumes.map((perfume) => perfume.id);
-        const pricingRes = await fetchWithTimeout(toPublicApiUrl("/api/pricing"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ perfumeIds: ids }),
-          timeout: 10000,
-          retries: 1,
-          signal: controller.signal,
-        });
-
-        if (!pricingRes.ok) return;
-        const map = await pricingRes.json();
-        const parsed: Record<string, PriceInfo[]> = {};
-
-        for (const [id, val] of Object.entries((map && typeof map === "object") ? map : {})) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          parsed[id] = (val as any).prices || [];
-        }
-
-        if (!controller.signal.aborted) {
-          setPriceMap(parsed);
-        }
-      } catch {
-        // Keep the estimated starting price if pricing lookup fails.
-      }
-    }, 0);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [perfumes, priceMap]);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -527,15 +333,16 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
 
   const hasFilters = qParam || categoryParam || seasonParam || bestSellerParam || brandParam || dealParam || notesParam;
 
-  // Price-filter client side (API handles the rest)
-  const filteredPerfumes = perfumes.filter((p) => {
-    const priceEstimate = p.marketPricePerMl * 10; // estimate for 10ml
-    return priceEstimate >= priceRange[0] && priceEstimate <= priceRange[1];
+  const filteredPerfumes = perfumes.filter((perfume) => {
+    if (priceRange[0] === 0 && priceRange[1] === MAX_PRICE) return true;
+    return priceMap[perfume.id]?.prices.some((offer) =>
+      offer.available && offer.sellingPrice >= priceRange[0] && offer.sellingPrice <= priceRange[1]
+    );
   });
 
-  const totalPages = Math.max(1, Math.ceil(filteredPerfumes.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredPerfumes.length / pageSize));
   const currentPage = Math.min(requestedPage, totalPages);
-  const paginatedPerfumes = filteredPerfumes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedPerfumes = filteredPerfumes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     if (requestedPage <= totalPages) return;
@@ -585,7 +392,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
       </div>
 
       {/* Price Range - at top */}
-      <FilterSection title="Price Range (est. 10ml)">
+      <FilterSection title="Decant Price (BDT)">
         <PriceRangeSlider
           min={0}
           max={MAX_PRICE}
@@ -772,11 +579,11 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
         <div>
           <p className="text-[10px] uppercase tracking-[0.4em] text-gold mb-2">Our Collection</p>
           <h1 className="font-serif text-4xl font-light italic">{title}</h1>
-          {!loading && (
+          {!error && (
             <p className="text-sm text-text-muted mt-1">
               {filteredPerfumes.length === 0
                 ? "No fragrances"
-                : `${Math.min(filteredPerfumes.length, (currentPage - 1) * PAGE_SIZE + 1)}-${Math.min(currentPage * PAGE_SIZE, filteredPerfumes.length)} of ${filteredPerfumes.length} fragrances`}
+                : `${Math.min(filteredPerfumes.length, (currentPage - 1) * pageSize + 1)}-${Math.min(currentPage * pageSize, filteredPerfumes.length)} of ${filteredPerfumes.length} fragrances`}
             </p>
           )}
         </div>
@@ -784,6 +591,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
         <div className="flex items-center gap-3">
           {/* Sort Dropdown */}
           <select
+            aria-label="Sort fragrances"
             value={sortParam}
             onChange={(e) => updateFilter("sort", e.target.value)}
             className="bg-card border border-border rounded px-3 py-2 text-base text-text-secondary outline-none cursor-pointer hover:border-gold transition-colors"
@@ -889,16 +697,6 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
                 Try Again
               </button>
             </div>
-          ) : loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {[...Array(9)].map((_, i) => (
-                <div key={i}>
-                  <div className="skeleton aspect-square rounded" />
-                  <div className="skeleton h-4 mt-3 rounded w-3/4" />
-                  <div className="skeleton h-3 mt-2 rounded w-1/2" />
-                </div>
-              ))}
-            </div>
           ) : filteredPerfumes.length === 0 ? (
             <div className="text-center py-20">
               <p className="font-serif text-2xl text-text-muted">No perfumes found</p>
@@ -912,7 +710,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 {paginatedPerfumes.map((perfume, i) => (
                   <div key={perfume.id} className="animate-fade-up" style={{ animationDelay: `${i * 40}ms` }}>
-                    <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]} />
+                    <PerfumeCard perfume={perfume} prices={priceMap[perfume.id]?.prices} priority={i === 0} />
                   </div>
                 ))}
               </div>
@@ -929,7 +727,7 @@ function ShopContent({ initialPerfumes }: { initialPerfumes?: Perfume[] }) {
                   brand: brandParam || undefined,
                   deal: dealParam || undefined,
                   notes: notesParam || undefined,
-                  sort: sortParam || undefined,
+                  sort: searchParams.get("sort") || undefined,
                 }}
               />
             </div>

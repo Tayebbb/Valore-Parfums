@@ -4,23 +4,24 @@ import { buildCanonicalProductPath, getActivePerfumes, parseImageList, SITE_URL 
 import Image from "next/image";
 import { PaginationNav } from "@/components/ui/PaginationNav";
 
+import { catalogPage, catalogPagePath, paginateCatalog, type CatalogQuery } from "@/lib/catalog-pagination";
+
 export const revalidate = 300;
-const PAGE_SIZE = 24;
+type CategoryProps = { searchParams: Promise<CatalogQuery> };
 
-export const metadata: Metadata = {
-  title: "Perfume Decants Category | 3ml, 10ml, 15ml, 30ml Bangladesh",
-  description: "Shop authentic perfume decants in Bangladesh. Explore 3ml, 10ml, 15ml, and 30ml variants from popular brands.",
-  alternates: { canonical: "/category/decants" },
-  keywords: ["perfume decant Bangladesh", "3ml 10ml 15ml 30ml decants", "buy perfume samples BD"],
-};
+export async function generateMetadata({ searchParams }: CategoryProps): Promise<Metadata> {
+  const page = catalogPage(await searchParams);
+  return {
+    title: `Perfume Decants by Brand in Bangladesh${page > 1 ? ` – Page ${page}` : ""}`,
+    description: "Browse fragrances by name and brand. Open a fragrance to compare decant sizes, current prices in BDT and availability.",
+    alternates: { canonical: catalogPagePath("/category/decants", page) },
+  };
+}
 
-export default async function DecantsCategoryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function DecantsCategoryPage({ searchParams }: CategoryProps) {
   const perfumes = await getActivePerfumes();
-  const { page } = await searchParams;
-  const requestedPage = Math.max(1, Number.parseInt(page || "1", 10) || 1);
-  const totalPages = Math.max(1, Math.ceil(perfumes.length / PAGE_SIZE));
-  const currentPage = Math.min(requestedPage, totalPages);
-  const paginatedPerfumes = perfumes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const currentPage = catalogPage(await searchParams);
+  const { items: paginatedPerfumes, totalPages } = paginateCatalog(perfumes, currentPage);
 
   return (
     <>
@@ -41,7 +42,7 @@ export default async function DecantsCategoryPage({ searchParams }: { searchPara
         <header className="max-w-4xl mb-8">
           <h1 className="font-serif text-3xl md:text-4xl font-light leading-tight">Perfume Decants in Bangladesh</h1>
           <p className="mt-3 text-text-secondary max-w-3xl text-sm md:text-base leading-relaxed">
-            Discover authentic decants in 3ml, 10ml, 15ml, and 30ml sizes. Each perfume has one canonical page with variant selector and full bottle request option.
+            Browse by fragrance and perfume house. Select a fragrance to compare available decant sizes and prices in BDT.
           </p>
         </header>
 
